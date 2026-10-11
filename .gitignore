@@ -1,0 +1,6 @@
+# Claude Code lays these beside the mod each time it loads it
+.claude-plugin/types/
+
+# Evaluation scratch output
+eval/.work/
+node_modules/
