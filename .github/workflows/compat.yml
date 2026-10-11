@@ -1,0 +1,23 @@
+# Checks gearbox against the newest Claude Code every week, so a change in
+# the plugin API shows up here before it shows up in someone's session.
+name: Claude Code compatibility
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: claude --version
+      - run: claude plugin validate .
+      - run: claude plugin test .

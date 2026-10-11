@@ -4,6 +4,7 @@ import { pace } from '../hooks/core/pacing'
 import { decide } from '../hooks/core/policy'
 import { applyCommand, DEFAULTS } from '../hooks/core/settings'
 import { classify, parseOverrides } from '../hooks/core/signals'
+import { isNewerThan } from '../hooks/core/version'
 
 describe('classify', () => {
   const cases: ReadonlyArray<readonly [string, number]> = [
@@ -121,5 +122,29 @@ describe('applyCommand', () => {
     expect(applyCommand(DEFAULTS, 'haiku', 'kapa')).toEqual({ ...DEFAULTS, allowHaiku: false })
     expect(applyCommand(DEFAULTS, '', '')).toBe('status')
     expect(applyCommand(DEFAULTS, 'profil', 'yok')).toBe('help')
+  })
+})
+
+describe('robustness', () => {
+  test('a family that gave no answer is routed around, upward within the picker', () => {
+    const decision = decide({
+      source: 'rules',
+      reasons: [],
+      profile: 'tasarruf',
+      pace: { level: 'normal' },
+      allowHaiku: true,
+      tier: 0,
+      ceiling: { family: 'opus', effort: 'high' },
+      unavailable: ['haiku'],
+    })
+    expect(decision.family).toBe('sonnet')
+    expect(decision.effort).toBe('low')
+  })
+
+  test('reads Claude Code versions', () => {
+    expect(isNewerThan('2.1.300', '2.1.295')).toBe(true)
+    expect(isNewerThan('2.2.0', '2.1.295')).toBe(true)
+    expect(isNewerThan('2.1.295', '2.1.295')).toBe(false)
+    expect(isNewerThan('2.1.278 (Claude Code)', '2.1.295')).toBe(false)
   })
 })

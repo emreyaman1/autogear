@@ -1,19 +1,35 @@
 // gearbox: picks the model and effort of every main-thread request from the
 // prompt that started the turn, never above what the picker holds.
 
-import type { EngineInterface, Register, TurnStepInput, TurnUsage } from 'claude-code'
+import type {
+  EngineInterface,
+  Register,
+  SessionRateLimit,
+  TurnStepChunk,
+  TurnStepInput,
+  TurnUsage,
+} from 'claude-code'
 
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
-import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort } from './core/models'
+import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort, type Family } from './core/models'
 import { pace } from './core/pacing'
 import { decide, type Decision } from './core/policy'
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { classify, normalize, parseOverrides, type RuleResult } from './core/signals'
-import { tierSpec, type Tier } from './core/tiers'
+import { tierSpec, toTier, type Tier } from './core/tiers'
+import { isNewerThan, TESTED_THROUGH } from './core/version'
 
 // Prompts a person sent: the rest (task notifications, peers, plugins) carry
 // on with the last choice.
 const USER_ORIGINS = new Set(['composer', 'bridge', 'sdk', 'slack-ping', 'unclassified'])
+
+// Commands whose failure means the work is not done: tests, builds, linters.
+const CHECK_COMMAND =
+  /\b(?:test|tests|jest|vitest|pytest|mocha|tsc|eslint|lint|build|make|gradle|mvn|cargo|go (?:test|build|vet)|dotnet (?:build|test)|node --test)\b/
+
+// After this many turns in a row answered by another model than the one
+// chosen, gearbox concludes its choices no longer take effect and stands down.
+const MISMATCH_LIMIT = 3
 
 const SOURCE_NAMES: Record<string, string> = {
   rules: 'kural',
@@ -23,8 +39,10 @@ const SOURCE_NAMES: Record<string, string> = {
   escalate: 'yükseltme',
 }
 
+const WINDOW_NAMES: Record<string, string> = { five_hour: '5 saatlik', seven_day: 'haftalık' }
+
 const HELP = [
-  '/gear                   durum ve son karar',
+  '/gear                   durum, son karar, limitler',
   '/gear oto | sabitle     yönlendiriciyi aç / kapat (sabit: seçici ne diyorsa o)',
   '/gear profil tasarruf | dengeli | kalite',
   "/gear haiku aç | kapa   önemsiz işler Haiku'ya gitsin mi",
@@ -41,20 +59,42 @@ type State = {
   ceilingSeen: string | undefined
   complaints: number
   decisions: Map<string, Decision>
+  // Families a request failed on this session; they are routed around.
+  unavailable: Set<Family>
+  // Turns in a row the API answered with another model than the one chosen.
+  mismatches: number
+  // Set once choices stopped taking effect: requests go as the picker says.
+  isStoodDown: boolean
+  // The last test or build command of the main thread failed...
+  lastCheckFailed: boolean
+  // ...and the turn ended that way, so the next one gets a stronger model.
+  carryFailure: boolean
+  limits: readonly SessionRateLimit[]
 }
 
 const kilo = (tokens: number): string => (tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}K` : String(tokens))
 
 const onOff = (value: boolean): string => (value ? 'açık' : 'kapalı')
 
+const clock = (iso: string): string => {
+  const date = new Date(iso)
+
+  return Number.isNaN(date.getTime()) ? '' : `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 function tierLabel(state: State, decision: Decision): string {
   return tierSpec(state.settings.profile, decision.tier).label
+}
+
+function isRouting(state: State): boolean {
+  return state.settings.mode === 'auto' && !state.isStoodDown
 }
 
 function showStatus($: EngineInterface, state: State): void {
   const { settings, last } = state
   $.ui.status(
-    settings.mode === 'pin' ? '⚙ gearbox: sabit (seçici)'
+    state.isStoodDown ? '⚙ gearbox: devre dışı (seçici), /gear'
+    : settings.mode === 'pin' ? '⚙ gearbox: sabit (seçici)'
     : last === undefined ? `⚙ gearbox: otomatik · ${settings.profile}`
     : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} ${tierLabel(state, last)}`,
   )
@@ -121,6 +161,7 @@ async function decideTurn(
   const taken = state.pending
   state.pending = undefined
   const usage = await readUsage($)
+  state.limits = usage?.rateLimits ?? state.limits
   const currentPace = pace(usage?.rateLimits ?? [], await $.clock.now())
   const common = {
     profile: state.settings.profile,
@@ -129,6 +170,7 @@ async function decideTurn(
     contextTokens: usage?.context.tokens,
     pace: currentPace,
     allowHaiku: state.settings.allowHaiku,
+    unavailable: [...state.unavailable],
   }
   if (taken === undefined) {
     if (state.last === undefined) {
@@ -149,8 +191,29 @@ async function decideTurn(
       reasons = [...reasons, `Haiku: T${asked}`]
     }
   }
+  // A step that ended with failing tests is not built on by a weaker model.
+  if (state.carryFailure && taken.rule.override === undefined) {
+    tier = toTier(tier + 1)
+    reasons = [...reasons, 'önceki turda test/derleme başarısız kaldı: +1 kademe']
+  }
+  state.carryFailure = false
 
   return remember($, state, e.turnId, decide({ ...common, tier, source, reasons, override: taken.rule.override }))
+}
+
+// The routed request got no answer at all (a retired model id, a model the
+// plan lacks): the family is avoided for the rest of the session and the
+// turn carries on as the picker says.
+function noteUnavailable($: EngineInterface, state: State, e: Pick<TurnStepInput, 'turnId' | 'model' | 'effort'>, decision: Decision): void {
+  state.unavailable.add(decision.family)
+  const family = familyOf(e.model) ?? decision.family
+  state.decisions.set(e.turnId, {
+    ...decision,
+    family,
+    effort: asEffort(e.effort) ?? decision.effort,
+    reasons: [...decision.reasons, `${MODEL_IDS[decision.family]} yanıt vermedi`],
+  })
+  $.ui.toast(`gearbox: ${MODEL_IDS[decision.family]} yanıt vermedi; bu oturumda kullanmıyorum, seçicideki model devam ediyor.`, { timeoutMs: 10000 })
 }
 
 function footer(state: State, decision: Decision, usage: TurnUsage | undefined): string {
@@ -165,7 +228,23 @@ function footer(state: State, decision: Decision, usage: TurnUsage | undefined):
   return `⚙ ${model} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} (${source}: ${why})${cache}`
 }
 
-async function countTurn($: EngineInterface, decision: Decision): Promise<void> {
+async function afterTurn($: EngineInterface, state: State, decision: Decision, usage: TurnUsage | undefined): Promise<void> {
+  // The API names the model that answered: if it is not the chosen one, turn
+  // after turn, the plugin API has changed under gearbox and it stands down.
+  const answered = familyOf(usage?.model)
+  if (answered !== undefined) {
+    state.mismatches = answered === decision.family ? 0 : state.mismatches + 1
+    if (state.mismatches >= MISMATCH_LIMIT && !state.isStoodDown) {
+      state.isStoodDown = true
+      $.ui.toast(
+        `gearbox: seçtiğim model ${MISMATCH_LIMIT} turdur uygulanmıyor, kendimi kapattım; istekler seçicideki modelle gidiyor. /gear oto ile yeniden dener.`,
+        { timeoutMs: 15000 },
+      )
+      showStatus($, state)
+    }
+  }
+  state.carryFailure = state.lastCheckFailed && decision.tier < 4
+  state.lastCheckFailed = false
   try {
     const stats = readStats(await $.store.get('stats'))
     stats.turns += 1
@@ -182,17 +261,39 @@ async function describe($: EngineInterface, state: State): Promise<string> {
   const { settings, last } = state
   const stats = readStats(await $.store.get('stats'))
   const perFamily = FAMILIES.map(family => `${FAMILY_NAMES[family]} ${stats.byFamily[family] ?? 0}`).join(', ')
+  const limits = state.limits
+    .map(limit => `${WINDOW_NAMES[limit.kind] ?? limit.kind} %${Math.round(limit.percentUsed)}${limit.resetsAt === undefined ? '' : ` (sıfırlanma ${clock(limit.resetsAt)})`}`)
+    .join(' · ')
 
   return [
-    `gearbox ${settings.mode === 'auto' ? 'otomatik' : 'sabit (seçici)'} · profil ${settings.profile} · Haiku ${onOff(settings.allowHaiku)} · Haiku'ya sor ${onOff(settings.askHaiku)} · not ${onOff(settings.footer)}`,
+    `gearbox ${state.isStoodDown ? 'devre dışı (seçimler uygulanmıyordu)' : settings.mode === 'auto' ? 'otomatik' : 'sabit (seçici)'} · profil ${settings.profile} · Haiku ${onOff(settings.allowHaiku)} · Haiku'ya sor ${onOff(settings.askHaiku)} · not ${onOff(settings.footer)}`,
     `Tavan (seçici): ${state.ceilingSeen ?? 'henüz istek yok'}`,
+    `Limitler: ${limits === '' ? 'henüz bilinmiyor' : limits}`,
     last === undefined
       ? 'Son karar: yok'
       : `Son karar: ${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)} (${SOURCE_NAMES[last.source] ?? last.source}: ${last.reasons.join('; ')})`,
+    state.unavailable.size === 0 ? '' : `Bu oturumda yanıt vermeyen: ${[...state.unavailable].map(family => MODEL_IDS[family]).join(', ')}`,
     `Toplam ${stats.turns} tur: ${perFamily} · elle ${stats.overrides} · yükseltme ${stats.escalations}`,
     '',
     HELP,
-  ].join('\n')
+  ]
+    .filter((line, index, lines) => line !== '' || lines[index - 1] !== '')
+    .join('\n')
+}
+
+async function noticeVersion($: EngineInterface): Promise<void> {
+  try {
+    const { version, base } = await $.session.version()
+    if (isNewerThan(base ?? version, TESTED_THROUGH) && (await $.store.get('versionNotice')) !== version) {
+      $.ui.toast(
+        `gearbox, Claude Code ${version} ile henüz denenmedi. Seçimleri uygulanmazsa kendini kapatır; istersen /gear sabitle.`,
+        { timeoutMs: 12000 },
+      )
+      await $.store.set('versionNotice', version)
+    }
+  } catch {
+    // A notice only: a build that cannot say its version still routes.
+  }
 }
 
 async function loadSettings($: EngineInterface, state: State): Promise<void> {
@@ -203,6 +304,7 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
     description: 'gearbox: otomatik model ve efor seçimi',
     argumentHint: '[oto | sabitle | profil <ad> | haiku | sor | not]',
   })
+  await noticeVersion($)
   if ((await $.store.get('tipShown')) !== true) {
     $.ui.toast(
       'gearbox açık: seçicideki model ve efor tavan sayılır, gearbox bunun altında seçer. Tam otomatik için seçiciyi Opus · high yap.',
@@ -221,6 +323,12 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
   if (changed === 'help') {
     return { text: HELP }
   }
+  if (changed.mode === 'auto') {
+    // Asked for by hand: try again after standing down or a failed model.
+    state.isStoodDown = false
+    state.mismatches = 0
+    state.unavailable.clear()
+  }
   state.settings = changed
   await $.store.set('settings', changed)
   showStatus($, state)
@@ -236,6 +344,12 @@ export const register: Register = on => {
     ceilingSeen: undefined,
     complaints: 0,
     decisions: new Map(),
+    unavailable: new Set(),
+    mismatches: 0,
+    isStoodDown: false,
+    lastCheckFailed: false,
+    carryFailure: false,
+    limits: [],
   }
 
   on('session.start', async ($, e, next) => {
@@ -270,12 +384,12 @@ export const register: Register = on => {
     }
 
     return parsed.text === e.text ? next(e) : next({ ...e, text: parsed.text })
-  })
+  }).catch(($, e, next) => next(e))
 
   // Every request of a turn goes out on the turn's one model: a switch inside
   // a turn would drop the cache and the thinking the turn has built up.
   on('turn.step', async function* ($, e, next) {
-    if (state.settings.mode === 'pin' || e.agentId !== undefined) {
+    if (!isRouting(state) || e.agentId !== undefined) {
       return yield* next(e)
     }
     const decision = state.decisions.get(e.turnId) ?? (e.index === 0 ? await decideTurn($, state, e) : undefined)
@@ -283,9 +397,53 @@ export const register: Register = on => {
       return yield* next(e)
     }
     const model = familyOf(e.model) === decision.family ? e.model : MODEL_IDS[decision.family]
+    if (model === e.model && decision.effort === e.effort) {
+      return yield* next(e)
+    }
 
-    return yield* next({ ...e, model, effort: decision.effort })
+    // Engine chunks are held back until the answer starts, so a request that
+    // gets no answer at all can be sent again on the picker's model cleanly.
+    const stream = next({ ...e, model, effort: decision.effort })
+    const held: TurnStepChunk[] = []
+    let isAnswering = false
+    try {
+      for await (const chunk of stream) {
+        if (isAnswering) {
+          yield chunk
+        } else {
+          held.push(chunk)
+          if (chunk.kind !== 'engine') {
+            isAnswering = true
+            yield* held
+          }
+        }
+      }
+      const result = await stream.result
+      if (isAnswering || result.stopReason !== null || next.signal.aborted) {
+        if (!isAnswering) {
+          yield* held
+        }
+
+        return result
+      }
+    } catch (error) {
+      if (isAnswering || next.signal.aborted) {
+        throw error
+      }
+    }
+    noteUnavailable($, state, e, decision)
+
+    return yield* next(e)
   })
+
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    const ran = await next(e)
+    if (e.agentId === undefined && CHECK_COMMAND.test(e.command)) {
+      state.lastCheckFailed = ran.isError === true
+    }
+
+    return ran
+  }).catch(($, e, next) => next(e))
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
@@ -293,7 +451,7 @@ export const register: Register = on => {
     if (decision === undefined) {
       return result
     }
-    await countTurn($, decision)
+    await afterTurn($, state, decision, e.usage)
 
     return state.settings.footer ? { ...result, text: footer(state, decision, e.usage) } : result
   })

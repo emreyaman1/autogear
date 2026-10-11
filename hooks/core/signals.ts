@@ -35,11 +35,30 @@ export function normalize(text: string): string {
     .replace(/[çğıöşüâîû]/g, letter => FOLD[letter] ?? letter)
 }
 
+// A token that is code, a path or an identifier, not words: `add(a, b)`,
+// `server.js`, `./utils/date`, `MAX_RETRIES`, `user_id`.
+const CODE_TOKEN = /[(){};=<>]|^[.~/\\]|\w\.\w|^[A-Z0-9]+_[A-Z0-9_]+$|^[a-z0-9]+(?:_[a-z0-9]+)+$/i
+
+const EDGE_PUNCTUATION = /^["'“”‘’([]+|["'“”‘’)\],.:;!?]+$/g
+
+// The prompt's prose: code and names in it carry words ("add", "test",
+// "DATABASE") that say nothing about how hard the work is.
+export function prose(raw: string): string {
+  return raw
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`\n]*`/g, ' ')
+    .replace(/\{[^{}]*\}/g, ' ')
+    .replace(/[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\([^()\n]*\)/g, ' ')
+    .split(/\s+/)
+    .filter(token => !CODE_TOKEN.test(token.replace(EDGE_PUNCTUATION, '')))
+    .join(' ')
+}
+
 type Cue = { word: string; pattern: RegExp }
 
 // A cue matches at the start of a word and lets any suffix follow, as Turkish
 // needs ("hata", "hatayı", "hatası"); stems stop before a consonant that
-// mutates ("özelli" for özellik/özelliği).
+// mutates ("özelli" for özellik/özelliği, "ren[kg]" for renk/rengi).
 function cues(words: readonly string[]): readonly Cue[] {
   return [...new Set(words)].map(word => ({ word, pattern: new RegExp(`(?:^|[^a-z0-9])(?:${word})`) }))
 }
@@ -59,53 +78,126 @@ function found(list: readonly Cue[], text: string): string[] {
   return list.filter(cue => cue.pattern.test(text)).map(cue => label(cue.word))
 }
 
+const word = (source: string): RegExp => new RegExp(`(?:^|[^a-z0-9])(?:${source})`)
+
+// Hard on their own: architecture, concurrency, performance, security, and
+// failures that are hard to pin down.
 const HARD = cues([
-  'neden', 'niye', 'nicin', 'sebep', 'sebeb', 'kok neden', 'mimari', 'tasarla', 'tasarim', 'refactor',
-  'refaktor', 'yeniden yapilandir', 'yeniden tasarla', 'optimiz', 'performans', 'yavas', 'olcekle',
-  'race condition', 'deadlock', 'kilitlen', 'sizinti', 'guvenli', 'zafiyet', 'eszamanli', 'algoritma',
-  'karmasi', 'arastir', 'analiz', 'karsilastir', 'strateji', 'yol haritasi', 'sifirdan', 'tum proje',
-  'butun proje', 'tum kod', 'butun kod', 'kapsamli', 'derinlemesine', 'nasil calisiyor',
-  'why', 'root cause', 'architect', 'design', 'redesign', 'restructur', 'optimi', 'performance', 'slow',
-  'scalab', 'memory leak', 'security', 'vulnerab', 'concurren', 'algorithm', 'complex', 'investigat',
-  'analy', 'compar', 'trade.?off', 'strateg', 'roadmap', 'migrat', 'from scratch', 'entire codebase',
-  'whole project', 'whole codebase', 'in depth', 'deep dive', 'how does',
+  'mimari', 'architect', 'refactor', 'refaktor', 'yeniden yapilandir', 'yeniden duzenle', 'restructur', 'katman',
+  'monorepo', 'mikroservis', 'microservice', 'monolit', 'design pattern', 'strategy pattern', 'multi.?tenant', 'coklu kiraci',
+  'race condition', 'deadlock', 'kilitlen', 'eszamanli', 'ayni anda', 'concurren', 'thread.?safe',
+  'memory leak', 'sizinti', 'performans', 'performance', 'yavas', 'slow', 'hizlandir', 'speed up', 'latency', 'optimiz', 'optimis', 'olcekle', 'scalab',
+  'guvenli[kg]?', 'security', 'zafiyet', 'vulnerab', 'injection', 'xss', 'csrf',
+  'kok neden', 'root cause', 'bazen', 'rastgele', 'ara sira', 'arada bir', 'sometimes', 'randomly', 'intermittent',
+  'flaky', 'donuyor', 'cokuyor', 'takiliyor', 'tutarsiz', 'inconsistent',
 ])
 
-const WORK = cues([
-  'ekle', 'ozelli', 'implement', 'uygula(?!ma)', 'olustur', 'gelistir', 'entegre', 'endpoint', 'bilesen',
-  'sayfa', 'form(?!at)', 'veritaban', 'test', 'debug', 'hata ayikla', 'duzelt', 'hata', 'sorun', 'kurulum',
-  'yapilandir', 'baglan',
-  'add(?:s|ed|ing)?(?![a-z])', 'feature', 'create', 'build', 'develop', 'integrat', 'component', 'page',
-  'database', 'schema', 'fix', 'bugs?(?![a-z])', 'error', 'issue', 'set ?up', 'configur', 'connect', 'install',
+// Hard only beside another sign: "neden" may be a quick question or a hunt.
+const MAYBE_HARD = cues([
+  'neden', 'niye', 'nicin', 'sebep', 'sebeb', 'why', 'tasarla', 'tasarim', 'design', 'analiz', 'analy', 'karsilastir',
+  'compar', 'strateji', 'strateg', 'degerlendir', 'evaluat', 'avantaj', 'dezavantaj', 'artilari', 'eksileri',
+  'pros and cons', 'trade.?off', 'arastir', 'investigat', 'incele', 'nasil calisiyor', 'how does', 'kapsamli',
+  'derinlemesine', 'in depth', 'deep dive', 'yol haritasi', 'roadmap', 'yetkilendirme', 'authoriz', 'kimlik dogrula',
+  'authenticat', '(?:meli|mali)(?:yim|yiz)', 'should i',
 ])
 
-const ROUTINE = cues([
-  'degistir', 'guncelle', 'sil', 'kaldir', 'tasi', 'ayarla', 'ren[kg]', 'metin', 'metni', 'buton', 'bosluk',
-  'hizala', 'import',
-  'change', 'update', 'delete', 'remove', 'move', 'tweak', 'adjust', 'colou?r', 'text', 'button', 'spacing',
-  'align', 'bump',
+// A choice between options: "Redux mı Zustand mı", "geçmeli miyiz".
+const DECISION = word('[a-z]+ mi [a-z]+ mi(?![a-z])|(?:meli|mali) miyiz|should we|which (?:one )?(?:is|would be) better|hangisi daha|versus|vs\\.?(?![a-z])')
+
+const WHY = word('neden|niye|nicin|sebep|sebeb|why')
+const HUNT = word('bul|find|figure out|arastir|investigat|incele|tespit|anla|understand|debug')
+const FAILURE = word('hata|error|fail|crash|cok|don|takil|bozul|broken|yanlis|wrong|duplicate|cift|iki kez|twice|kayb|lost|null|undefined|yavas|slow')
+
+// "X'ten Y'ye taşı/geçir", "migrate ... from X to Y".
+const MIGRATION = new RegExp(
+  "'?(?:ten|tan|den|dan)\\s+[^,.;]{0,40}?'?(?:ye|ya|e|a)\\s+(?:gec|tasi|cevir|donustur|aktar)|(?:migrat|convert|rewrite)[^.]{0,60}from [^.]{1,40} to |(?:^|[^a-z])migrat",
+)
+const WHOLE = word('uygulama(?:yi|nin)?(?![a-z])|tum|butun|proje(?:yi|nin)?(?![a-z])|codebase|whole|entire|the app(?![a-z])|our app|her sey')
+
+const REPEATED_FAILURE = cues([
+  '(?:gun|hafta|ay|saat)(?:ler|lar)?d[iu]r(?![a-z])', 'gundur', 'defalarca', 'kac (?:kere|defa|kez)', 'her denemede',
+  'her seferinde', 'bir turlu', 'tekrar tekrar', 'hicbir sey ise yaramadi', 'her yer bozul', 'again and again',
+  'for days', 'for hours', 'keeps? (?:failing|breaking)', 'nothing works', 'tried everything',
+])
+
+const SCOPE = cues([
+  'complete', 'full(?:-| )?(?:stack|featured)', 'entire', 'whole', 'bastan sona', 'sifirdan', 'eksiksiz', 'komple',
+  'from scratch', 'end.to.end', 'uctan uca',
+])
+
+const DESIGN = word('tasarla|design|architect|planla|kurgula')
+const SYSTEM = word('sistem|system|sema|schema|veritaban|database|mimari|architecture|api|yapi|altyapi|infrastructure|servis|service')
+const MONEY = word('odeme|payment|stripe|iyzico|paypal|fatura|billing')
+const INTEGRATION = word('entegr|integrat|webhook')
+
+// What a feature is made of; its verbs are the ADD ones.
+const FEATURE = cues([
+  'ozelli', 'feature', 'deste[kg]', 'support', 'fatura', 'billing', 'filtre', 'filter', 'siralama', 'sort', 'arama', 'search', 'kuyruk', 'queue',
+  'yukleme', 'upload', 'entegr', 'integrat', 'sistem', 'system', 'modul', 'module', 'sayfa', 'page', 'form(?!at)',
+  'dogrulama', 'validat', 'oturum', 'session', 'bildirim', 'notification', 'cache', 'onbellek', 'sepet', 'cart',
+  'odeme', 'payment', 'rapor', 'report', 'dashboard', 'panel', 'disa aktar', 'export', 'sayfalama', 'pagination',
+  'endpoint', 'api', 'hook', 'servis', 'service', 'kutucu', 'checkbox', 'kutusu', 'secici', 'picker', 'dark mode',
+  'tema', 'theme', 'sifre', 'password', 'e-?posta', 'email', 'tarih', 'timezone', 'saat dilimi', 'rol(?:e|ler)',
+  'izin', 'permission', 'webhook', 'cron', 'zamanla', 'schedul', 'auth', 'login', 'giris', 'kayit', 'signup',
+  'profil', 'user management', 'kullanici yonetimi', 'veritaban', 'database', 'schema', 'backend', 'frontend',
+  'arayuz', 'debounce', 'throttle', 'retry', 'yeniden dene', 'cubu[kg]', 'bar(?![a-z])', 'spinner', 'modal', 'popup',
+  'tooltip', 'dropdown', 'menu', 'sekme', 'progress', 'ilerleme', 'banner', 'toast', 'badge', 'grafik', 'chart',
+  'animasyon', 'animation', 'yukle(?:me|rken|nen)',
+])
+
+const ADD = cues([
+  'ekle', 'add(?:s|ed|ing)?(?![a-z])', 'olustur', 'create', 'implement', 'build', 'gelistir', 'develop', 'yaz(?![a-z])',
+  'yaz[ai]', 'write', 'entegre', 'integrate', 'destekle', 'goster', 'display',
+])
+
+const CHANGE = cues([
+  'degistir', 'guncelle', 'yap(?![a-z])', 'sil(?![a-z])', 'kaldir', 'tasi(?![a-z])', 'ayarla', 'cevir', 'yukselt',
+  'change', 'update', 'set(?![a-z])', 'remove', 'delete', 'move', 'tweak', 'adjust', 'bump', 'make',
+])
+
+// Small things a change touches: a color, a label, a number.
+const SMALL = cues([
+  'ren[kg]', 'colou?r', 'metin', 'metni', 'text', 'yazi', 'label', 'baslik', 'title', 'satir', 'line(?![a-z])', 'yil',
+  'year', 'boyut', 'size', 'port(?![a-z])', 'deger', 'value', 'sure(?:si|sini)', 'timeout', 'duration', 'link',
+  'logo', 'ikon', 'icon', 'padding', 'margin', 'bosluk', 'spacing', 'font', 'kalin', 'bold', 'versiyon', 'version',
+  'sabit', 'constant', 'import', 'yorum', 'comment', 'mesaj', 'message', 'varsayilan', 'default',
 ])
 
 // Phrases that settle a prompt as trivial even beside a work verb ("yorum ekle").
-const TRIVIAL_STRONG = cues([
-  'commit mesaji', 'commit message', 'commit', 'push', 'yazim hatasi', 'typo', 'formatla', 'girinti', 'indent',
-  'yorum ekle', 'yorum satiri', 'add (?:a )?comments?', 'yeniden adlandir', 'adini degistir', 'rename',
+const TRIVIAL = cues([
+  'commit mesaji', 'commit message', 'commit', 'push', 'yazim hata', 'typo', 'formatla', 'prettier', 'girinti',
+  'indent', 'yorum ekle', 'yorum satiri', 'add (?:a )?comments?', 'yeniden adlandir',
+  'adini [^,.]{0,30}(?:yap|degistir|olarak)', 'rename',
 ])
 
-// Question words that mark a prompt trivial only when it is short and asks nothing else.
-const TRIVIAL_WEAK = cues([
-  'ne yapiyor', 'ne ise yariyor', 'nedir', 'ne demek', 'acikla', 'anlat', 'ozetle', 'ozet', 'listele',
-  'goster', 'hangi dosya', 'nerede', 'cevir',
-  'what does', 'what is', 'what.?s', 'explain', 'summari[sz]', 'list', 'show', 'where is', 'which file',
-  'how many', 'translate',
+// Questions about code already in view.
+const QUESTION = cues([
+  'ne yapiyor', 'ne ise yariyor', 'nedir', 'ne demek', 'ne anlama', 'acikla(?:r mi|yabilir|yin)?(?![a-z])',
+  'anlat(?:ir mi|abilir|in)?(?![a-z])', 'ozetle', 'ozet(?![a-z])', 'ne degisti',
+  'hangi dosya', 'nerede', 'kac tane', 'what does', 'what is', 'what.?s', 'explain', 'summari[sz]', 'how many',
+  'where is', 'which file', 'what changed',
 ])
+
+const LIST = word('listele|goster|show|list(?![a-z])|neler var|ne var')
+const INFO = word(
+  'dosya|file|klasor|folder|dizin|director|script|todo|yorum|comment|log(?![a-z])|loglar|degisiklik|diff|commit|branch|bagimlilik|dependenc|paket|package|route|fonksiyon|function|sinif|class',
+)
+
+const CONVERSION = /(?:typescript|javascript|python|kotlin|swift|go(?:lang)?|rust|java)(?:'?[a-z]{0,3})?\s+(?:cevir|donustur)|convert[^.]{0,40}to (?:typescript|javascript|python)/
+
+const TEST_WRITE = word(
+  '(?:test|birim test|unit test|entegrasyon test|integration test)[a-z]*[^.?!]{0,40}(?:yaz|write|ekle|add|olustur|create)|(?:write|add|create)[^.?!]{0,30}tests?(?![a-z])',
+)
+
+const DEBUG = word(
+  'hata(?:si|yi)? (?:veriyor|aliyorum|cikiyor|firlatiyor|donuyor)|kiriliyor|patliyor|calismiyor|calismadi|bozuk|fail(?:s|ed|ing)?(?![a-z])|broken|exception|crash|[45]\\d\\d hatasi|error',
+)
 
 const FRUSTRATION = cues([
-  'olmadi', 'olmuyor', 'hala (?:ayni|hata|calism|olm|bozuk)', 'yine (?:ayni|hata|olmadi|calism|bozuk)',
-  'tekrar hata', 'calismiyor', 'calismadi', 'yanlis', 'bozuldu', 'bozdun', 'duzelmedi', 'ayni hata',
-  'anlamadin', 'istedigim (?:bu|gibi) degil',
-  'still', 'same error', 'doesn.?t work', 'does not work', 'didn.?t work', 'not working', 'wrong', 'broken',
-  'that.?s not', 'not what i',
+  'olmadi', 'olmuyor', 'hala (?:ayni|hata|calism|olm|bozuk)', 'yine (?:ayni|hata|olmadi|calism|bozuk)', 'tekrar hata',
+  'calismiyor', 'calismadi', 'yanlis', 'bozuldu', 'bozdun', 'duzelmedi', 'ayni hata', 'anlamadin',
+  'istedigim (?:bu|gibi) degil', 'still', 'same error', 'doesn.?t work', 'does not work', 'didn.?t work',
+  'not working', 'wrong', 'broken', 'that.?s not', 'not what i',
 ])
 
 const ACK =
@@ -169,10 +261,12 @@ export function parseOverrides(text: string): ParsedPrompt {
   return rest.trim() === '' ? { text, tokens: [] } : { text: rest, override, tokens }
 }
 
+// "evet, devam" carries the last tier on; "tamam ama testleri de yaz" asks for new work.
 function isFollowup(text: string): boolean {
   const plain = text.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  const asksMore = found(FEATURE, plain).length > 0 || found(HARD, plain).length > 0 || TEST_WRITE.test(plain)
 
-  return plain.length <= 40 && ACK.test(plain) && found(WORK, plain).length === 0 && found(HARD, plain).length === 0
+  return plain.length <= 40 && ACK.test(plain) && !asksMore
 }
 
 function countFiles(raw: string): number {
@@ -182,7 +276,7 @@ function countFiles(raw: string): number {
 const quote = (words: readonly string[]): string =>
   words
     .slice(0, 3)
-    .map(word => `"${word}"`)
+    .map(item => `"${item}"`)
     .join(', ')
 
 export function classify(raw: string, context: RuleContext = {}): RuleResult {
@@ -195,7 +289,7 @@ export function classify(raw: string, context: RuleContext = {}): RuleResult {
 }
 
 function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleContext): RuleResult {
-  const text = normalize(raw)
+  const text = normalize(prose(raw))
   const length = raw.trim().length
   const rule = (tier: number, confidence: RuleResult['confidence'], reasons: string[], source: RuleSource = 'rules'): RuleResult => ({
     tier: toTier(tier),
@@ -204,7 +298,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
     reasons,
   })
 
-  if (/(?:^|[^a-z])ultrathink/.test(text)) {
+  if (/(?:^|[^a-z])ultrathink/.test(normalize(raw))) {
     return rule(4, 'high', ['"ultrathink"'])
   }
   if (prevTier !== undefined && length <= 400) {
@@ -219,54 +313,119 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
     }
   }
 
-  const strong = found(TRIVIAL_STRONG, text)
+  const trivial = found(TRIVIAL, text)
   // A trivial phrase's own verb ("yorum ekle") is no sign of other work.
-  const rest = TRIVIAL_STRONG.reduce((left, cue) => left.replace(new RegExp(cue.pattern.source, 'g'), ' '), text)
+  const rest = TRIVIAL.reduce((left, cue) => left.replace(new RegExp(cue.pattern.source, 'g'), ' '), text)
   const hard = found(HARD, rest)
-  const work = found(WORK, rest)
-  const routine = found(ROUTINE, rest)
-  const weak = found(TRIVIAL_WEAK, text)
+  const maybeHard = found(MAYBE_HARD, rest)
+  const feature = found(FEATURE, rest)
+  const adds = found(ADD, rest)
+  const changes = found(CHANGE, rest)
+  const small = found(SMALL, rest)
+  const question = found(QUESTION, rest)
   const hasError = ERROR_OUTPUT.test(raw)
   const files = countFiles(raw)
   const items = raw.match(LIST_ITEM)?.length ?? 0
+  const parts = (rest.match(/,/g)?.length ?? 0) + (rest.match(/\s(?:ve|and|ile)\s/g)?.length ?? 0)
   const isLong = length > 1200
-  const isShort = length <= 160
+  const isShort = length <= 200
+  const isMigration = MIGRATION.test(rest)
+  const isWide = isLong || files >= 3
 
-  if (hard.length >= 3 && (isLong || files >= 3)) {
-    return rule(4, 'high', [`çok sayıda zor sinyali: ${quote(hard)}`, 'kapsamlı istek'])
+  // T4: long, many-sided work, or work that has already failed again and again.
+  const again = found(REPEATED_FAILURE, rest)
+  if (again.length > 0) {
+    return rule(4, 'high', [`tekrarlayan başarısızlık: ${quote(again)}`])
   }
-  if (hard.length >= 2) {
-    return rule(3, 'high', [`zor sinyalleri: ${quote(hard)}`])
+  if (isMigration && WHOLE.test(rest)) {
+    return rule(4, 'high', ['bütün uygulamanın taşınması'])
   }
-  if (hard.length === 1 && (hasError || isLong || files >= 3)) {
-    return rule(3, 'high', [`zor sinyali: ${quote(hard)}`, hasError ? 'hata çıktısı' : 'kapsamlı istek'])
+  const scope = found(SCOPE, rest)
+  if (scope.length > 0 && parts >= 2 && (feature.length > 0 || adds.length > 0)) {
+    return rule(4, 'high', [`kapsamlı iş: ${quote(scope)}, ${parts + 1} parça`])
   }
-  if (hard.length === 1) {
-    return rule(2, 'low', [`tek zor sinyali: ${quote(hard)}`])
+  if (parts >= 3 && feature.length >= 3 && adds.length > 0) {
+    return rule(4, 'high', [`çok parçalı özellik: ${quote(feature)}`])
   }
+  if (hard.length + maybeHard.length >= 3 && isWide) {
+    return rule(4, 'high', [`çok sayıda zor sinyali: ${quote([...hard, ...maybeHard])}`, 'kapsamlı istek'])
+  }
+
+  // T3: hard work, decisions, hunts for a cause.
+  if (hard.length > 0) {
+    return rule(3, 'high', [`zor iş: ${quote(hard)}`])
+  }
+  if (DECISION.test(rest)) {
+    return rule(3, 'high', ['seçenekler arasında karar'])
+  }
+  if (WHY.test(rest) && (HUNT.test(rest) || FAILURE.test(rest))) {
+    return rule(3, 'high', ['bir hatanın sebebini bulmak'])
+  }
+  if (isMigration) {
+    return rule(3, 'high', ['bir yapıdan diğerine geçiş'])
+  }
+  if (maybeHard.length >= 2 || (maybeHard.length === 1 && (hasError || isWide))) {
+    return rule(3, 'high', [`zor sinyalleri: ${quote(maybeHard)}`])
+  }
+  if (DESIGN.test(rest) && SYSTEM.test(rest)) {
+    return rule(3, 'high', ['bir sistem tasarlamak'])
+  }
+  if (MONEY.test(rest) && INTEGRATION.test(rest)) {
+    return rule(3, 'high', ['ödeme entegrasyonu'])
+  }
+  if (scope.length > 0 && (feature.length > 0 || adds.length > 0)) {
+    return rule(3, 'high', [`kapsamlı iş: ${quote(scope)}`])
+  }
+
+  // T2: debugging with an error in hand, and writing tests.
   if (hasError) {
     return rule(2, 'high', ['hata çıktısı'])
   }
-  if (isLong || files >= 3 || items >= 4) {
+  if (DEBUG.test(rest)) {
+    return rule(2, 'high', ['hata ayıklama'])
+  }
+  if (TEST_WRITE.test(rest)) {
+    return rule(2, 'high', ['test yazmak'])
+  }
+
+  // T0: questions about code in view, and chores.
+  if (trivial.length > 0 && (feature.length === 0 || adds.length === 0)) {
+    return rule(0, 'high', [`basit iş: ${quote(trivial)}`])
+  }
+  if (isShort && LIST.test(rest) && INFO.test(rest) && feature.length === 0) {
+    return rule(0, 'high', ['bilgi listeleme'])
+  }
+  if (isShort && question.length > 0 && adds.length === 0) {
+    return rule(0, 'high', [`soru: ${quote(question)}`])
+  }
+
+  // T2: features, conversions, wide requests.
+  if (maybeHard.length === 1) {
+    return rule(2, 'low', [`tek zor sinyali: ${quote(maybeHard)}`])
+  }
+  if (CONVERSION.test(rest)) {
+    return rule(2, 'high', ['kodu başka bir dile çevirmek'])
+  }
+  if (isWide || items >= 4) {
     return rule(2, 'high', [isLong ? 'uzun istek' : files >= 3 ? `${files} dosya` : `${items} maddelik liste`])
   }
-  if (work.length >= 2 || (work.length === 1 && length > 500)) {
-    return rule(2, 'high', [`iş sinyalleri: ${quote(work)}`])
+  if (feature.length > 0 && (small.length === 0 || feature.length >= 2) && (adds.length > 0 || changes.length === 0)) {
+    return rule(2, 'high', [`özellik: ${quote(feature)}`])
   }
-  if (work.length === 1) {
-    return rule(1, 'low', [`iş sinyali: ${quote(work)}`])
+
+  // T1: small, clearly specified changes. Sending hard work to a weak model
+  // costs more than a second opinion, so the rules are sure of T1 only when a
+  // short prompt names both the thing and the change ("rengini kırmızı yap").
+  if (small.length > 0 || changes.length > 0) {
+    const isClear = small.length > 0 && changes.length > 0 && length <= 120
+
+    return rule(1, isClear ? 'high' : 'low', [`küçük değişiklik: ${quote([...small, ...changes])}`])
   }
-  if (routine.length > 0) {
-    return rule(1, 'high', [`rutin: ${quote(routine)}`])
+  if (adds.length > 0) {
+    return rule(1, 'low', [`iş: ${quote(adds)}`])
   }
-  if (strong.length > 0) {
-    return rule(0, 'high', [`basit iş: ${quote(strong)}`])
-  }
-  if (weak.length > 0) {
-    return isShort ? rule(0, 'high', [`kısa soru: ${quote(weak)}`]) : rule(1, 'high', [`soru: ${quote(weak)}`])
-  }
-  if (isShort && (/\?\s*$/.test(raw.trim()) || QUESTION_START.test(text))) {
-    return rule(1, 'low', ['kısa soru'])
+  if (isShort && (/\?\s*$/.test(raw.trim()) || QUESTION_START.test(text) || question.length > 0)) {
+    return rule(1, 'low', ['soru'])
   }
 
   return rule(1, 'low', ['belirgin sinyal yok'])

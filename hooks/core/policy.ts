@@ -1,7 +1,7 @@
 // Turns a tier into the model and effort a request goes out with: within the
 // picker's ceiling, in the cache's interest, at the rate-limit windows' pace.
 
-import { effortRank, familyRank, shiftEffort, type Effort, type Family } from './models'
+import { effortRank, FAMILIES, FAMILY_NAMES, familyRank, shiftEffort, type Effort, type Family } from './models'
 import type { Pace } from './pacing'
 import type { Override } from './signals'
 import { tierSpec, type ProfileId, type Tier } from './tiers'
@@ -30,6 +30,8 @@ export type PolicyInput = {
   contextTokens?: number
   pace: Pace
   allowHaiku: boolean
+  // Families a request has already failed on this session.
+  unavailable?: readonly Family[]
 }
 
 // A model switch sends the whole conversation again without the prompt cache.
@@ -59,6 +61,13 @@ export function decide(input: PolicyInput): Decision {
   }
   if (override?.family !== undefined) {
     family = override.family
+  }
+  const unavailable = input.unavailable ?? []
+  if (unavailable.includes(family)) {
+    // The next family up that still answers, within the picker; else the picker's own.
+    const usable = FAMILIES.filter(other => !unavailable.includes(other) && familyRank(other) <= familyRank(ceiling.family))
+    reasons.push(`${FAMILY_NAMES[family]} kullanılamıyor`)
+    family = usable.find(other => familyRank(other) > familyRank(family)) ?? usable.at(-1) ?? ceiling.family
   }
 
   // A prompt's own +opus, +max or +derin outranks the picker; nothing else does.
