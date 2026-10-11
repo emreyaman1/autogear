@@ -86,7 +86,16 @@ Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gi
 
 Küçük bir proje üzerinde 6 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir.
 
-<!-- tasks-results -->
+| Görev | gearbox'ın seçtiği | Sonuç | Maliyet | Opus · high, gearbox'sız |
+|---|---|---|---|---|
+| 1 Yeniden adlandırma | Haiku | Geçti | $0.011 | Geçti, $0.277 |
+| 2 Kargo eşiği | Sonnet | Geçti | $0.173 | — |
+| 3 Kupon özelliği ve testleri | Sonnet | Geçti | $0.124 | Geçti, $1.387 |
+| 4 Hata mesajıyla verilen sayfalama hatası | Sonnet | Geçti | $0.072 | Geçti, $0.255 |
+| 5 İnce kuruş yuvarlama hatası | Opus | Geçti | $0.423 | — |
+| 6 İndirimin kargoya da uygulanması | Sonnet | Geçti | $0.099 | Geçti, $0.460 |
+
+İki yolla da denenen 4 görevde gearbox $0.31, hep Opus · high $2.38 harcadı: aynı başarıyla yaklaşık 8 kat ucuz, 8 kat hızlı (73 sn'ye karşı 619 sn). Maliyetler API liste fiyatıyla; abonelik kotası da kabaca bu oranda tükenir. Her görev bir kez, küçük bir projede çalıştırıldı: sonuç kesin değil, yön gösterici.
 
 ## Geliştirme
 
