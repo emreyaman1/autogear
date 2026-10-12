@@ -1,5 +1,6 @@
 # gearbox
-n[English](README.md) · **Türkçe**
+
+[English](README.md) · **Türkçe**
 
 Claude Code için otomatik vites: her mesajda modeli (Haiku, Sonnet, Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki seçicinin üstüne asla çıkmaz. Amaç limitin daha uzun sürmesi ve zor işlerin yine güçlü modelle yapılması.
 
@@ -7,7 +8,15 @@ Claude Code için otomatik vites: her mesajda modeli (Haiku, Sonnet, Opus) ve ef
 
 ## Kurulum
 
-Bu bilgisayarda, bir terminalde:
+Claude Code'da:
+
+```
+/plugin install gearbox --marketplace emreyaman1/gearbox
+```
+
+Sonra seçiciyi bir kez en güçlü modeline getir (örneğin **Opus · high**). gearbox seçicinin üstüne çıkmaz, ya ona eşit ya da altında seçer. Kurduktan sonra yeni bir sohbet aç; zaten açık olan sohbetler yeni eklentileri yüklemez.
+
+Yerel bir kopyadan kurmak için, bir terminalde:
 
 ```bash
 claude plugin marketplace add C:\gearbox
@@ -17,11 +26,7 @@ claude plugin marketplace add C:\gearbox
 claude plugin install gearbox@gearbox
 ```
 
-Kurulumdan sonra açılan her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. GitHub'a yüklendikten sonra başkaları için tek satır:
-
-```
-/plugin install gearbox --marketplace emreyaman1/gearbox
-```
+Kurulumdan sonra açılan her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır.
 
 ## Nasıl çalışır
 
@@ -30,7 +35,7 @@ Kurulumdan sonra açılan her Claude Code oturumunda (masaüstü uygulaması dah
    - **Tavan:** Seçicideki model ve efor aşılmaz.
    - **Önbellek:** Bağlam büyükse (40K+ token) bir kademelik farklar için model değiştirilmez, yalnızca efor değişir; model geçişi bütün konuşmayı önbelleksiz yeniden gönderir.
    - **Tempo:** 5 saatlik ya da haftalık limit sürdürülebilir hızın üstünde harcanıyorsa efor bir kademe iner; %90'ı geçince Opus kullanılmaz.
-3. **Uygulama** (`hooks/register.ts`): Her model isteğinden hemen önce kararı uygular. Bir turun bütün istekleri aynı modelle gider. Alt ajanlara dokunulmaz.
+3. **Uygulama** (`hooks/register.tsx`): Her model isteğinden hemen önce kararı uygular. Bir turun bütün istekleri aynı modelle gider. Alt ajanlara dokunulmaz.
 
 | Kademe | Örnek | tasarruf (Pro) |
 |---|---|---|
@@ -42,9 +47,11 @@ Kurulumdan sonra açılan her Claude Code oturumunda (masaüstü uygulaması dah
 
 `dengeli` ve `kalite` profilleri Max planları için daha cömert.
 
-## Seçici = tavan
+## Seçici = tavan, bir de aç/kapa anahtarı
 
-Sağ alttaki seçici, gearbox'ın harcayabileceği en üst sınırdır. Tam otomatik için seçiciyi bir kez **Opus · high** yap; gearbox bunun altında seçer. Seçiciyi değiştirdiğinde yeni tavanı bildirir. O an gerçekten çalışan model durum çubuğunda ve her cevabın altında görünür.
+Sağ alttaki seçici, gearbox'ın harcayabileceği en üst sınırdır. Tam otomatik için seçiciyi bir kez **Opus · high** yap; gearbox bunun altında seçer. Seçiciyi değiştirdiğinde yeni tavanı bildirir.
+
+İstem kutusunun üstündeki küçük bir satır gearbox'ın açık olup olmadığını gösterir ve yanında bir **ON / OFF anahtarı** vardır (açıkken yeşil ve topuz sağda, kapalıyken gri ve topuz solda); tıklayınca gearbox kapanır ya da açılır. gearbox kapalıyken her istek, seçici hangi model ve eforu gösteriyorsa tam olarak onunla gider. Sağ alttaki durum yazısı gearbox'ın son mesaj için seçtiği model ve eforu gösterir; her cevabın sonunda da hangi modelin, neden cevap verdiğini söyleyen bir satır bulunur.
 
 ## Kontrol
 
@@ -56,6 +63,7 @@ Sağ alttaki seçici, gearbox'ın harcayabileceği en üst sınırdır. Tam otom
 | `/gear haiku aç\|kapa` | önemsiz işler Haiku'ya gitsin mi |
 | `/gear sor aç\|kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |
 | `/gear not aç\|kapa` | cevabın altındaki satır |
+| `/gear bant aç\|kapa` | istem kutusunun üstündeki aç/kapa satırı |
 
 Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
 
@@ -116,7 +124,7 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-`eval/haiku.mjs` ve `eval/tasks.mjs` gerçek model çağrısı yapar, biraz kota harcar. Haiku cevapları `eval/.work` altında önbelleğe alınır.
+`eval/haiku.mjs` ve `eval/tasks.mjs` gerçek model çağrısı yapar, biraz kota harcar. Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test` komutu olan bir Claude Code sürümü gerekir (2.1.295 kullanıldı).
 
 ## Bir Claude Code güncellemesinden sonra
 
@@ -132,3 +140,7 @@ node eval/tasks.mjs
 - [ ] Elle düzeltmelerden öğrenme, istatistik paneli
 - [x] İngilizce README, lisans (MIT)
 - [x] GitHub'da yayın
+
+## Lisans
+
+MIT
