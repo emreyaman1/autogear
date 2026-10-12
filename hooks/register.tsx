@@ -1,6 +1,7 @@
 // gearbox: picks the model and effort of every main-thread request from the
 // prompt that started the turn, never above what the picker holds.
 
+import { atom, read, update } from 'claude-code'
 import type {
   EngineInterface,
   Register,
@@ -18,6 +19,7 @@ import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from '
 import { classify, normalize, parseOverrides, type RuleResult } from './core/signals'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { isNewerThan, TESTED_THROUGH } from './core/version'
+import type { GearboxMode } from '../types'
 
 // Prompts a person sent: the rest (task notifications, peers, plugins) carry
 // on with the last choice.
@@ -43,11 +45,12 @@ const WINDOW_NAMES: Record<string, string> = { five_hour: '5 saatlik', seven_day
 
 const HELP = [
   '/gear                   durum, son karar, limitler',
-  '/gear oto | sabitle     yönlendiriciyi aç / kapat (sabit: seçici ne diyorsa o)',
+  "/gear oto | sabitle     gearbox'ı aç / kapat (kapalıyken seçici model kullanılır)",
   '/gear profil tasarruf | dengeli | kalite',
   "/gear haiku aç | kapa   önemsiz işler Haiku'ya gitsin mi",
   "/gear sor aç | kapa     kurallar emin olamazsa Haiku'ya sorulsun mu",
   '/gear not aç | kapa     cevabın altındaki satır',
+  '/gear bant aç | kapa    istem kutusunun üstündeki aç/kapa düğmesi',
   'Mesajın başında: +haiku +sonnet +opus, +low … +max, +ucuz, +derin',
 ].join('\n')
 
@@ -72,6 +75,8 @@ type State = {
   limits: readonly SessionRateLimit[]
 }
 
+const modeAtom = atom({ plugin: 'gearbox', key: 'mode' } as const, 'auto')
+
 const kilo = (tokens: number): string => (tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}K` : String(tokens))
 
 const onOff = (value: boolean): string => (value ? 'açık' : 'kapalı')
@@ -90,11 +95,17 @@ function isRouting(state: State): boolean {
   return state.settings.mode === 'auto' && !state.isStoodDown
 }
 
+function modeOf(state: State): GearboxMode {
+  return state.isStoodDown ? 'down' : state.settings.mode
+}
+
 function showStatus($: EngineInterface, state: State): void {
   const { settings, last } = state
+  const mode = modeOf(state)
+  void update($, modeAtom, () => mode)
   $.ui.status(
-    state.isStoodDown ? '⚙ gearbox: devre dışı (seçici), /gear'
-    : settings.mode === 'pin' ? '⚙ gearbox: sabit (seçici)'
+    mode === 'down' ? '⚙ gearbox: devre dışı (seçici), /gear'
+    : mode === 'pin' ? '⚙ gearbox: kapalı (seçici model)'
     : last === undefined ? `⚙ gearbox: otomatik · ${settings.profile}`
     : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} ${tierLabel(state, last)}`,
   )
@@ -266,7 +277,7 @@ async function describe($: EngineInterface, state: State): Promise<string> {
     .join(' · ')
 
   return [
-    `gearbox ${state.isStoodDown ? 'devre dışı (seçimler uygulanmıyordu)' : settings.mode === 'auto' ? 'otomatik' : 'sabit (seçici)'} · profil ${settings.profile} · Haiku ${onOff(settings.allowHaiku)} · Haiku'ya sor ${onOff(settings.askHaiku)} · not ${onOff(settings.footer)}`,
+    `gearbox ${state.isStoodDown ? 'devre dışı (seçimler uygulanmıyordu)' : settings.mode === 'auto' ? 'açık' : 'kapalı (seçici model)'} · profil ${settings.profile} · Haiku ${onOff(settings.allowHaiku)} · Haiku'ya sor ${onOff(settings.askHaiku)} · not ${onOff(settings.footer)} · bant ${onOff(settings.band)}`,
     `Tavan (seçici): ${state.ceilingSeen ?? 'henüz istek yok'}`,
     `Limitler: ${limits === '' ? 'henüz bilinmiyor' : limits}`,
     last === undefined
@@ -302,7 +313,7 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
   await $.command.register({
     name: 'gear',
     description: 'gearbox: otomatik model ve efor seçimi',
-    argumentHint: '[oto | sabitle | profil <ad> | haiku | sor | not]',
+    argumentHint: '[oto | sabitle | profil <ad> | haiku | sor | not | bant]',
   })
   await noticeVersion($)
   if ((await $.store.get('tipShown')) !== true) {
@@ -314,6 +325,19 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
   }
 }
 
+// One switch for the band's button and for /gear: auto turns routing on (and
+// tries again after standing down), pin hands every request to the picker.
+async function switchMode($: EngineInterface, state: State, mode: 'auto' | 'pin'): Promise<void> {
+  if (mode === 'auto') {
+    state.isStoodDown = false
+    state.mismatches = 0
+    state.unavailable.clear()
+  }
+  state.settings = { ...state.settings, mode }
+  await $.store.set('settings', state.settings)
+  showStatus($, state)
+}
+
 async function runCommand($: EngineInterface, state: State, args: string): Promise<{ text: string }> {
   const [verb = '', value = ''] = normalize(args).trim().split(/\s+/)
   const changed = applyCommand(state.settings, verb, value)
@@ -323,17 +347,15 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
   if (changed === 'help') {
     return { text: HELP }
   }
-  if (changed.mode === 'auto') {
-    // Asked for by hand: try again after standing down or a failed model.
-    state.isStoodDown = false
-    state.mismatches = 0
-    state.unavailable.clear()
+  // `/gear oto` also tries again after standing down, though the mode was already auto.
+  if (changed.mode === 'auto' || changed.mode !== state.settings.mode) {
+    await switchMode($, state, changed.mode)
   }
   state.settings = changed
   await $.store.set('settings', changed)
   showStatus($, state)
 
-  return { text: `gearbox: ${changed.mode === 'auto' ? 'otomatik' : 'sabit (seçici)'} · profil ${changed.profile}` }
+  return { text: `gearbox: ${changed.mode === 'auto' ? 'açık' : 'kapalı (seçici model)'} · profil ${changed.profile}` }
 }
 
 export const register: Register = on => {
@@ -454,6 +476,31 @@ export const register: Register = on => {
     await afterTurn($, state, decision, e.usage)
 
     return state.settings.footer ? { ...result, text: footer(state, decision, e.usage) } : result
+  })
+
+  // A small row above the prompt with the on/off switch: the status text at
+  // the bottom right cannot be pressed, a Button can.
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey || !state.settings.band) {
+      return next(e)
+    }
+    const mode = await read($, modeAtom)
+    const { Box, Button, Text } = $.ui.resolve(e)
+    const note =
+      mode === 'auto' ? 'açık: işe göre model ve efor seçiyor'
+      : mode === 'pin' ? 'kapalı: seçicideki model kullanılıyor'
+      : 'devre dışı: seçimler uygulanmıyordu, seçicideki model kullanılıyor'
+
+    return (
+      <Box>
+        <Text dimColor>⚙ gearbox {note} </Text>
+        <Button
+          key="toggle"
+          label={mode === 'auto' ? 'Kapat' : mode === 'pin' ? 'Aç' : 'Yeniden dene'}
+          onPress={() => switchMode($, state, mode === 'auto' ? 'pin' : 'auto')}
+        />
+      </Box>
+    )
   })
 
   on('command.run', { command: 'gear' }, ($, e) => runCommand($, state, e.args))

@@ -1,132 +1,97 @@
 # gearbox
 
-Claude Code için otomatik vites: her mesajda modeli (Haiku, Sonnet, Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki seçicinin üstüne asla çıkmaz. Amaç limitin daha uzun sürmesi ve zor işlerin yine güçlü modelle yapılması.
+[English](README.md) · [Türkçe](README.tr.md)
 
-> Durum: 0.2.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+Automatic gear shifting for Claude Code: for every message it picks the model (Haiku, Sonnet, Opus) and the effort that the work needs, and never goes above what the model picker (bottom right) holds. The goal: your usage limits last longer, and hard work still goes to the strong model.
 
-## Kurulum
+> Status: 0.3.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
-Bu bilgisayarda, bir terminalde:
+## Install
 
-```bash
-claude plugin marketplace add C:\gearbox
-```
-
-```bash
-claude plugin install gearbox@gearbox
-```
-
-Kurulumdan sonra açılan her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. GitHub'a yüklendikten sonra başkaları için tek satır:
+In Claude Code:
 
 ```
-/plugin install gearbox --marketplace <kullanıcı>/<repo>
+/plugin install gearbox --marketplace <owner>/<repo>
 ```
 
-## Nasıl çalışır
+Then set the picker to your strongest model once (for example **Opus · high**). gearbox chooses at or below the picker, never above. Open a new chat after installing; chats that were already open do not load new plugins.
 
-1. **Sınıflandırma** (`hooks/core/signals.ts`): Mesaj T0–T4 kademelerinden birine konur. Türkçe ve İngilizce sinyaller okunur; mesajdaki kod, dosya ve değişken adları dikkate alınmaz. Fiil tek başına değil nesnesiyle değerlendirilir ("rengi değiştir" ≠ "ödeme sistemi ekle"). Kurallar emin olamazsa Haiku'ya tek kısa bir soru sorulur.
-2. **Politika** (`hooks/core/policy.ts`): Kademe, profil tablosundan model ve efora çevrilir, sonra şu sınırlardan geçer:
-   - **Tavan:** Seçicideki model ve efor aşılmaz.
-   - **Önbellek:** Bağlam büyükse (40K+ token) bir kademelik farklar için model değiştirilmez, yalnızca efor değişir; model geçişi bütün konuşmayı önbelleksiz yeniden gönderir.
-   - **Tempo:** 5 saatlik ya da haftalık limit sürdürülebilir hızın üstünde harcanıyorsa efor bir kademe iner; %90'ı geçince Opus kullanılmaz.
-3. **Uygulama** (`hooks/register.ts`): Her model isteğinden hemen önce kararı uygular. Bir turun bütün istekleri aynı modelle gider. Alt ajanlara dokunulmaz.
+## How it works
 
-| Kademe | Örnek | tasarruf (Pro) |
+1. **Classify** (`hooks/core/signals.ts`): a message becomes tier T0 to T4. Turkish and English cues are read; code, paths and identifiers inside the message are ignored; verbs are read together with their object ("change the color" is not "add a payment system"). When the rules are unsure, one short question goes to Haiku.
+2. **Decide** (`hooks/core/policy.ts`): the tier maps to a model and effort through a profile, then passes three limits:
+   - **Ceiling:** never above the picker's model and effort.
+   - **Cache:** with a large context (40K+ tokens) a one-tier difference changes only the effort, because switching models re-sends the whole conversation uncached.
+   - **Pace:** if the 5-hour or weekly window is being spent faster than an even pace, effort drops one step; above 90% Opus is not used.
+3. **Apply** (`hooks/register.tsx`): right before each model request. All requests of a turn use the same model. Subagents are left alone.
+
+| Tier | Example | `tasarruf` (Pro) |
 |---|---|---|
-| T0 önemsiz | "bu fonksiyon ne yapıyor", commit mesajı, yeniden adlandırma | Haiku · low |
-| T1 rutin | net, tek yerlik değişiklik | Sonnet · medium |
-| T2 standart | özellik, test yazma, hata çıktılı debug | Sonnet · high |
-| T3 zor | belirsiz hata, mimari, performans, güvenlik | Opus · medium |
-| T4 kritik | çok adımlı büyük iş, tekrarlayan başarısızlık | Opus · high |
+| T0 trivial | "what does this function do", commit message, rename | Haiku · low |
+| T1 routine | clear one-place change | Sonnet · medium |
+| T2 standard | feature, writing tests, debugging with an error | Sonnet · high |
+| T3 hard | unclear bug, architecture, performance, security | Opus · medium |
+| T4 critical | long multi-step work, repeated failure | Opus · high |
 
-`dengeli` ve `kalite` profilleri Max planları için daha cömert.
+Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced), `kalite` (quality) for Max plans.
 
-## Seçici = tavan
+## Picker = ceiling, plus an on/off switch
 
-Sağ alttaki seçici, gearbox'ın harcayabileceği en üst sınırdır. Tam otomatik için seçiciyi bir kez **Opus · high** yap; gearbox bunun altında seçer. Seçiciyi değiştirdiğinde yeni tavanı bildirir. O an gerçekten çalışan model durum çubuğunda ve her cevabın altında görünür.
+A small row above the prompt shows whether gearbox is on and has a **Kapat / Aç** button. When gearbox is off, every request uses exactly the model and effort the picker shows. The status text at the bottom right shows the model and effort gearbox chose for the last message; every answer also ends with a line saying which model answered and why.
 
-## Kontrol
+## Control
 
-| Komut | İş |
+| Command | Does |
 |---|---|
-| `/gear` | durum, son karar ve gerekçesi, limitler, istatistik |
-| `/gear oto` / `/gear sabitle` | yönlendiriciyi aç / kapat (sabit: seçici ne diyorsa o) |
-| `/gear profil tasarruf\|dengeli\|kalite` | kademe tablosu |
-| `/gear haiku aç\|kapa` | önemsiz işler Haiku'ya gitsin mi |
-| `/gear sor aç\|kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |
-| `/gear not aç\|kapa` | cevabın altındaki satır |
+| `/gear` | status, last decision and reason, limits, statistics |
+| `/gear oto` / `/gear sabitle` | turn gearbox on / off (off: the picker's model is used) |
+| `/gear profil tasarruf\|dengeli\|kalite` | tier table |
+| `/gear haiku aç\|kapa` | may trivial work go to Haiku |
+| `/gear sor aç\|kapa` | may the rules ask Haiku when unsure |
+| `/gear not aç\|kapa` | the line under each answer |
+| `/gear bant aç\|kapa` | the on/off row above the prompt |
 
-Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
+(`aç` = on, `kapa` = off, `oto` = auto, `sabitle` = pin.)
 
-## Güvenlik ağları
+Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). Writing `ultrathink` means T4.
 
-- **Kendini denetleme:** Her turdan sonra API'nin bildirdiği gerçek modele bakar. Seçtiği model üst üste 3 tur uygulanmazsa (bir Claude Code güncellemesi eklenti API'sini değiştirmişse) kendini kapatır ve haber verir; `/gear oto` yeniden dener.
-- **Yedek model:** Seçilen model yanıt vermezse (kimliği eskimiş, planında yok) istek seçicideki modelle yeniden gönderilir, o model o oturumda bir daha seçilmez.
-- **Kartopu freni:** Ucuz bir modelle yapılan tur, testleri ya da derlemesi kırık bitmişse bir sonraki tur bir kademe güçlü modelle yapılır. "Olmadı", "hâlâ aynı hata" gibi şikâyetler de kademeyi yükseltir; üst üste ikinci şikâyette iki kademe.
-- **Sürüm uyarısı:** Claude Code, gearbox'ın denendiği sürümden (`hooks/core/version.ts`) yeniyse bir kez haber verir.
-- **Haftalık uyumluluk testi:** GitHub'da `.github/workflows/compat.yml` her hafta en yeni Claude Code ile doğrulama ve testleri çalıştırır.
-- **Canlı duman testi:** `node scripts/smoke.mjs`, üç kısa mesajı gerçekten gönderip modelin değiştiğini API'nin cevabından doğrular (biraz kota harcar).
+## Safety nets
 
-## Ölçümler
+- **Self-check:** after every turn it compares the model the API says answered with the one it chose. If 3 turns in a row differ (a Claude Code update changed the plugin API), it switches itself off and tells you.
+- **Fallback model:** if a chosen model gives no answer (retired id, not on your plan), the request is re-sent on the picker's model and the failed one is avoided for the session.
+- **Snowball brake:** if a turn done on a cheap model ends with failing tests or build, the next turn goes one tier up. Complaints ("still broken") also raise the tier.
+- **Version notice:** one notice when Claude Code is newer than the version gearbox was tested on (`hooks/core/version.ts`).
+- **Weekly compatibility CI:** `.github/workflows/compat.yml` validates and tests against the newest Claude Code every week.
+- **Live smoke test:** `node scripts/smoke.mjs` sends three short messages and checks from the API's reply that the model really changed (spends a little usage).
 
-### Sınıflandırma (`eval/`)
+## Measurements
 
-143 etiketli mesaj üç kümede: kuralların ayarlandığı küme (66), ayardan önce ayrılan küme (43), ayarlardan sonra yazılıp bir kez ölçülen yeni küme (34). Etiketler "bu işi hangi güçte model yapmalı" sorusuna göre kondu. Son iki kümenin toplamı (77 mesaj):
+**Classifier** (`eval/`): 143 labeled messages in three sets: the one the rules were tuned on (66), one set aside before tuning (43), and one written after tuning and measured once (34). Labels follow "how strong a model should do this". On the last two sets together (77 messages):
 
-| Yöntem | Tam isabet | ±1 kademe | Ciddi hata* | Haiku'ya sorulan |
+| Method | Exact | Within 1 tier | Severe* | Asked Haiku |
 |---|---|---|---|---|
-| Sadece kurallar | %83 | %94 | 4 | %0 |
-| Sadece Haiku | %77 | %97 | 0 | %100 |
-| **Kurallar + emin değilse Haiku (gearbox)** | **%90** | **%100** | **0** | **%19** |
-| Her zaman Haiku, yüksek olan | %74 | %96 | 0 | %100 |
+| Rules only | 83% | 94% | 4 | 0% |
+| Haiku only | 77% | 97% | 0 | 100% |
+| **Rules, Haiku when unsure (gearbox)** | **90%** | **100%** | **0** | **19%** |
+| Always Haiku, take the higher | 74% | 96% | 0 | 100% |
 
-\* Zor bir işi (T3+) T0/T1'e ya da iki kademe aşağı koymak. Not: ayardan önce ayrılan kümenin hataları bir kez görüldü ve yeni kümedeki hatalar "emin değilse sor" eşiğini etkiledi; gerçek isabet bir miktar düşük olabilir.
+\* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower.
 
-### Çıktı kalitesi (`eval/tasks/`)
+**Output quality** (`eval/tasks/`): six real tasks on a small project, each checked by tests Claude never saw. With gearbox all 6 pass. Four of them also ran on Opus · high without gearbox: the same 4/4 pass, at $0.31 instead of $2.38 (list prices) and about 8x faster. One run per task on a small project, so this shows direction, not certainty.
 
-Küçük bir proje üzerinde 6 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir.
+## Development
 
-| Görev | gearbox'ın seçtiği | Sonuç | Maliyet | Opus · high, gearbox'sız |
-|---|---|---|---|---|
-| 1 Yeniden adlandırma | Haiku | Geçti | $0.011 | Geçti, $0.277 |
-| 2 Kargo eşiği | Sonnet | Geçti | $0.173 | — |
-| 3 Kupon özelliği ve testleri | Sonnet | Geçti | $0.124 | Geçti, $1.387 |
-| 4 Hata mesajıyla verilen sayfalama hatası | Sonnet | Geçti | $0.072 | Geçti, $0.255 |
-| 5 İnce kuruş yuvarlama hatası | Opus | Geçti | $0.423 | — |
-| 6 İndirimin kargoya da uygulanması | Sonnet | Geçti | $0.099 | Geçti, $0.460 |
-
-İki yolla da denenen 4 görevde gearbox $0.31, hep Opus · high $2.38 harcadı: aynı başarıyla yaklaşık 8 kat ucuz, 8 kat hızlı (73 sn'ye karşı 619 sn). Maliyetler API liste fiyatıyla; abonelik kotası da kabaca bu oranda tükenir. Her görev bir kez, küçük bir projede çalıştırıldı: sonuç kesin değil, yön gösterici.
-
-## Geliştirme
-
-```bash
+```
 claude plugin validate .
-```
-
-```bash
 claude plugin test .
-```
-
-```bash
 node eval/haiku.mjs
-```
-
-```bash
 node eval/tasks.mjs
 ```
 
-`eval/haiku.mjs` ve `eval/tasks.mjs` gerçek model çağrısı yapar, biraz kota harcar. Haiku cevapları `eval/.work` altında önbelleğe alınır.
+The last two call real models and spend usage. Requires a Claude Code build that has `plugin test` (2.1.295 was used).
 
-## Bir Claude Code güncellemesinden sonra
+After a Claude Code update: run `claude plugin test .` and `node scripts/smoke.mjs`; if both pass, raise `TESTED_THROUGH` in `hooks/core/version.ts`. When new models ship, update `MODEL_IDS` in `hooks/core/models.ts`.
 
-1. `claude plugin test .` ve `node scripts/smoke.mjs` çalıştır.
-2. İkisi de geçiyorsa `hooks/core/version.ts` içindeki `TESTED_THROUGH` değerini yeni sürüme çek.
-3. Yeni modeller çıktıysa `hooks/core/models.ts` içindeki `MODEL_IDS` tablosunu güncelle.
+## License
 
-## Yol haritası
-
-- [x] Canlı doğrulama, kendini denetleme, yedek model, kartopu freni
-- [x] Sınıflandırma ve çıktı kalitesi ölçümleri
-- [ ] Alt ajan kuralları (keşif ajanları Haiku · low)
-- [ ] Elle düzeltmelerden öğrenme, istatistik paneli
-- [ ] İngilizce README, GitHub'da yayın
+MIT

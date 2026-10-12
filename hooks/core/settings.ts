@@ -13,9 +13,11 @@ export type Settings = {
   askHaiku: boolean
   // Show the line beneath each answer?
   footer: boolean
+  // Show the on/off band above the prompt?
+  band: boolean
 }
 
-export const DEFAULTS: Settings = { mode: 'auto', profile: 'tasarruf', allowHaiku: true, askHaiku: true, footer: true }
+export const DEFAULTS: Settings = { mode: 'auto', profile: 'tasarruf', allowHaiku: true, askHaiku: true, footer: true, band: true }
 
 export type Stats = { turns: number; byFamily: Partial<Record<Family, number>>; overrides: number; escalations: number }
 
@@ -36,6 +38,7 @@ export function readSettings(stored: unknown): Settings {
     allowHaiku: flag(value.allowHaiku, DEFAULTS.allowHaiku),
     askHaiku: flag(value.askHaiku, DEFAULTS.askHaiku),
     footer: flag(value.footer, DEFAULTS.footer),
+    band: flag(value.band, DEFAULTS.band),
   }
 }
 
@@ -83,6 +86,9 @@ export function applyCommand(settings: Settings, verb: string, value: string): S
     case 'not':
     case 'footer':
       return isOn === undefined ? 'help' : { ...settings, footer: isOn }
+    case 'bant':
+    case 'band':
+      return isOn === undefined ? 'help' : { ...settings, band: isOn }
     default:
       return 'help'
   }

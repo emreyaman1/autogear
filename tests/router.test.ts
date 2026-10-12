@@ -144,3 +144,25 @@ test('a turn that ends with failing tests hands the next one a stronger model', 
   await step($, 't2')
   expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'medium' })
 })
+
+test('the band switches gearbox off and on, and off means the picker model', async ($, on) => {
+  const { sent } = world(on)
+  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  for (const surface of ['terminal', 'desktop'] as const) {
+    sent.length = 0
+    await $.command.run({ command: 'gear', args: 'oto' })
+    const ui = await $.ui.mount({ ...BAND, surface })
+    expect(await ui.find({ type: 'Text', text: /açık/ })).toBeDefined()
+    await ui.press({ key: 'toggle' })
+    expect(await ui.find({ type: 'Text', text: /kapalı/ })).toBeDefined()
+    await say($, 'bu fonksiyon ne yapıyor?')
+    await step($, `off-${surface}`, 0, 'claude-opus-5-5', 'max')
+    expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })
+    await ui.press({ key: 'toggle' })
+    expect(await ui.find({ type: 'Text', text: /açık/ })).toBeDefined()
+    await say($, 'bu fonksiyon ne yapıyor?')
+    await step($, `on-${surface}`, 0, 'claude-opus-5-5', 'max')
+    expect(sent[1]?.model).toBe('claude-haiku-5-5')
+    await ui.unmount()
+  }
+})
