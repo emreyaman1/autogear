@@ -11,7 +11,7 @@ Automatic gear shifting for Claude Code: for every message it picks the model (H
 In Claude Code:
 
 ```
-/plugin install gearbox --marketplace <owner>/<repo>
+/plugin install gearbox --marketplace emreyaman1/gearbox
 ```
 
 Then set the picker to your strongest model once (for example **Opus · high**). gearbox chooses at or below the picker, never above. Open a new chat after installing; chats that were already open do not load new plugins.

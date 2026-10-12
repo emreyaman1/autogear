@@ -20,7 +20,7 @@ claude plugin install gearbox@gearbox
 Kurulumdan sonra açılan her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. GitHub'a yüklendikten sonra başkaları için tek satır:
 
 ```
-/plugin install gearbox --marketplace <kullanıcı>/<repo>
+/plugin install gearbox --marketplace emreyaman1/gearbox
 ```
 
 ## Nasıl çalışır
@@ -131,4 +131,4 @@ node eval/tasks.mjs
 - [ ] Alt ajan kuralları (keşif ajanları Haiku · low)
 - [ ] Elle düzeltmelerden öğrenme, istatistik paneli
 - [x] İngilizce README, lisans (MIT)
-- [ ] GitHub'da yayın
+- [x] GitHub'da yayın
