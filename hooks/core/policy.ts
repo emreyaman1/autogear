@@ -16,6 +16,8 @@ export type Decision = {
   source: string
   reasons: string[]
   isClamped: boolean
+  // The picker's model when the choice was made: what the turn would have cost without gearbox.
+  ceilingModel?: string
 }
 
 export type PolicyInput = {

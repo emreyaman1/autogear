@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites: her mesajda modeli (Haiku, Sonnet, Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki seçicinin üstüne asla çıkmaz. Amaç limitin daha uzun sürmesi ve zor işlerin yine güçlü modelle yapılması.
 
-> Durum: 0.3.2. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.4.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Kurulum
 
@@ -64,8 +64,16 @@ Sağ alttaki seçici, gearbox'ın harcayabileceği en üst sınırdır. Tam otom
 | `/gear sor aç\|kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |
 | `/gear not aç\|kapa` | cevabın altındaki satır |
 | `/gear bant aç\|kapa` | istem kutusunun üstündeki aç/kapa satırı |
+| `/gear tasarruf` | bir kart: oturum ve toplam tasarruf, model payı, modele göre döküm tablosu, limitler |
+| `/gear sifirla` | tasarruf sayacını sıfırla |
 
 Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
+
+## Tasarruf
+
+Her turdan sonra gearbox cevabı veren modelin gerçek token sayısını API liste fiyatıyla çarpar ve aynı tokenların seçicideki modelde ne tutacağıyla karşılaştırır. Cevabın altındaki satırda turun tutarı görünür (`$0,04 (seçici modeliyle $0,18)`), sağ alttaki durum yazısında oturumun toplam tasarrufu, `/gear tasarruf` komutunda ise konuşmanın içine bir kart çizilir: oturum ve toplam tasarruf çubukları, her modelin payı, modele göre tablo (token, önbellek isabeti, harcama, seçici modeliyle harcama, tasarruf) ve limit pencereleri. Kartın çizilemediği yerde aynı rakamlar markdown tablo olarak gelir.
+
+Bu bir **tahmindir**: fiyatlar `hooks/core/prices.ts` içindeki liste fiyatlarıdır; abonelikte para ödemezsin, kota ise kabaca bu oranda tükenir. Model değiştiren turda yeniden yazılan önbellek, seçici modelinde sıcak kalacağı varsayımıyla okuma fiyatından sayılır, yani geçişin maliyeti gearbox'ın aleyhine yazılır. Düşük efor daha az token üretir; bu fark hesaba katılmadığı için tasarruf biraz düşük çıkabilir. gearbox'ın kendi Haiku sorularının maliyeti tasarruftan düşülür, alt ajanlar sayılmaz.
 
 ## Güvenlik ağları
 

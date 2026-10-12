@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code: for every message it picks the model (Haiku, Sonnet, Opus) and the effort that the work needs, and never goes above what the model picker (bottom right) holds. The goal: your usage limits last longer, and hard work still goes to the strong model.
 
-> Status: 0.3.2. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.4.1. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## Install
 
@@ -50,10 +50,18 @@ A small row above the prompt shows whether gearbox is on and has an **ON / OFF s
 | `/gear sor aç\|kapa` | may the rules ask Haiku when unsure |
 | `/gear not aç\|kapa` | the line under each answer |
 | `/gear bant aç\|kapa` | the on/off row above the prompt |
+| `/gear tasarruf` | a card: saving this session and in total, model share, a per-model table, rate limits |
+| `/gear sifirla` | reset the saving counter |
 
 (`aç` = on, `kapa` = off, `oto` = auto, `sabitle` = pin.)
 
 Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). Writing `ultrathink` means T4.
+
+## Savings
+
+After every turn gearbox prices the answering model's real token counts at API list prices and compares them with the same tokens on the picker's model. The line under each answer shows the turn's cost (`$0,04 (seçici modeliyle $0,18)`, i.e. "$0.18 on the picker's model"), the bottom-right status shows the session's total saving, and `/gear tasarruf` draws a card in the transcript: bars for the saving this session and in total, the share of each model, a table per model (tokens, cache hit rate, spend, spend on the picker's model, saving) and the rate-limit windows. Where a surface cannot draw it, the same figures come as a markdown table.
+
+It is an **estimate**: prices are the list prices in `hooks/core/prices.ts`; on a subscription you pay no dollars, but the quota drains at roughly that ratio. A turn that switched model prices its rewritten cache as warm reads on the picker's model, so the cost of switching counts against gearbox. Lower effort emits fewer tokens, which is not credited, so the saving can read a little low. gearbox's own Haiku questions are subtracted; subagents are not counted.
 
 ## Safety nets
 

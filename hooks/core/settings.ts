@@ -1,6 +1,7 @@
 // The router's settings, kept in the plugin's store and changed with /gear.
 
-import { FAMILIES, type Family } from './models'
+import { FAMILIES } from './models'
+import { emptyTotals, type Bucket, type Totals } from './savings'
 import { PROFILE_IDS, type ProfileId } from './tiers'
 
 export type Settings = {
@@ -19,7 +20,9 @@ export type Settings = {
 
 export const DEFAULTS: Settings = { mode: 'auto', profile: 'tasarruf', allowHaiku: true, askHaiku: true, footer: true, band: true }
 
-export type Stats = { turns: number; byFamily: Partial<Record<Family, number>>; overrides: number; escalations: number }
+// What is kept for good: the turn and dollar totals, how often the prompt
+// chose the model, and when counting began.
+export type Stats = Totals & { overrides: number; escalations: number; since: number }
 
 type Loose<T> = Partial<Record<keyof T, unknown>>
 
@@ -42,15 +45,37 @@ export function readSettings(stored: unknown): Settings {
   }
 }
 
+// The totals as stored. Before the dollar counts there were only the turns of
+// each family (`byFamily`): those carry over.
+function readTotals(value: Loose<Stats> & { byFamily?: unknown }): Totals {
+  const totals = emptyTotals()
+  const stored = asRecord<Totals['families']>(value.families)
+  const turns = asRecord<Totals['families']>(value.byFamily)
+  for (const family of FAMILIES) {
+    const bucket = asRecord<Bucket>(stored[family])
+    totals.families[family] = {
+      turns: stored[family] === undefined ? count(turns[family]) : count(bucket.turns),
+      spent: count(bucket.spent),
+      baseline: count(bucket.baseline),
+      input: count(bucket.input),
+      output: count(bucket.output),
+      cacheRead: count(bucket.cacheRead),
+      cacheWrite: count(bucket.cacheWrite),
+    }
+  }
+  totals.overhead = count(value.overhead)
+
+  return totals
+}
+
 export function readStats(stored: unknown): Stats {
   const value = asRecord<Stats>(stored)
-  const byFamily = asRecord<Record<Family, number>>(value.byFamily)
 
   return {
-    turns: count(value.turns),
-    byFamily: Object.fromEntries(FAMILIES.map(family => [family, count(byFamily[family])])),
+    ...readTotals(value),
     overrides: count(value.overrides),
     escalations: count(value.escalations),
+    since: count(value.since),
   }
 }
 
@@ -58,13 +83,20 @@ const ON = new Set(['ac', 'acik', 'on', 'evet', '1'])
 const OFF = new Set(['kapa', 'kapat', 'kapali', 'off', 'hayir', '0'])
 
 // What `/gear <verb> <value>` asks for: new settings, the status, or the help.
-export function applyCommand(settings: Settings, verb: string, value: string): Settings | 'status' | 'help' {
+export function applyCommand(settings: Settings, verb: string, value: string): Settings | 'status' | 'savings' | 'reset' | 'help' {
   const isOn = ON.has(value) ? true : OFF.has(value) ? false : undefined
   switch (verb) {
     case '':
     case 'durum':
     case 'status':
       return 'status'
+    case 'tasarruf':
+    case 'savings':
+    case 'kar':
+      return 'savings'
+    case 'sifirla':
+    case 'reset':
+      return 'reset'
     case 'oto':
     case 'auto':
       return { ...settings, mode: 'auto' }

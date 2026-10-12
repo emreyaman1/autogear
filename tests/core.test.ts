@@ -2,7 +2,9 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { pace } from '../hooks/core/pacing'
 import { decide } from '../hooks/core/policy'
-import { applyCommand, DEFAULTS } from '../hooks/core/settings'
+import { costOf, readTokens, turnMoney, usd } from '../hooks/core/prices'
+import { addTurn, emptyTotals, savedOf, savingsText, sharesOf, splitCells, sumOf } from '../hooks/core/savings'
+import { applyCommand, DEFAULTS, readStats } from '../hooks/core/settings'
 import { classify, parseOverrides } from '../hooks/core/signals'
 import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from '../hooks/core/switch'
 import { isNewerThan } from '../hooks/core/version'
@@ -168,5 +170,97 @@ describe('switchSvg', () => {
       expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${SWITCH_WIDTH}" height="${SWITCH_HEIGHT}"`)
       expect(svg).toEndWith('</svg>')
     }
+  })
+})
+
+// Dollar sums compared to a millionth: float addition leaves dust past that.
+const near = (value: number): number => Math.round(value * 1e6) / 1e6
+
+describe('prices', () => {
+  const tokens = { input_tokens: 1_000_000, output_tokens: 1_000_000, cache_read_input_tokens: 1_000_000, cache_creation_input_tokens: 1_000_000 }
+
+  test('a family costs its list price per token kind', () => {
+    expect(near(costOf('sonnet', tokens))).toBe(near(2 + 10 + 0.2 + 2.5))
+    expect(near(costOf('opus', tokens))).toBe(near(4 + 20 + 0.2 + 5))
+  })
+
+  test('a Haiku prompt past 100K tokens costs five times as much', () => {
+    expect(near(costOf('haiku', { ...tokens, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }))).toBe(near(5 * (0.1 + 0.5) * 1))
+    expect(near(costOf('haiku', { ...tokens, input_tokens: 1000, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }))).toBe(near(0.0001))
+  })
+
+  test('a turn that switched model prices its cache writes as reads on the picker model', () => {
+    const written = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 100_000 }
+    expect(near(turnMoney('haiku', 'opus', written, false).baseline)).toBe(near(0.5))
+    expect(near(turnMoney('haiku', 'opus', written, true).baseline)).toBe(near(0.02))
+  })
+
+  test('money reads in dollars with more places for small sums', () => {
+    expect(usd(1.234)).toBe('$1,23')
+    expect(usd(0.0314)).toBe('$0,031')
+    expect(usd(0.00096)).toBe('$0,0010')
+    expect(usd(-0.5)).toBe('-$0,50')
+    expect(usd(-0.00001)).toBe('$0,0000')
+  })
+
+  test('bad numbers in usage count as zero', () => {
+    expect(readTokens({ input_tokens: NaN, output_tokens: '5', cache_read_input_tokens: 7 }).output_tokens).toBe(0)
+    expect(readTokens({ cache_read_input_tokens: 7 }).cache_read_input_tokens).toBe(7)
+  })
+})
+
+describe('savings', () => {
+  const tokens = { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 90, cache_creation_input_tokens: 0 }
+
+  test('a report adds up what was spent against the picker, per model', () => {
+    const all = emptyTotals()
+    addTurn(all, 'haiku', { spent: 0.001, baseline: 0.032 }, tokens)
+    addTurn(all, 'opus', { spent: 0.02, baseline: 0.02 }, tokens)
+    all.overhead = 0.0005
+    expect(near(savedOf(all))).toBe(near(0.0305))
+    expect(sumOf(all).turns).toBe(2)
+    const report = savingsText(emptyTotals(), all, Date.parse('2026-10-12T12:00:00Z'))
+    expect(report).toContain('| Tur | 0 | 2 |')
+    expect(report).toContain('| Seçici modeliyle | – | $0,052 |')
+    expect(report).toContain('| Haiku | 1 (%50) | $0,0010 | $0,032 | $0,031 |')
+    expect(report).toContain('Önbellek isabeti %90')
+    expect(report).toContain('$0,0005')
+  })
+
+  test('an empty report says so', () => {
+    expect(savingsText(emptyTotals(), emptyTotals(), undefined)).toContain('Henüz kayıtlı tur yok')
+  })
+
+  test('the families that ran share the turns', () => {
+    const all = emptyTotals()
+    addTurn(all, 'haiku', { spent: 0, baseline: 0 }, tokens)
+    addTurn(all, 'haiku', { spent: 0, baseline: 0 }, tokens)
+    addTurn(all, 'opus', { spent: 0, baseline: 0 }, tokens)
+    expect(sharesOf(all).map(share => [share.family, share.turns])).toEqual([['haiku', 2], ['opus', 1]])
+  })
+
+  test('a bar is split by weight, every family that ran keeping a cell', () => {
+    expect(splitCells([0.5, 0.3, 0.2], 10)).toEqual([5, 3, 2])
+    expect(splitCells([0.97, 0.03], 20).reduce((a, b) => a + b, 0)).toBe(20)
+    expect(splitCells([0.99, 0.01], 20)[1]).toBe(1)
+    expect(splitCells([1, 0], 8)).toEqual([8, 0])
+    expect(splitCells([0, 0], 8)).toEqual([0, 0])
+    expect(splitCells([3, 2, 1], 2)).toEqual([1, 1, 0])
+  })
+
+  test('stored turn counts from before the dollar counts carry over', () => {
+    const stats = readStats({ turns: 35, byFamily: { haiku: 18, sonnet: 10, opus: 7 }, overrides: 2, escalations: 1 })
+    expect(stats.families.haiku.turns).toBe(18)
+    expect(sumOf(stats).turns).toBe(35)
+    expect(stats.overrides).toBe(2)
+    expect(sumOf(readStats(undefined)).turns).toBe(0)
+    const kept = readStats({ families: { opus: { turns: 3, spent: 1.5, baseline: 2 } }, byFamily: { opus: 99 }, overhead: 0.1 })
+    expect(kept.families.opus).toMatchObject({ turns: 3, spent: 1.5, baseline: 2, input: 0 })
+    expect(kept.overhead).toBe(0.1)
+  })
+
+  test('/gear tasarruf and sifirla are read', () => {
+    expect(applyCommand(DEFAULTS, 'tasarruf', '')).toBe('savings')
+    expect(applyCommand(DEFAULTS, 'sifirla', '')).toBe('reset')
   })
 })

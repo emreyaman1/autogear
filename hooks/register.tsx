@@ -11,10 +11,13 @@ import type {
   TurnUsage,
 } from 'claude-code'
 
+import { savingsCard, type LimitRow } from './card'
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
 import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort, type Family } from './core/models'
 import { pace } from './core/pacing'
 import { decide, type Decision } from './core/policy'
+import { costOf, readTokens, turnMoney, usd } from './core/prices'
+import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from './core/savings'
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { classify, normalize, parseOverrides, type RuleResult } from './core/signals'
 import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from './core/switch'
@@ -44,19 +47,26 @@ const SOURCE_NAMES: Record<string, string> = {
 
 const WINDOW_NAMES: Record<string, string> = { five_hour: '5 saatlik', seven_day: 'haftalık' }
 
+const LIMIT_TITLES: Record<string, string> = { five_hour: 'Oturum sınırı · 5 saat', seven_day: 'Haftalık sınır' }
+
 // A desktop Button draws its label and nothing else: three em spaces make one
 // that is blank and wider than the switch it is laid over.
 const BLANK_LABEL = '\u2003'.repeat(3)
 
 const HELP = [
-  '/gear                   durum, son karar, limitler',
-  "/gear oto | sabitle     gearbox'ı aç / kapat (kapalıyken seçici model kullanılır)",
-  '/gear profil tasarruf | dengeli | kalite',
-  "/gear haiku aç | kapa   önemsiz işler Haiku'ya gitsin mi",
-  "/gear sor aç | kapa     kurallar emin olamazsa Haiku'ya sorulsun mu",
-  '/gear not aç | kapa     cevabın altındaki satır',
-  '/gear bant aç | kapa    istem kutusunun üstündeki aç/kapa düğmesi',
-  'Mesajın başında: +haiku +sonnet +opus, +low … +max, +ucuz, +derin',
+  '| Komut | İş |',
+  '|:--|:--|',
+  '| `/gear` | durum, son karar, limitler |',
+  '| `/gear tasarruf` | harcama, seçici modeliyle olacak harcama, tasarruf |',
+  '| `/gear sifirla` | tasarruf sayacını sıfırla |',
+  "| `/gear oto` · `/gear sabitle` | gearbox'ı aç · kapat (kapalıyken seçici model kullanılır) |",
+  '| `/gear profil <ad>` | tasarruf, dengeli ya da kalite |',
+  "| `/gear haiku aç` · `kapa` | önemsiz işler Haiku'ya gitsin mi |",
+  "| `/gear sor aç` · `kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |",
+  '| `/gear not aç` · `kapa` | cevabın altındaki satır |',
+  '| `/gear bant aç` · `kapa` | istem kutusunun üstündeki aç/kapa düğmesi |',
+  '',
+  'Mesajın başına yazılan etiketler: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz`, `+derin`.',
 ].join('\n')
 
 // What the router remembers within one load of the module.
@@ -78,6 +88,11 @@ type State = {
   // ...and the turn ended that way, so the next one gets a stronger model.
   carryFailure: boolean
   limits: readonly SessionRateLimit[]
+  // This session's money, and the family that answered the turn before.
+  session: Totals
+  lastAnswered: Family | undefined
+  // What gearbox's own questions to Haiku cost since the last turn ended.
+  overhead: number
 }
 
 const modeAtom = atom({ plugin: 'gearbox', key: 'mode' } as const, 'auto')
@@ -104,6 +119,13 @@ function modeOf(state: State): GearboxMode {
   return state.isStoodDown ? 'down' : state.settings.mode
 }
 
+// " · $1.42 tasarruf" once this session has saved a cent.
+function savedNote(state: State): string {
+  const saved = savedOf(state.session)
+
+  return saved >= 0.01 ? ` · ${usd(saved)} tasarruf` : ''
+}
+
 function showStatus($: EngineInterface, state: State): void {
   const { settings, last } = state
   const mode = modeOf(state)
@@ -112,7 +134,7 @@ function showStatus($: EngineInterface, state: State): void {
     mode === 'down' ? '⚙ gearbox: devre dışı (seçici), /gear'
     : mode === 'pin' ? '⚙ gearbox: kapalı (seçici model)'
     : last === undefined ? `⚙ gearbox: otomatik · ${settings.profile}`
-    : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} ${tierLabel(state, last)}`,
+    : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} ${tierLabel(state, last)}${savedNote(state)}`,
   )
 }
 
@@ -146,7 +168,7 @@ async function readUsage($: EngineInterface) {
   }
 }
 
-async function askHaiku($: EngineInterface, text: string, previous: Tier | undefined): Promise<Tier | undefined> {
+async function askHaiku($: EngineInterface, text: string, previous: Tier | undefined): Promise<{ tier: Tier | undefined; cost: number }> {
   try {
     const reply = await $.model.complete({
       model: 'haiku',
@@ -157,9 +179,9 @@ async function askHaiku($: EngineInterface, text: string, previous: Tier | undef
       timeoutMs: 6000,
     })
 
-    return reply.isAnswered ? parseTier(reply.text) : undefined
+    return { tier: reply.isAnswered ? parseTier(reply.text) : undefined, cost: costOf('haiku', readTokens(reply.usage ?? {})) }
   } catch {
-    return undefined
+    return { tier: undefined, cost: 0 }
   }
 }
 
@@ -194,17 +216,18 @@ async function decideTurn(
     }
     const kept = decide({ ...common, tier: state.last.tier, source: 'inherit', reasons: ['kullanıcı mesajı yok: son seçim'] })
 
-    return remember($, state, e.turnId, kept)
+    return remember($, state, e.turnId, { ...kept, ceilingModel: e.model })
   }
 
   let { tier, reasons } = taken.rule
   let source: string = taken.rule.source
   if (taken.rule.confidence === 'low' && state.settings.askHaiku && currentPace.level !== 'critical') {
     const asked = await askHaiku($, taken.text, state.last?.tier)
-    if (asked !== undefined) {
-      tier = asked
+    state.overhead += asked.cost
+    if (asked.tier !== undefined) {
+      tier = asked.tier
       source = 'haiku'
-      reasons = [...reasons, `Haiku: T${asked}`]
+      reasons = [...reasons, `Haiku: T${asked.tier}`]
     }
   }
   // A step that ended with failing tests is not built on by a weaker model.
@@ -214,7 +237,7 @@ async function decideTurn(
   }
   state.carryFailure = false
 
-  return remember($, state, e.turnId, decide({ ...common, tier, source, reasons, override: taken.rule.override }))
+  return remember($, state, e.turnId, { ...decide({ ...common, tier, source, reasons, override: taken.rule.override }), ceilingModel: e.model })
 }
 
 // The routed request got no answer at all (a retired model id, a model the
@@ -232,7 +255,9 @@ function noteUnavailable($: EngineInterface, state: State, e: Pick<TurnStepInput
   $.ui.toast(`gearbox: ${MODEL_IDS[decision.family]} yanıt vermedi; bu oturumda kullanmıyorum, seçicideki model devam ediyor.`, { timeoutMs: 10000 })
 }
 
-function footer(state: State, decision: Decision, usage: TurnUsage | undefined): string {
+type TurnMoney = { spent: number; baseline: number }
+
+function footer(state: State, decision: Decision, usage: TurnUsage | undefined, money: TurnMoney | undefined): string {
   const model = usage === undefined ? FAMILY_NAMES[decision.family] : displayModel(usage.model)
   const why = decision.reasons.slice(0, 2).join('; ')
   const cache =
@@ -240,11 +265,12 @@ function footer(state: State, decision: Decision, usage: TurnUsage | undefined):
       ? ''
       : ` · önbellek ${kilo(usage.cache_read_input_tokens)} okundu / ${kilo(usage.cache_creation_input_tokens)} yazıldı`
   const source = SOURCE_NAMES[decision.source] ?? decision.source
+  const cost = money === undefined ? '' : ` · ${usd(money.spent)} (seçici modeliyle ${usd(money.baseline)})`
 
-  return `⚙ ${model} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} (${source}: ${why})${cache}`
+  return `⚙ ${model} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} (${source}: ${why})${cache}${cost}`
 }
 
-async function afterTurn($: EngineInterface, state: State, decision: Decision, usage: TurnUsage | undefined): Promise<void> {
+async function afterTurn($: EngineInterface, state: State, decision: Decision, usage: TurnUsage | undefined): Promise<TurnMoney | undefined> {
   // The API names the model that answered: if it is not the chosen one, turn
   // after turn, the plugin API has changed under gearbox and it stands down.
   const answered = familyOf(usage?.model)
@@ -261,39 +287,69 @@ async function afterTurn($: EngineInterface, state: State, decision: Decision, u
   }
   state.carryFailure = state.lastCheckFailed && decision.tier < 4
   state.lastCheckFailed = false
+
+  // The turn's tokens at the answering model's price and at the picker's.
+  const tokens = usage === undefined ? undefined : readTokens(usage)
+  const family = answered ?? decision.family
+  const money =
+    tokens === undefined
+      ? undefined
+      : turnMoney(family, familyOf(decision.ceilingModel) ?? family, tokens, state.lastAnswered !== undefined && state.lastAnswered !== family)
+  state.lastAnswered = answered ?? state.lastAnswered
+  const overhead = state.overhead
+  state.overhead = 0
+  if (money !== undefined && tokens !== undefined) {
+    addTurn(state.session, family, money, tokens)
+  } else {
+    state.session.families[decision.family].turns += 1
+  }
+  state.session.overhead += overhead
+  showStatus($, state)
   try {
     const stats = readStats(await $.store.get('stats'))
-    stats.turns += 1
-    stats.byFamily[decision.family] = (stats.byFamily[decision.family] ?? 0) + 1
+    if (money !== undefined && tokens !== undefined) {
+      addTurn(stats, family, money, tokens)
+    } else {
+      stats.families[decision.family].turns += 1
+    }
+    stats.overhead += overhead
+    stats.since = stats.since === 0 ? await $.clock.now() : stats.since
     stats.overrides += decision.source === 'override' ? 1 : 0
     stats.escalations += decision.source === 'escalate' ? 1 : 0
     await $.store.set('stats', stats)
   } catch {
     // Statistics are a nicety: a store that refuses them changes no answer.
   }
+
+  return money
 }
 
 async function describe($: EngineInterface, state: State): Promise<string> {
   const { settings, last } = state
   const stats = readStats(await $.store.get('stats'))
-  const perFamily = FAMILIES.map(family => `${FAMILY_NAMES[family]} ${stats.byFamily[family] ?? 0}`).join(', ')
+  const perFamily = FAMILIES.map(family => `${FAMILY_NAMES[family]} ${stats.families[family].turns}`).join(', ')
   const limits = state.limits
     .map(limit => `${WINDOW_NAMES[limit.kind] ?? limit.kind} %${Math.round(limit.percentUsed)}${limit.resetsAt === undefined ? '' : ` (sıfırlanma ${clock(limit.resetsAt)})`}`)
     .join(' · ')
+  const mode = state.isStoodDown ? 'devre dışı (seçimler uygulanmıyordu)' : settings.mode === 'auto' ? 'açık' : 'kapalı (seçici model)'
+  const total = sumOf(stats)
 
   return [
-    `gearbox ${state.isStoodDown ? 'devre dışı (seçimler uygulanmıyordu)' : settings.mode === 'auto' ? 'açık' : 'kapalı (seçici model)'} · profil ${settings.profile} · Haiku ${onOff(settings.allowHaiku)} · Haiku'ya sor ${onOff(settings.askHaiku)} · not ${onOff(settings.footer)} · bant ${onOff(settings.band)}`,
-    `Tavan (seçici): ${state.ceilingSeen ?? 'henüz istek yok'}`,
-    `Limitler: ${limits === '' ? 'henüz bilinmiyor' : limits}`,
+    `**gearbox ${mode}** · profil ${settings.profile}`,
+    '',
+    `- **Tavan (seçici):** ${state.ceilingSeen ?? 'henüz istek yok'}`,
+    `- **Limitler:** ${limits === '' ? 'henüz bilinmiyor' : limits}`,
     last === undefined
-      ? 'Son karar: yok'
-      : `Son karar: ${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)} (${SOURCE_NAMES[last.source] ?? last.source}: ${last.reasons.join('; ')})`,
-    state.unavailable.size === 0 ? '' : `Bu oturumda yanıt vermeyen: ${[...state.unavailable].map(family => MODEL_IDS[family]).join(', ')}`,
-    `Toplam ${stats.turns} tur: ${perFamily} · elle ${stats.overrides} · yükseltme ${stats.escalations}`,
+      ? '- **Son karar:** yok'
+      : `- **Son karar:** ${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)} (${SOURCE_NAMES[last.source] ?? last.source}: ${last.reasons.join('; ')})`,
+    state.unavailable.size === 0 ? undefined : `- **Bu oturumda yanıt vermeyen:** ${[...state.unavailable].map(family => MODEL_IDS[family]).join(', ')}`,
+    `- **Toplam:** ${total.turns} tur (${perFamily}) · elle ${stats.overrides} · yükseltme ${stats.escalations}`,
+    total.baseline === 0 ? undefined : `- **Tasarruf (tahmin):** ${usd(savedOf(stats))} · ayrıntı için \`/gear tasarruf\``,
+    `- **Ayarlar:** Haiku ${onOff(settings.allowHaiku)} · Haiku'ya sor ${onOff(settings.askHaiku)} · not ${onOff(settings.footer)} · bant ${onOff(settings.band)}`,
     '',
     HELP,
   ]
-    .filter((line, index, lines) => line !== '' || lines[index - 1] !== '')
+    .filter(line => line !== undefined)
     .join('\n')
 }
 
@@ -318,7 +374,7 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
   await $.command.register({
     name: 'gear',
     description: 'gearbox: otomatik model ve efor seçimi',
-    argumentHint: '[oto | sabitle | profil <ad> | haiku | sor | not | bant]',
+    argumentHint: '[oto | sabitle | profil <ad> | haiku | sor | not | bant | tasarruf | sifirla]',
   })
   await noticeVersion($)
   if ((await $.store.get('tipShown')) !== true) {
@@ -352,6 +408,18 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
   if (changed === 'help') {
     return { text: HELP }
   }
+  if (changed === 'savings') {
+    const stats = readStats(await $.store.get('stats'))
+
+    return { text: savingsText(state.session, stats, stats.since) }
+  }
+  if (changed === 'reset') {
+    await $.store.set('stats', readStats(undefined))
+    state.session = emptyTotals()
+    showStatus($, state)
+
+    return { text: 'gearbox: tasarruf ve tur sayacı sıfırlandı.' }
+  }
   // `/gear oto` also tries again after standing down, though the mode was already auto.
   if (changed.mode === 'auto' || changed.mode !== state.settings.mode) {
     await switchMode($, state, changed.mode)
@@ -377,6 +445,9 @@ export const register: Register = on => {
     lastCheckFailed: false,
     carryFailure: false,
     limits: [],
+    session: emptyTotals(),
+    lastAnswered: undefined,
+    overhead: 0,
   }
 
   on('session.start', async ($, e, next) => {
@@ -478,9 +549,9 @@ export const register: Register = on => {
     if (decision === undefined) {
       return result
     }
-    await afterTurn($, state, decision, e.usage)
+    const money = await afterTurn($, state, decision, e.usage)
 
-    return state.settings.footer ? { ...result, text: footer(state, decision, e.usage) } : result
+    return state.settings.footer ? { ...result, text: footer(state, decision, e.usage, money) } : result
   })
 
   // A small row above the prompt with the on/off switch: the status text at
@@ -529,6 +600,23 @@ export const register: Register = on => {
         </Box>
       </Box>
     )
+  })
+
+  // `/gear tasarruf` is drawn as a card; its text stays what the model reads.
+  on('ui.render', { component: 'CommandOutput', props: { command: 'gear' } }, async ($, e, next) => {
+    const [verb = '', value = ''] = normalize(e.props.args).trim().split(/\s+/)
+    if (e.props.isErrored || applyCommand(state.settings, verb, value) !== 'savings') {
+      return next(e)
+    }
+    const { Box, Text } = $.ui.resolve(e)
+    const stats = readStats(await $.store.get('stats'))
+    const limits: LimitRow[] = state.limits.map(limit => ({
+      name: LIMIT_TITLES[limit.kind] ?? limit.kind,
+      percentUsed: limit.percentUsed,
+      resetsAt: limit.resetsAt === undefined ? '' : `sıfırlanma ${clock(limit.resetsAt)}`,
+    }))
+
+    return savingsCard({ Box, Text }, { session: state.session, all: stats, since: stats.since, limits, columns: e.viewport?.columns ?? 80 })
   })
 
   on('command.run', { command: 'gear' }, ($, e) => runCommand($, state, e.args))

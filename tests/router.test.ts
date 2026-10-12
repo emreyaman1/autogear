@@ -193,3 +193,85 @@ test('the switch is an Svg under a blank Button on the desktop and colored Text 
   expect(await terminal.find({ type: 'Text', text: /ON/ })).toBeDefined()
   await terminal.unmount()
 })
+
+test('a turn answered by Haiku shows its cost and the saving against the picker, and /gear tasarruf adds it up', async ($, on) => {
+  world(on)
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't1')
+  const usage = { model: 'claude-haiku-5-5', input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 40_000, cache_creation_input_tokens: 2000 }
+  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage })
+  // Haiku: $0.0001 + $0.00025 + $0.0004 + $0.00025; Opus: $0.004 + $0.01 + $0.008 + $0.01.
+  expect(done.text).toContain('$0,0010')
+  expect(done.text).toContain('seçici modeliyle $0,032')
+  const report = await $.command.run({ command: 'gear', args: 'tasarruf' })
+  expect(JSON.stringify(report)).toContain('| Tasarruf | **$0,031** (%97) |')
+  await $.command.run({ command: 'gear', args: 'sifirla' })
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'tasarruf' }))).toContain('Henüz kayıtlı tur yok')
+})
+
+test('a turn that switched model counts its rewritten cache against gearbox', async ($, on) => {
+  world(on)
+  const turn = async (id: string, model: string, text: string) => {
+    await say($, text)
+    await step($, id)
+    const usage = { model, input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 100_000 }
+
+    return $.turn.complete({ turnId: id, answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage })
+  }
+  await turn('t1', 'claude-opus-5-5', 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
+  // Opus took the first turn; the second goes to Haiku, which writes the cache afresh.
+  const second = await turn('t2', 'claude-haiku-5-5', 'bu fonksiyon ne yapıyor?')
+  // Haiku writes 100K at $0.125/M = $0.0125; the picker's Opus would have read 100K at $0.20/M = $0.02.
+  expect(second.text).toContain('$0,013')
+  expect(second.text).toContain('seçici modeliyle $0,020')
+})
+
+const CARD = { plugin: 'gearbox', component: 'CommandOutput', props: { command: 'gear', args: 'tasarruf', text: '', isErrored: false } } as const
+
+async function turnOn($: Engine, id: string, text: string, model: string, tokens: { read: number; write: number; output: number }) {
+  await say($, text)
+  await step($, id)
+  const usage = { model, input_tokens: 100, output_tokens: tokens.output, cache_read_input_tokens: tokens.read, cache_creation_input_tokens: tokens.write }
+  await $.turn.complete({ turnId: id, answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage })
+}
+
+test('/gear tasarruf is drawn as a card of the session, the total, the models and the table', async ($, on) => {
+  world(on)
+  await turnOn($, 't1', 'bu fonksiyon ne yapıyor?', 'claude-haiku-5-5', { read: 40_000, write: 2000, output: 500 })
+  await turnOn($, 't2', 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır', 'claude-opus-5-5', { read: 90_000, write: 8000, output: 3000 })
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...CARD, surface, viewport: { columns: 100, rows: 40 } })
+    for (const text of [/Bu oturum/, /Toplam/, /Model payı/, /Haiku %50/, /Opus %50/, /Döküm/, /Önbellek okuma/, /Seçici modeliyle/, /\/gear sifirla/]) {
+      expect(await ui.find({ type: 'Text', text })).toBeDefined()
+    }
+    expect(await ui.find({ type: 'Box', borderStyle: 'round' })).toBeDefined()
+    await ui.unmount()
+  }
+})
+
+test('the card falls back to a line per model on a narrow screen, and says so when there is nothing yet', async ($, on) => {
+  world(on)
+  const empty = await $.ui.mount({ ...CARD, surface: 'desktop' })
+  expect(await empty.find({ type: 'Text', text: /Henüz kayıtlı tur yok/ })).toBeDefined()
+  await empty.unmount()
+
+  await turnOn($, 't1', 'bu fonksiyon ne yapıyor?', 'claude-haiku-5-5', { read: 40_000, write: 2000, output: 500 })
+  await turnOn($, 't2', 'bu sınıf ne yapıyor?', 'claude-sonnet-5-5', { read: 40_000, write: 2000, output: 500 })
+  await turnOn($, 't3', 'bu modül ne yapıyor?', 'claude-opus-5-5', { read: 40_000, write: 2000, output: 500 })
+  const wide = await $.ui.mount({ ...CARD, surface: 'terminal', viewport: { columns: 100, rows: 30 } })
+  expect(await wide.find({ type: 'Text', text: /Girdi/ })).toBeDefined()
+  await wide.unmount()
+  const narrow = await $.ui.mount({ ...CARD, surface: 'terminal', viewport: { columns: 40, rows: 30 } })
+  expect(await narrow.find({ type: 'Text', text: /1 tur · \$0,00/ })).toBeDefined()
+  expect(await narrow.find({ type: 'Text', text: /Girdi/ })).toBeUndefined()
+  await narrow.unmount()
+})
+
+test('other /gear output is left to the engine', async ($, on) => {
+  world(on)
+  on('ui.render', ($, e) => $.ui.resolve(e).Text({ children: 'engine row' }))
+  const status = await $.ui.mount({ ...CARD, props: { ...CARD.props, args: '' }, surface: 'desktop' })
+  expect(await status.find({ type: 'Text', text: /engine row/ })).toBeDefined()
+  expect(await status.find({ type: 'Box', borderStyle: 'round' })).toBeUndefined()
+  await status.unmount()
+})
