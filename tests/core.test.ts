@@ -4,6 +4,7 @@ import { pace } from '../hooks/core/pacing'
 import { decide } from '../hooks/core/policy'
 import { applyCommand, DEFAULTS } from '../hooks/core/settings'
 import { classify, parseOverrides } from '../hooks/core/signals'
+import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from '../hooks/core/switch'
 import { isNewerThan } from '../hooks/core/version'
 
 describe('classify', () => {
@@ -146,5 +147,26 @@ describe('robustness', () => {
     expect(isNewerThan('2.2.0', '2.1.295')).toBe(true)
     expect(isNewerThan('2.1.295', '2.1.295')).toBe(false)
     expect(isNewerThan('2.1.278 (Claude Code)', '2.1.295')).toBe(false)
+  })
+})
+
+describe('switchSvg', () => {
+  test('on is a green track with the knob at the right, off a gray one with the knob at the left', () => {
+    const on = switchSvg(true)
+    const off = switchSvg(false)
+    expect(on).toContain(`<rect width="${SWITCH_WIDTH}" height="${SWITCH_HEIGHT}" rx="${SWITCH_HEIGHT / 2}" fill="${SWITCH_ON}"/>`)
+    expect(off).toContain(`fill="${SWITCH_OFF}"/>`)
+    expect(on).toContain(`<circle cx="${SWITCH_WIDTH - SWITCH_HEIGHT / 2}"`)
+    expect(off).toContain(`<circle cx="${SWITCH_HEIGHT / 2}"`)
+    expect(on).toContain('>ON</text>')
+    expect(off).toContain('>OFF</text>')
+  })
+
+  test('is one svg root of the size the Svg element is given', () => {
+    for (const isOn of [true, false]) {
+      const svg = switchSvg(isOn)
+      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${SWITCH_WIDTH}" height="${SWITCH_HEIGHT}"`)
+      expect(svg).toEndWith('</svg>')
+    }
   })
 })

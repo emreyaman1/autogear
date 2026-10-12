@@ -1,6 +1,8 @@
 import type { On } from 'claude-code'
 import { expect, mock, test, type Engine } from 'claude-code/testing'
 
+import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH } from '../hooks/core/switch'
+
 type Sent = { model: string; effort: unknown }
 
 type World = { sent: Sent[]; prompts: string[] }
@@ -165,4 +167,29 @@ test('the band switches gearbox off and on, and off means the picker model', asy
     expect(sent[1]?.model).toBe('claude-haiku-5-5')
     await ui.unmount()
   }
+})
+
+test('the switch is an Svg under a blank Button on the desktop and colored Text on the terminal', async ($, on) => {
+  world(on)
+  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  await $.command.run({ command: 'gear', args: 'oto' })
+
+  const desktop = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const green = await desktop.find({ type: 'Svg' })
+  expect(green?.props).toMatchObject({ alt: 'gearbox: açık', width: SWITCH_WIDTH, height: SWITCH_HEIGHT })
+  expect(green?.props.source).toContain(SWITCH_ON)
+  expect(await desktop.find({ type: 'Button', key: 'toggle' })).toBeDefined()
+  await desktop.press({ key: 'toggle' })
+  const gray = await desktop.find({ type: 'Svg' })
+  expect(gray?.props).toMatchObject({ alt: 'gearbox: kapalı' })
+  expect(gray?.props.source).toContain(SWITCH_OFF)
+  await desktop.unmount()
+
+  // The desktop's press turned gearbox off: the terminal draws the same state.
+  const terminal = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await terminal.find({ type: 'Svg' })).toBeUndefined()
+  expect(await terminal.find({ type: 'Text', text: /OFF/ })).toBeDefined()
+  await terminal.press({ key: 'toggle' })
+  expect(await terminal.find({ type: 'Text', text: /ON/ })).toBeDefined()
+  await terminal.unmount()
 })

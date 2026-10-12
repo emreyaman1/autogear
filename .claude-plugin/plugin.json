@@ -1,6 +1,6 @@
 {
   "name": "gearbox",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Picks the model and effort for every prompt automatically, never above what the picker holds.",
   "author": {
     "name": "Yunus Emre Yaman"

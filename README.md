@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code: for every message it picks the model (Haiku, Sonnet, Opus) and the effort that the work needs, and never goes above what the model picker (bottom right) holds. The goal: your usage limits last longer, and hard work still goes to the strong model.
 
-> Status: 0.3.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.3.2. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## Install
 
@@ -37,7 +37,7 @@ Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced), `kalite` (quality) 
 
 ## Picker = ceiling, plus an on/off switch
 
-A small row above the prompt shows whether gearbox is on and has a **Kapat / Aç** button. When gearbox is off, every request uses exactly the model and effort the picker shows. The status text at the bottom right shows the model and effort gearbox chose for the last message; every answer also ends with a line saying which model answered and why.
+A small row above the prompt shows whether gearbox is on and has an **ON / OFF switch** (green with the knob on the right when on, gray with the knob on the left when off) that you click to turn it off or on. When gearbox is off, every request uses exactly the model and effort the picker shows. The status text at the bottom right shows the model and effort gearbox chose for the last message; every answer also ends with a line saying which model answered and why.
 
 ## Control
 

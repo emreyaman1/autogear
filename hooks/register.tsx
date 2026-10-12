@@ -17,6 +17,7 @@ import { pace } from './core/pacing'
 import { decide, type Decision } from './core/policy'
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { classify, normalize, parseOverrides, type RuleResult } from './core/signals'
+import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from './core/switch'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { isNewerThan, TESTED_THROUGH } from './core/version'
 import type { GearboxMode } from '../types'
@@ -42,6 +43,10 @@ const SOURCE_NAMES: Record<string, string> = {
 }
 
 const WINDOW_NAMES: Record<string, string> = { five_hour: '5 saatlik', seven_day: 'haftalık' }
+
+// A desktop Button draws its label and nothing else: three em spaces make one
+// that is blank and wider than the switch it is laid over.
+const BLANK_LABEL = '\u2003'.repeat(3)
 
 const HELP = [
   '/gear                   durum, son karar, limitler',
@@ -479,26 +484,49 @@ export const register: Register = on => {
   })
 
   // A small row above the prompt with the on/off switch: the status text at
-  // the bottom right cannot be pressed, a Button can.
+  // the bottom right cannot be pressed, a Button can. The terminal draws the
+  // switch as colored Text inside the Button; a desktop draws a Button as its
+  // label alone, so there the switch is an Svg with a blank Button laid over it.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey || !state.settings.band) {
       return next(e)
     }
     const mode = await read($, modeAtom)
-    const { Box, Button, Text } = $.ui.resolve(e)
+    const isOn = mode === 'auto'
+    const name = mode === 'auto' ? 'açık' : mode === 'pin' ? 'kapalı' : 'devre dışı'
     const note =
       mode === 'auto' ? 'açık: işe göre model ve efor seçiyor'
       : mode === 'pin' ? 'kapalı: seçicideki model kullanılıyor'
       : 'devre dışı: seçimler uygulanmıyordu, seçicideki model kullanılıyor'
+    const flip = () => switchMode($, state, isOn ? 'pin' : 'auto')
 
+    if (e.surface === 'terminal') {
+      const { Box, Button, Text } = $.ui.resolve(e)
+
+      return (
+        <Box>
+          <Text dimColor>⚙ gearbox {note} </Text>
+          <Button key="toggle" plain label={`gearbox: ${name}`} onPress={flip}>
+            <Text backgroundColor={isOn ? SWITCH_ON : SWITCH_OFF} color="#ffffff" bold>
+              {isOn ? ' ON  ● ' : ' ● OFF '}
+            </Text>
+          </Button>
+        </Box>
+      )
+    }
+    const { Box, Button, Svg, Text } = $.ui.resolve(e)
+
+    // The padding leaves the Button, centered over the Svg, room for its whole
+    // label: squeezed narrower, a desktop Button draws an ellipsis in it.
     return (
       <Box>
-        <Text dimColor>⚙ gearbox {note} </Text>
-        <Button
-          key="toggle"
-          label={mode === 'auto' ? 'Kapat' : mode === 'pin' ? 'Aç' : 'Yeniden dene'}
-          onPress={() => switchMode($, state, mode === 'auto' ? 'pin' : 'auto')}
-        />
+        <Text dimColor>⚙ gearbox {note}</Text>
+        <Box alignSelf="center" flexShrink={0} paddingX={3}>
+          <Svg source={switchSvg(isOn)} alt={`gearbox: ${name}`} width={SWITCH_WIDTH} height={SWITCH_HEIGHT} />
+          <Box position="absolute" top={0} left={0} width="100%" height="100%" alignItems="center" justifyContent="center">
+            <Button key="toggle" plain label={BLANK_LABEL} onPress={flip} />
+          </Box>
+        </Box>
       </Box>
     )
   })
