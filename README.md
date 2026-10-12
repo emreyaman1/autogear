@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer, and hard work still goes to the strong model.
 
-> Status: 0.4.1. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.5.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## What you get
 
@@ -54,7 +54,9 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 |---|---|
 | `/gear` | status, last decision and reason, limits, statistics, this list |
 | `/gear tasarruf` | the savings card (see below) |
-| `/gear sifirla` | reset the savings counter |
+| `/gear kayit` | the log of gearbox's latest decisions and the doubtful ones |
+| `/gear yanlis zayif\|fazla` | mark the latest decision: model too weak, or more than the work needed |
+| `/gear sifirla` | reset the savings counter and the log |
 | `/gear oto` / `/gear sabitle` | turn gearbox on / off (off: the picker's model is used) |
 | `/gear profil tasarruf\|dengeli\|kalite` | which tier table to use |
 | `/gear haiku aç\|kapa` | may trivial work go to Haiku |
@@ -91,6 +93,15 @@ message ─► classify ─► decide ─► apply     ─► answer ─► veri
 | T4 critical | long multi-step work, repeated failure | Opus · high |
 
 Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced) and `kalite` (quality) spend more, for Max plans.
+
+## Reviewing its decisions
+
+The classifier numbers below were measured on labels we wrote. To see how gearbox does on your own work, it keeps a log of its decisions on your machine: the start of each message (100 characters), the tier, the model and effort that answered, the source of the choice, what the turn cost, and what happened next. The last 200 are kept.
+
+- `/gear kayit` shows the latest 25 as a table, the tiers used, and the **doubtful decisions**: those the work itself called into question (you complained and gearbox moved up a tier; the tests or build failed at the end of the turn) and those you marked.
+- When a decision was wrong, say so right after the answer: `/gear yanlis zayif` (the model was too weak) or `/gear yanlis fazla` (stronger than the work needed). The mark lands on the latest message.
+- The doubtful share is a floor: a wrong choice nobody noticed is not counted. With a few days of use it shows which kinds of message the rules get wrong, which is where to tune next.
+- `/gear sifirla` clears the log. It never leaves your machine.
 
 ## Savings
 
@@ -173,6 +184,7 @@ On the 4 tasks run both ways gearbox spent $0.31 against $2.38 on Opus · high t
 | `hooks/core/pacing.ts` | reads the rate-limit windows |
 | `hooks/core/models.ts` | model families, ids, effort levels |
 | `hooks/core/prices.ts` | list prices and the cost of a turn |
+| `hooks/core/journal.ts` | the decision log: entries, complaint and failing-check flags, your marks, the report |
 | `hooks/core/savings.ts` | per-model totals, the saving, the markdown report |
 | `hooks/core/settings.ts` | stored settings and statistics, `/gear` parsing |
 | `hooks/core/switch.ts` | the drawing of the on/off switch |
@@ -226,7 +238,8 @@ Restart the app and open a new chat.
 - [x] Per-turn cost, savings counter and card
 - [x] English README, MIT license, published on GitHub
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
-- [ ] Learning from manual corrections
+- [x] Decision log with your marks, to see where the rules go wrong
+- [ ] Learning from those corrections
 
 ## License
 

@@ -83,7 +83,7 @@ const ON = new Set(['ac', 'acik', 'on', 'evet', '1'])
 const OFF = new Set(['kapa', 'kapat', 'kapali', 'off', 'hayir', '0'])
 
 // What `/gear <verb> <value>` asks for: new settings, the status, or the help.
-export function applyCommand(settings: Settings, verb: string, value: string): Settings | 'status' | 'savings' | 'reset' | 'help' {
+export function applyCommand(settings: Settings, verb: string, value: string): Settings | 'status' | 'savings' | 'journal' | 'mark' | 'reset' | 'help' {
   const isOn = ON.has(value) ? true : OFF.has(value) ? false : undefined
   switch (verb) {
     case '':
@@ -94,6 +94,13 @@ export function applyCommand(settings: Settings, verb: string, value: string): S
     case 'savings':
     case 'kar':
       return 'savings'
+    case 'kayit':
+    case 'gunluk':
+    case 'log':
+      return 'journal'
+    case 'yanlis':
+    case 'wrong':
+      return 'mark'
     case 'sifirla':
     case 'reset':
       return 'reset'

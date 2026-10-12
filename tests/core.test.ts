@@ -4,6 +4,7 @@ import { pace } from '../hooks/core/pacing'
 import { decide } from '../hooks/core/policy'
 import { costOf, readTokens, turnMoney, usd } from '../hooks/core/prices'
 import { addTurn, emptyTotals, savedOf, savingsText, sharesOf, splitCells, sumOf } from '../hooks/core/savings'
+import { addEntry, flagLast, journalText, markLast, MAX_ENTRIES, readJournal, snippet, type Entry } from '../hooks/core/journal'
 import { applyCommand, DEFAULTS, readStats } from '../hooks/core/settings'
 import { classify, parseOverrides } from '../hooks/core/signals'
 import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from '../hooks/core/switch'
@@ -262,5 +263,57 @@ describe('savings', () => {
   test('/gear tasarruf and sifirla are read', () => {
     expect(applyCommand(DEFAULTS, 'tasarruf', '')).toBe('savings')
     expect(applyCommand(DEFAULTS, 'sifirla', '')).toBe('reset')
+  })
+})
+
+describe('journal', () => {
+  const entry = (text: string, extra: Partial<Entry> = {}): Entry => ({
+    at: Date.parse('2026-10-13T09:30:00'),
+    text,
+    tier: 1,
+    family: 'sonnet',
+    effort: 'medium',
+    source: 'kural',
+    ceiling: 'opus',
+    spent: 0.01,
+    baseline: 0.04,
+    flags: [],
+    mark: undefined,
+    ...extra,
+  })
+
+  test('a message is cut to its start, one line, no table breakers', () => {
+    expect(snippet('  a\n\nb  ')).toBe('a b')
+    expect(snippet('x'.repeat(300)).length).toBeLessThan(110)
+  })
+
+  test('the log keeps the latest entries only', () => {
+    const entries: Entry[] = []
+    for (let index = 0; index < MAX_ENTRIES + 5; index += 1) addEntry(entries, entry(`m${index}`))
+    expect(entries).toHaveLength(MAX_ENTRIES)
+    expect(entries[0]?.text).toBe('m5')
+  })
+
+  test('a complaint flags the answer before it, a mark the latest one', () => {
+    const entries = [entry('ilk'), entry('ikinci')]
+    flagLast(entries, 'şikâyetle yükseltildi')
+    flagLast(entries, 'şikâyetle yükseltildi')
+    expect(entries[1]?.flags).toEqual(['şikâyetle yükseltildi'])
+    expect(markLast(entries, 'zayif')?.text).toBe('ikinci')
+    const report = journalText(entries)
+    expect(report).toContain('Şüpheli kararlar: 1 / 2 (50%)')
+    expect(report).toContain('siz: çok zayıftı')
+    expect(report).toContain('| T1 | Sonnet · medium | kural |')
+  })
+
+  test('stored entries that are not entries are dropped, and an empty log says so', () => {
+    expect(readJournal([{ text: 'x', family: 'opus', tier: 3 }, { text: 1 }, 'x', { family: 'zzz', text: 'y' }])).toHaveLength(1)
+    expect(readJournal(undefined)).toEqual([])
+    expect(journalText([])).toContain('Henüz kayıtlı karar yok')
+  })
+
+  test('/gear kayit and yanlis are read', () => {
+    expect(applyCommand(DEFAULTS, 'kayit', '')).toBe('journal')
+    expect(applyCommand(DEFAULTS, 'yanlis', 'zayif')).toBe('mark')
   })
 })

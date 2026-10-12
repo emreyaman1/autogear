@@ -13,6 +13,7 @@ import type {
 
 import { savingsCard, type LimitRow } from './card'
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
+import { addEntry, flagLast, journalText, markLast, MARK_NAMES, readJournal, snippet, type Mark } from './core/journal'
 import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort, type Family } from './core/models'
 import { pace } from './core/pacing'
 import { decide, type Decision } from './core/policy'
@@ -58,7 +59,9 @@ const HELP = [
   '|:--|:--|',
   '| `/gear` | durum, son karar, limitler |',
   '| `/gear tasarruf` | harcama, seçici modeliyle olacak harcama, tasarruf |',
-  '| `/gear sifirla` | tasarruf sayacını sıfırla |',
+  '| `/gear kayit` | gearbox\'ın son kararları ve şüpheli olanlar |',
+  '| `/gear yanlis zayif` · `fazla` | son mesajın kararını işaretle: model çok zayıftı · gereğinden güçlüydü |',
+  '| `/gear sifirla` | tasarruf sayacını ve günlüğü sıfırla |',
   "| `/gear oto` · `/gear sabitle` | gearbox'ı aç · kapat (kapalıyken seçici model kullanılır) |",
   '| `/gear profil <ad>` | tasarruf, dengeli ya da kalite |',
   "| `/gear haiku aç` · `kapa` | önemsiz işler Haiku'ya gitsin mi |",
@@ -237,7 +240,7 @@ async function decideTurn(
   }
   state.carryFailure = false
 
-  return remember($, state, e.turnId, { ...decide({ ...common, tier, source, reasons, override: taken.rule.override }), ceilingModel: e.model })
+  return remember($, state, e.turnId, { ...decide({ ...common, tier, source, reasons, override: taken.rule.override }), ceilingModel: e.model, prompt: taken.text })
 }
 
 // The routed request got no answer at all (a retired model id, a model the
@@ -285,7 +288,8 @@ async function afterTurn($: EngineInterface, state: State, decision: Decision, u
       showStatus($, state)
     }
   }
-  state.carryFailure = state.lastCheckFailed && decision.tier < 4
+  const isCheckFailed = state.lastCheckFailed
+  state.carryFailure = isCheckFailed && decision.tier < 4
   state.lastCheckFailed = false
 
   // The turn's tokens at the answering model's price and at the picker's.
@@ -313,6 +317,7 @@ async function afterTurn($: EngineInterface, state: State, decision: Decision, u
       stats.families[decision.family].turns += 1
     }
     stats.overhead += overhead
+    await noteDecision($, decision, answered, money, isCheckFailed)
     stats.since = stats.since === 0 ? await $.clock.now() : stats.since
     stats.overrides += decision.source === 'override' ? 1 : 0
     stats.escalations += decision.source === 'escalate' ? 1 : 0
@@ -322,6 +327,41 @@ async function afterTurn($: EngineInterface, state: State, decision: Decision, u
   }
 
   return money
+}
+
+// The decision goes into the log: a complaint is about the answer before it,
+// a failing check about this one.
+async function noteDecision(
+  $: EngineInterface,
+  decision: Decision,
+  answered: Family | undefined,
+  money: TurnMoney | undefined,
+  isCheckFailed: boolean,
+): Promise<void> {
+  try {
+    const journal = readJournal(await $.store.get('journal'))
+    if (decision.source === 'escalate') {
+      flagLast(journal, 'şikâyetle yükseltildi')
+    }
+    if (decision.prompt !== undefined) {
+      addEntry(journal, {
+        at: await $.clock.now(),
+        text: snippet(decision.prompt),
+        tier: decision.tier,
+        family: answered ?? decision.family,
+        effort: decision.effort,
+        source: SOURCE_NAMES[decision.source] ?? decision.source,
+        ceiling: familyOf(decision.ceilingModel),
+        spent: money?.spent ?? 0,
+        baseline: money?.baseline ?? 0,
+        flags: isCheckFailed ? ['test/derleme kırık'] : [],
+        mark: undefined,
+      })
+    }
+    await $.store.set('journal', journal)
+  } catch {
+    // A log only: a store that refuses it changes no answer.
+  }
 }
 
 async function describe($: EngineInterface, state: State): Promise<string> {
@@ -374,7 +414,7 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
   await $.command.register({
     name: 'gear',
     description: 'gearbox: otomatik model ve efor seçimi',
-    argumentHint: '[oto | sabitle | profil <ad> | haiku | sor | not | bant | tasarruf | sifirla]',
+    argumentHint: '[oto | sabitle | profil <ad> | haiku | sor | not | bant | tasarruf | kayit | yanlis | sifirla]',
   })
   await noticeVersion($)
   if ((await $.store.get('tipShown')) !== true) {
@@ -413,7 +453,25 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
 
     return { text: savingsText(state.session, stats, stats.since) }
   }
+  if (changed === 'journal') {
+    return { text: journalText(readJournal(await $.store.get('journal'))) }
+  }
+  if (changed === 'mark') {
+    const mark: Mark | undefined = ['zayif', 'az', 'dusuk'].includes(value) ? 'zayif' : ['fazla', 'guclu', 'cok'].includes(value) ? 'fazla' : undefined
+    const journal = readJournal(await $.store.get('journal'))
+    if (mark === undefined) {
+      return { text: 'Kullanım: `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (gereğinden güçlüydü).' }
+    }
+    const entry = markLast(journal, mark)
+    if (entry === undefined) {
+      return { text: 'Henüz işaretlenecek bir karar yok.' }
+    }
+    await $.store.set('journal', journal)
+
+    return { text: `İşaretlendi: "${entry.text}" için ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${MARK_NAMES[mark]}.` }
+  }
   if (changed === 'reset') {
+    await $.store.set('journal', [])
     await $.store.set('stats', readStats(undefined))
     state.session = emptyTotals()
     showStatus($, state)

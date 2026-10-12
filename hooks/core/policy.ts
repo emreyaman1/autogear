@@ -18,6 +18,8 @@ export type Decision = {
   isClamped: boolean
   // The picker's model when the choice was made: what the turn would have cost without gearbox.
   ceilingModel?: string
+  // The message the choice was made for; absent when no message prompted it.
+  prompt?: string
 }
 
 export type PolicyInput = {

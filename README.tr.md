@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer, zor işler yine güçlü modelle yapılır.
 
-> Durum: 0.4.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.5.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Ne sağlar
 
@@ -54,7 +54,9 @@ Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması 
 |---|---|
 | `/gear` | durum, son karar ve gerekçesi, limitler, istatistik, bu liste |
 | `/gear tasarruf` | tasarruf kartı (aşağıda) |
-| `/gear sifirla` | tasarruf sayacını sıfırla |
+| `/gear kayit` | gearbox'ın son kararlarının günlüğü ve şüpheli olanlar |
+| `/gear yanlis zayif\|fazla` | son kararı işaretle: model çok zayıftı, ya da işin gerektirdiğinden güçlüydü |
+| `/gear sifirla` | tasarruf sayacını ve günlüğü sıfırla |
 | `/gear oto` / `/gear sabitle` | gearbox'ı aç / kapat (kapalıyken seçicideki model kullanılır) |
 | `/gear profil tasarruf\|dengeli\|kalite` | hangi kademe tablosu kullanılsın |
 | `/gear haiku aç\|kapa` | önemsiz işler Haiku'ya gitsin mi |
@@ -89,6 +91,15 @@ mesaj ─► sınıfla ─► karar  ─► uygula    ─► cevap ─► doğru
 | T4 kritik | çok adımlı büyük iş, tekrarlayan başarısızlık | Opus · high |
 
 Profiller: `tasarruf` (Pro için), `dengeli` ve `kalite` daha cömert harcar, Max planları içindir.
+
+## Kararlarını gözden geçirme
+
+Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölçüldü. Kendi işlerinde gearbox'ın nasıl yaptığını görmek için kararlarının günlüğünü makinende tutar: her mesajın başı (100 karakter), kademe, cevap veren model ve efor, seçimin kaynağı, turun maliyeti ve sonrasında ne olduğu. Son 200 karar saklanır.
+
+- `/gear kayit` son 25 kararı tablo olarak, kullanılan kademeleri ve **şüpheli kararları** gösterir: işin kendisinin sorguladığı kararlar (şikâyet ettin ve gearbox bir kademe yükseltti; turun sonunda testler ya da derleme kırıktı) ve senin işaretlediklerin.
+- Bir karar yanlışsa cevaptan hemen sonra söyle: `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (işin gerektirdiğinden güçlüydü). İşaret son mesaja düşer.
+- Şüpheli oranı bir tabandır: kimsenin fark etmediği yanlış seçimler sayılmaz. Birkaç günlük kullanımla kuralların hangi tür mesajlarda yanıldığını gösterir, bir sonraki ayar da orada.
+- `/gear sifirla` günlüğü siler. Makinenden hiç çıkmaz.
 
 ## Tasarruf
 
@@ -171,6 +182,7 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 | `hooks/core/pacing.ts` | limit pencerelerini okur |
 | `hooks/core/models.ts` | model aileleri, kimlikler, efor seviyeleri |
 | `hooks/core/prices.ts` | liste fiyatları ve bir turun maliyeti |
+| `hooks/core/journal.ts` | karar günlüğü: kayıtlar, şikâyet ve kırık test işaretleri, senin işaretlerin, rapor |
 | `hooks/core/savings.ts` | modele göre toplamlar, tasarruf, markdown rapor |
 | `hooks/core/settings.ts` | kayıtlı ayarlar ve istatistik, `/gear` ayrıştırma |
 | `hooks/core/switch.ts` | aç/kapa anahtarının çizimi |
@@ -224,7 +236,8 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] Tur başına maliyet, tasarruf sayacı ve kart
 - [x] İngilizce README, MIT lisansı, GitHub'da yayın
 - [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
-- [ ] Elle düzeltmelerden öğrenme
+- [x] Senin işaretlerinle karar günlüğü, kuralların nerede yanıldığını görmek için
+- [ ] Bu düzeltmelerden öğrenme
 
 ## Lisans
 
