@@ -2,9 +2,21 @@
 
 [English](README.md) · **Türkçe**
 
-Claude Code için otomatik vites: her mesajda modeli (Haiku, Sonnet, Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki seçicinin üstüne asla çıkmaz. Amaç limitin daha uzun sürmesi ve zor işlerin yine güçlü modelle yapılması.
+Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer, zor işler yine güçlü modelle yapılır.
 
 > Durum: 0.4.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+
+## Ne sağlar
+
+- **Mesaj başına doğru model.** "Bu fonksiyon ne yapıyor" Haiku · low ile, net ve tek yerlik bir değişiklik Sonnet · medium ile, belirsiz bir hata ya da mimari sorusu Opus ile çalışır.
+- **Seçicinin üstüne çıkmaz.** Seçiciyi bir kez en güçlü modeline getirirsin; gearbox ona eşit ya da altında seçer.
+- **Bir anahtar.** İstem kutusunun üstündeki satır gearbox'ın açık olup olmadığını gösterir; yanındaki ON / OFF anahtarına tıklarsın.
+- **Her cevap kendini açıklar.** Altındaki satır cevap veren model ve eforu, kademeyi ve nedenini, bir de turun seçici modeline göre ne tuttuğunu söyler:
+
+  ```
+  ⚙ Haiku 5.5 · low · T0 önemsiz (kural: soru: "ne yapiyor") · önbellek 0 okundu / 100.0K yazıldı · $0,013 (seçici modeliyle $0,020)
+  ```
+- **Tasarruf sayacı.** Sağ alttaki durum yazısında oturumun tasarrufu görünür, ayrıntı için `/gear tasarruf` bir kart çizer.
 
 ## Kurulum
 
@@ -14,7 +26,7 @@ Claude Code'da:
 /plugin install gearbox --marketplace emreyaman1/gearbox
 ```
 
-Sonra seçiciyi bir kez en güçlü modeline getir (örneğin **Opus · high**). gearbox seçicinin üstüne çıkmaz, ya ona eşit ya da altında seçer. Kurduktan sonra yeni bir sohbet aç; zaten açık olan sohbetler yeni eklentileri yüklemez.
+Sonra seçiciyi bir kez en güçlü modeline getir (örneğin **Opus · high**). Kurduktan sonra yeni bir sohbet aç; zaten açık olan sohbetler yeni eklentileri yüklemez.
 
 Yerel bir kopyadan kurmak için, bir terminalde:
 
@@ -26,18 +38,49 @@ claude plugin marketplace add C:\gearbox
 claude plugin install gearbox@gearbox
 ```
 
-Kurulumdan sonra açılan her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır.
+Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Eklenti function hooks özelliği olan bir Claude Code sürümü ister (2.1.295'e kadar denendi).
+
+## Kullanım
+
+**Seçici tavandır.** gearbox, seçicideki model ve eforun üstünde harcama yapmaz. Seçiciyi değiştirdiğinde yeni tavanı bildirir. Seçici **Opus · high** iken tam otomatiktir.
+
+**Aç/kapa satırı.** İstem kutusunun üstündeki küçük satır gearbox'ın açık olup olmadığını gösterir. **ON / OFF anahtarı** (açıkken yeşil ve topuz sağda, kapalıyken gri ve topuz solda) gearbox'ı kapatır ve açar. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir.
+
+**Etiketler.** Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
+
+**Komutlar.**
+
+| Komut | İş |
+|---|---|
+| `/gear` | durum, son karar ve gerekçesi, limitler, istatistik, bu liste |
+| `/gear tasarruf` | tasarruf kartı (aşağıda) |
+| `/gear sifirla` | tasarruf sayacını sıfırla |
+| `/gear oto` / `/gear sabitle` | gearbox'ı aç / kapat (kapalıyken seçicideki model kullanılır) |
+| `/gear profil tasarruf\|dengeli\|kalite` | hangi kademe tablosu kullanılsın |
+| `/gear haiku aç\|kapa` | önemsiz işler Haiku'ya gitsin mi |
+| `/gear sor aç\|kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |
+| `/gear not aç\|kapa` | cevabın altındaki satır |
+| `/gear bant aç\|kapa` | istem kutusunun üstündeki aç/kapa satırı |
 
 ## Nasıl çalışır
 
-1. **Sınıflandırma** (`hooks/core/signals.ts`): Mesaj T0–T4 kademelerinden birine konur. Türkçe ve İngilizce sinyaller okunur; mesajdaki kod, dosya ve değişken adları dikkate alınmaz. Fiil tek başına değil nesnesiyle değerlendirilir ("rengi değiştir" ≠ "ödeme sistemi ekle"). Kurallar emin olamazsa Haiku'ya tek kısa bir soru sorulur.
-2. **Politika** (`hooks/core/policy.ts`): Kademe, profil tablosundan model ve efora çevrilir, sonra şu sınırlardan geçer:
+```
+mesaj ─► sınıfla ─► karar  ─► uygula    ─► cevap ─► doğrula       ─► say
+         signals    tiers     turn.step             turn.complete    savings
+         llm        policy                                           prices
+                    pacing
+```
+
+1. **Sınıflandırma** (`hooks/core/signals.ts`): Mesaj T0–T4 kademelerinden birine konur. Türkçe ve İngilizce sinyaller okunur; mesajdaki kod, dosya ve değişken adları dikkate alınmaz. Fiil tek başına değil nesnesiyle değerlendirilir ("rengi değiştir" ≠ "ödeme sistemi ekle"). Kurallar emin olamazsa Haiku'ya tek kısa bir soru sorulur (`hooks/core/llm.ts`).
+2. **Karar** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): Kademe, profil tablosundan model ve efora çevrilir, sonra üç sınırdan geçer:
    - **Tavan:** Seçicideki model ve efor aşılmaz.
    - **Önbellek:** Bağlam büyükse (40K+ token) bir kademelik farklar için model değiştirilmez, yalnızca efor değişir; model geçişi bütün konuşmayı önbelleksiz yeniden gönderir.
-   - **Tempo:** 5 saatlik ya da haftalık limit sürdürülebilir hızın üstünde harcanıyorsa efor bir kademe iner; %90'ı geçince Opus kullanılmaz.
-3. **Uygulama** (`hooks/register.tsx`): Her model isteğinden hemen önce kararı uygular. Bir turun bütün istekleri aynı modelle gider. Alt ajanlara dokunulmaz.
+   - **Tempo:** 5 saatlik ya da haftalık limit eşit hızın üstünde harcanıyorsa (%30'dan fazlası kullanılmış ve beklenenin 20 puan önünde) efor bir kademe iner; %90'da Opus kullanılmaz. Bir pencere bitmeye yakınsa ve yarısı bile kullanılmadıysa, standart ve üstü işlerde efor bir kademe çıkar.
+3. **Uygulama** (`hooks/register.tsx`, `turn.step`): Her model isteğinden hemen önce kararı uygular. Bir turun bütün istekleri aynı modelle gider, böylece tur önbelleğini korur. Alt ajanlara dokunulmaz.
+4. **Doğrulama** (`turn.complete`): API'nin bildirdiği gerçek model, seçimle karşılaştırılır (bkz. Güvenlik ağları).
+5. **Sayım** (`hooks/core/savings.ts`): Turun gerçek token sayısı iki kez fiyatlanır, bir kez cevap veren modelde, bir kez seçicideki modelde, ve oturumun ile genel toplama eklenir.
 
-| Kademe | Örnek | tasarruf (Pro) |
+| Kademe | Örnek | `tasarruf` (Pro) |
 |---|---|---|
 | T0 önemsiz | "bu fonksiyon ne yapıyor", commit mesajı, yeniden adlandırma | Haiku · low |
 | T1 rutin | net, tek yerlik değişiklik | Sonnet · medium |
@@ -45,35 +88,40 @@ Kurulumdan sonra açılan her Claude Code oturumunda (masaüstü uygulaması dah
 | T3 zor | belirsiz hata, mimari, performans, güvenlik | Opus · medium |
 | T4 kritik | çok adımlı büyük iş, tekrarlayan başarısızlık | Opus · high |
 
-`dengeli` ve `kalite` profilleri Max planları için daha cömert.
-
-## Seçici = tavan, bir de aç/kapa anahtarı
-
-Sağ alttaki seçici, gearbox'ın harcayabileceği en üst sınırdır. Tam otomatik için seçiciyi bir kez **Opus · high** yap; gearbox bunun altında seçer. Seçiciyi değiştirdiğinde yeni tavanı bildirir.
-
-İstem kutusunun üstündeki küçük bir satır gearbox'ın açık olup olmadığını gösterir ve yanında bir **ON / OFF anahtarı** vardır (açıkken yeşil ve topuz sağda, kapalıyken gri ve topuz solda); tıklayınca gearbox kapanır ya da açılır. gearbox kapalıyken her istek, seçici hangi model ve eforu gösteriyorsa tam olarak onunla gider. Sağ alttaki durum yazısı gearbox'ın son mesaj için seçtiği model ve eforu gösterir; her cevabın sonunda da hangi modelin, neden cevap verdiğini söyleyen bir satır bulunur.
-
-## Kontrol
-
-| Komut | İş |
-|---|---|
-| `/gear` | durum, son karar ve gerekçesi, limitler, istatistik |
-| `/gear oto` / `/gear sabitle` | yönlendiriciyi aç / kapat (sabit: seçici ne diyorsa o) |
-| `/gear profil tasarruf\|dengeli\|kalite` | kademe tablosu |
-| `/gear haiku aç\|kapa` | önemsiz işler Haiku'ya gitsin mi |
-| `/gear sor aç\|kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |
-| `/gear not aç\|kapa` | cevabın altındaki satır |
-| `/gear bant aç\|kapa` | istem kutusunun üstündeki aç/kapa satırı |
-| `/gear tasarruf` | bir kart: oturum ve toplam tasarruf, model payı, modele göre döküm tablosu, limitler |
-| `/gear sifirla` | tasarruf sayacını sıfırla |
-
-Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
+Profiller: `tasarruf` (Pro için), `dengeli` ve `kalite` daha cömert harcar, Max planları içindir.
 
 ## Tasarruf
 
-Her turdan sonra gearbox cevabı veren modelin gerçek token sayısını API liste fiyatıyla çarpar ve aynı tokenların seçicideki modelde ne tutacağıyla karşılaştırır. Cevabın altındaki satırda turun tutarı görünür (`$0,04 (seçici modeliyle $0,18)`), sağ alttaki durum yazısında oturumun toplam tasarrufu, `/gear tasarruf` komutunda ise konuşmanın içine bir kart çizilir: oturum ve toplam tasarruf çubukları, her modelin payı, modele göre tablo (token, önbellek isabeti, harcama, seçici modeliyle harcama, tasarruf) ve limit pencereleri. Kartın çizilemediği yerde aynı rakamlar markdown tablo olarak gelir.
+**Nerede görünür.**
 
-Bu bir **tahmindir**: fiyatlar `hooks/core/prices.ts` içindeki liste fiyatlarıdır; abonelikte para ödemezsin, kota ise kabaca bu oranda tükenir. Model değiştiren turda yeniden yazılan önbellek, seçici modelinde sıcak kalacağı varsayımıyla okuma fiyatından sayılır, yani geçişin maliyeti gearbox'ın aleyhine yazılır. Düşük efor daha az token üretir; bu fark hesaba katılmadığı için tasarruf biraz düşük çıkabilir. gearbox'ın kendi Haiku sorularının maliyeti tasarruftan düşülür, alt ajanlar sayılmaz.
+- Her cevabın altındaki satır: bu turun tutarı ve seçici modeliyle ne tutacağı.
+- Sağ alttaki durum yazısı: oturumun toplam tasarrufu.
+- `/gear tasarruf`: konuşmanın içine çizilen bir kart:
+  - iki çubuk, bu oturumun ve toplamın tasarrufu, her biri seçicinin faturasındaki payıyla;
+  - her modelin payı, çubuk ve açıklamayla;
+  - modele göre tablo: tur, girdi, çıktı, önbellek okuma, önbelleğe yazma, önbellek isabeti, harcama, seçici modeliyle harcama, tasarruf;
+  - 5 saatlik ve haftalık limit pencereleri.
+
+  Dar ekranda tablo, model başına tek satıra döner. Bir yüzey kartı çizemiyorsa aynı rakamlar markdown tablo olarak gelir. İkisi de aynı kayıtlı toplamları okur.
+- `/gear sifirla` sayımı baştan başlatır. Toplamlar makinendeki eklenti deposunda durur; sayımın başladığı tarih kartta yazar.
+
+**Nasıl hesaplanır.** Her turun gerçek token sayıları (girdi, çıktı, önbellek okuma, önbellek yazma) cevap veren modelin liste fiyatıyla çarpılır; aynı tokenlar bir de seçicideki modelin liste fiyatıyla çarpılır. Fiyatlar `hooks/core/prices.ts` içindedir:
+
+| Model | Girdi | Çıktı | Önbellek okuma | Önbellek yazma (5 dk) |
+|---|---|---|---|---|
+| Haiku 5.5 | $0,10 | $0,50 | $0,01 | $0,125 |
+| Sonnet 5.5 | $2 | $10 | $0,20 | $2,50 |
+| Opus 5.5 | $4 | $20 | $0,20 | $5 |
+| Fable 5.1 | $10 | $50 | $0,25 | $12,50 |
+
+Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar.
+
+**Bu bir tahmindir.**
+
+- Abonelikte dolar ödemezsin; kota kabaca bu oranda tükenir.
+- Model değiştiren tur önbelleğini yeniden yazmıştır. Seçici modelinde o önbellek sıcak kalacaktı, bu yüzden oradaki yazmalar okuma fiyatından sayılır: geçişin maliyeti gearbox'ın aleyhine yazılır.
+- Düşük efor daha az token üretir. Bu fark hesaba katılmaz, tasarruf biraz düşük çıkabilir.
+- gearbox'ın kendi Haiku sorularının maliyeti tasarruftan düşülür. Alt ajanlar sayılmaz.
 
 ## Güvenlik ağları
 
@@ -86,9 +134,7 @@ Bu bir **tahmindir**: fiyatlar `hooks/core/prices.ts` içindeki liste fiyatları
 
 ## Ölçümler
 
-### Sınıflandırma (`eval/`)
-
-143 etiketli mesaj üç kümede: kuralların ayarlandığı küme (66), ayardan önce ayrılan küme (43), ayarlardan sonra yazılıp bir kez ölçülen yeni küme (34). Etiketler "bu işi hangi güçte model yapmalı" sorusuna göre kondu. Son iki kümenin toplamı (77 mesaj):
+**Sınıflandırma** (`eval/`): 143 etiketli mesaj üç kümede: kuralların ayarlandığı küme (66), ayardan önce ayrılan küme (43), ayarlardan sonra yazılıp bir kez ölçülen yeni küme (34). Etiketler "bu işi hangi güçte model yapmalı" sorusuna göre kondu. Son iki kümenin toplamı (77 mesaj):
 
 | Yöntem | Tam isabet | ±1 kademe | Ciddi hata* | Haiku'ya sorulan |
 |---|---|---|---|---|
@@ -99,20 +145,39 @@ Bu bir **tahmindir**: fiyatlar `hooks/core/prices.ts` içindeki liste fiyatları
 
 \* Zor bir işi (T3+) T0/T1'e ya da iki kademe aşağı koymak. Not: ayardan önce ayrılan kümenin hataları bir kez görüldü ve yeni kümedeki hatalar "emin değilse sor" eşiğini etkiledi; gerçek isabet bir miktar düşük olabilir.
 
-### Çıktı kalitesi (`eval/tasks/`)
-
-Küçük bir proje üzerinde 6 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir.
+**Çıktı kalitesi** (`eval/tasks/`): Küçük bir proje üzerinde 6 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir.
 
 | Görev | gearbox'ın seçtiği | Sonuç | Maliyet | Opus · high, gearbox'sız |
 |---|---|---|---|---|
-| 1 Yeniden adlandırma | Haiku | Geçti | $0.011 | Geçti, $0.277 |
-| 2 Kargo eşiği | Sonnet | Geçti | $0.173 | — |
-| 3 Kupon özelliği ve testleri | Sonnet | Geçti | $0.124 | Geçti, $1.387 |
-| 4 Hata mesajıyla verilen sayfalama hatası | Sonnet | Geçti | $0.072 | Geçti, $0.255 |
-| 5 İnce kuruş yuvarlama hatası | Opus | Geçti | $0.423 | — |
-| 6 İndirimin kargoya da uygulanması | Sonnet | Geçti | $0.099 | Geçti, $0.460 |
+| 1 Yeniden adlandırma | Haiku | Geçti | $0,011 | Geçti, $0,277 |
+| 2 Kargo eşiği | Sonnet | Geçti | $0,173 | — |
+| 3 Kupon özelliği ve testleri | Sonnet | Geçti | $0,124 | Geçti, $1,387 |
+| 4 Hata mesajıyla verilen sayfalama hatası | Sonnet | Geçti | $0,072 | Geçti, $0,255 |
+| 5 İnce kuruş yuvarlama hatası | Opus | Geçti | $0,423 | — |
+| 6 İndirimin kargoya da uygulanması | Sonnet | Geçti | $0,099 | Geçti, $0,460 |
 
-İki yolla da denenen 4 görevde gearbox $0.31, hep Opus · high $2.38 harcadı: aynı başarıyla yaklaşık 8 kat ucuz, 8 kat hızlı (73 sn'ye karşı 619 sn). Maliyetler API liste fiyatıyla; abonelik kotası da kabaca bu oranda tükenir. Her görev bir kez, küçük bir projede çalıştırıldı: sonuç kesin değil, yön gösterici.
+İki yolla da denenen 4 görevde gearbox $0,31, hep Opus · high $2,38 harcadı: aynı sonuçla yaklaşık 8 kat ucuz, 8 kat hızlı (73 sn'ye karşı 619 sn). Maliyetler API liste fiyatıyla. Her görev bir kez, küçük bir projede çalıştırıldı: sonuç kesin değil, yön gösterici.
+
+## Proje yapısı
+
+| Yol | İçeriği |
+|---|---|
+| `hooks/register.tsx` | hooks modülü: olaylar, `/gear` komutu, aç/kapa satırı, kartı çizen kanca |
+| `hooks/card.tsx` | tasarruf kartı, Box ve Text'ten bir ağaç |
+| `hooks/core/signals.ts` | sınıflandırıcı: kurallar, etiketler, Türkçe ve İngilizce sinyaller |
+| `hooks/core/llm.ts` | kurallar emin olamayınca Haiku'ya sorulan soru |
+| `hooks/core/tiers.ts` | profiller: kademeden model ve efora |
+| `hooks/core/policy.ts` | bir kademeye uygulanan tavan, önbellek ve tempo |
+| `hooks/core/pacing.ts` | limit pencerelerini okur |
+| `hooks/core/models.ts` | model aileleri, kimlikler, efor seviyeleri |
+| `hooks/core/prices.ts` | liste fiyatları ve bir turun maliyeti |
+| `hooks/core/savings.ts` | modele göre toplamlar, tasarruf, markdown rapor |
+| `hooks/core/settings.ts` | kayıtlı ayarlar ve istatistik, `/gear` ayrıştırma |
+| `hooks/core/switch.ts` | aç/kapa anahtarının çizimi |
+| `hooks/core/version.ts` | denendiği en yeni Claude Code sürümü |
+| `tests/` | kurallar, politika, fiyat ve tasarruf; sahte motora karşı yönlendirici; sınıflandırıcı ölçümü |
+| `eval/` | sınıflandırma ölçümü ve çıktı kalitesi görevleri |
+| `scripts/` | canlı duman testi |
 
 ## Geliştirme
 
@@ -132,22 +197,34 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-`eval/haiku.mjs` ve `eval/tasks.mjs` gerçek model çağrısı yapar, biraz kota harcar. Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test` komutu olan bir Claude Code sürümü gerekir (2.1.295 kullanıldı).
+Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, eklenti API'si uyan bir Claude Code sürümü ister (2.1.295 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur.
 
-## Bir Claude Code güncellemesinden sonra
+**Bir değişikliği kendi Claude Code'unda denemek.** Claude Code klasörü değil, eklentinin kurulu bir kopyasını çalıştırır. Düzenledikten sonra `.claude-plugin/plugin.json` içindeki `version` değerini yükselt, sonra:
+
+```bash
+claude plugin marketplace update gearbox
+```
+
+```bash
+claude plugin update gearbox@gearbox
+```
+
+Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
+
+**Bir Claude Code güncellemesinden sonra:**
 
 1. `claude plugin test .` ve `node scripts/smoke.mjs` çalıştır.
 2. İkisi de geçiyorsa `hooks/core/version.ts` içindeki `TESTED_THROUGH` değerini yeni sürüme çek.
-3. Yeni modeller çıktıysa `hooks/core/models.ts` içindeki `MODEL_IDS` tablosunu güncelle.
+3. Yeni modeller çıktıysa `hooks/core/models.ts` içindeki `MODEL_IDS` tablosunu ve `hooks/core/prices.ts` içindeki fiyat tablosunu güncelle.
 
 ## Yol haritası
 
 - [x] Canlı doğrulama, kendini denetleme, yedek model, kartopu freni
 - [x] Sınıflandırma ve çıktı kalitesi ölçümleri
-- [ ] Alt ajan kuralları (keşif ajanları Haiku · low)
-- [ ] Elle düzeltmelerden öğrenme, istatistik paneli
-- [x] İngilizce README, lisans (MIT)
-- [x] GitHub'da yayın
+- [x] Tur başına maliyet, tasarruf sayacı ve kart
+- [x] İngilizce README, MIT lisansı, GitHub'da yayın
+- [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
+- [ ] Elle düzeltmelerden öğrenme
 
 ## Lisans
 
