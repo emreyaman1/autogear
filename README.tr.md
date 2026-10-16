@@ -244,7 +244,7 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, Claude Code 2.1.295 ya da daha yenisini ister (2.1.295 ve 2.1.299 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur (2.1.278: 75 geçti, 30 kaldı). PATH'teki `claude` masaüstü uygulamasının kendi sürümünden eski olabilir; Windows'ta o sürüm `%APPDATA%\Claude\claude-code\<sürüm>\` altındadır.
+Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, Claude Code 2.1.295 ya da daha yenisini ister (2.1.295 ve 2.1.299 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur (2.1.278: 75 geçti, 30 kaldı). PATH'teki `claude` masaüstü uygulamasının kendi sürümünden eski olabilir; Windows'ta o sürüm `%APPDATA%\Claude\claude-code\` ya da yeni uygulamalarda `%LOCALAPPDATA%\Claude-Data\<profil>\claude-code\` altındadır. Ölçüm betikleri bunların en yenisini kendileri bulur (`CLAUDE_BIN` ile değiştirilebilir) ve 2.1.295'ten eski bir sürümde hiçbir şey harcamadan durur.
 
 **Kendini test konusu yapmadan geliştirmek.** Yeni bir sürüm dört adımdan geçer, her biri bir sonrakinden önce, ve yalnızca sonuncusu gerçek işe dokunur:
 

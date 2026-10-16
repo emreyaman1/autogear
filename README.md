@@ -246,7 +246,7 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs Claude Code 2.1.295 or newer (2.1.295 and 2.1.299 were used): on older builds the hooks module does not load and the router tests fail (2.1.278: 75 pass, 30 fail). The `claude` on your PATH can be older than the desktop app's own build; that one lives under `%APPDATA%\Claude\claude-code\<version>\` on Windows.
+The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs Claude Code 2.1.295 or newer (2.1.295 and 2.1.299 were used): on older builds the hooks module does not load and the router tests fail (2.1.278: 75 pass, 30 fail). The `claude` on your PATH can be older than the desktop app's own build; on Windows that one lives under `%APPDATA%\Claude\claude-code\` or, in newer apps, `%LOCALAPPDATA%\Claude-Data\<profile>\claude-code\`. The measurement scripts pick the newest of them themselves (`CLAUDE_BIN` overrides) and stop before spending anything on a build older than 2.1.295.
 
 **Developing without making yourself the test.** A new version goes through four steps, each before the next, and only the last touches real work:
 

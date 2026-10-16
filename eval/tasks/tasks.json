@@ -2,31 +2,61 @@
   {
     "name": "1-rename",
     "tier": 0,
-    "prompt": "calc fonksiyonunun adını calculateTotal olarak değiştir, kullanıldığı her yerde de güncelle."
+    "prompt": "calc fonksiyonunun adını calculateTotal olarak değiştir, kullanıldığı her yerde de güncelle.",
+    "kind": "önemsiz"
   },
   {
     "name": "2-threshold",
     "tier": 1,
-    "prompt": "ücretsiz kargo sınırını 500 TL'den 750 TL'ye çıkar."
+    "prompt": "ücretsiz kargo sınırını 500 TL'den 750 TL'ye çıkar.",
+    "kind": "küçük değişiklik"
   },
   {
     "name": "3-coupon",
     "tier": 2,
-    "prompt": "checkout'a kupon desteği ekle, checkout(items, { coupon }) şeklinde çağrılsın. 'YUZDE10' ara toplamdan %10 indirim yapsın, 'KARGOBEDAVA' kargoyu ücretsiz yapsın, bilinmeyen bir kod gelirse Error fırlatsın. Testlerini de yaz."
+    "prompt": "checkout'a kupon desteği ekle, checkout(items, { coupon }) şeklinde çağrılsın. 'YUZDE10' ara toplamdan %10 indirim yapsın, 'KARGOBEDAVA' kargoyu ücretsiz yapsın, bilinmeyen bir kod gelirse Error fırlatsın. Testlerini de yaz.",
+    "kind": "yeni özellik"
   },
   {
     "name": "4-paginate",
     "tier": 2,
-    "prompt": "sayfalama yanlış çalışıyor: paginate([1,2,3,4,5,6,7,8,9,10], 2, 3) çağrısı [4,5,6] döndürmesi gerekirken [7,8,9] döndürüyor. Sayfalar 1'den başlıyor. Düzelt."
+    "prompt": "sayfalama yanlış çalışıyor: paginate([1,2,3,4,5,6,7,8,9,10], 2, 3) çağrısı [4,5,6] döndürmesi gerekirken [7,8,9] döndürüyor. Sayfalar 1'den başlıyor. Düzelt.",
+    "kind": "yeri belli hata"
   },
   {
     "name": "5-report",
     "tier": 3,
-    "prompt": "aylık rapordaki KDV dahil toplamlar bazen bir iki kuruş eksik çıkıyor, sebebini bul ve düzelt."
+    "prompt": "aylık rapordaki KDV dahil toplamlar bazen bir iki kuruş eksik çıkıyor, sebebini bul ve düzelt.",
+    "kind": "sebebi saklı hata"
   },
   {
     "name": "6-discount",
     "tier": 2,
-    "prompt": "indirim uygulanınca kargo ücreti de indirimli hesaplanıyor. İndirim sadece ürünlere uygulanmalı, kargo tam ücret kalmalı. Düzelt."
+    "prompt": "indirim uygulanınca kargo ücreti de indirimli hesaplanıyor. İndirim sadece ürünlere uygulanmalı, kargo tam ücret kalmalı. Düzelt.",
+    "kind": "yeri belli hata"
+  },
+  {
+    "name": "7-misleading",
+    "tier": 3,
+    "kind": "yanıltıcı hata",
+    "prompt": "npm test şu hatayı veriyor, invoice.js'deki fatura satırı biçimini düzelt:\n\nnot ok 1 - invoice lines keep the kuruş\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n    [\n  +   'defter: 12.40 TL'\n  -   'defter: 12.45 TL'\n    ]\n      at invoiceLines (src/invoice.js:4:16)\n      at TestContext.<anonymous> (test/invoice.test.js:7:10)"
+  },
+  {
+    "name": "8-vague",
+    "tier": 3,
+    "kind": "belirsiz anlatılmış hata",
+    "prompt": "bu çalışmıyor, düzelt."
+  },
+  {
+    "name": "9-catch-tests",
+    "tier": 3,
+    "kind": "hata yakalayan test",
+    "prompt": "src/cart.js ve src/shipping.js için hataları yakalayacak kapsamlı testler yaz, test/ klasörüne koy. Kaynak kodu değiştirme."
+  },
+  {
+    "name": "10-money",
+    "tier": 2,
+    "kind": "yeniden düzenleme",
+    "prompt": "cart.js'deki kuruşa yuvarlamaları (Math.round(x * 100) / 100) src/money.js içinde roundTL(x) adlı tek bir fonksiyona taşı; cart.js her yerde onu kullansın. Davranış değişmesin, testler geçsin."
   }
 ]
