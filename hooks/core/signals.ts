@@ -23,6 +23,10 @@ export type RuleResult = {
   override?: Override
   // The least Haiku may answer for it, where the rules saw a sure sign of work.
   floor?: Tier
+  // A hunt: a bug described without detail or whose cause hides (it comes and
+  // goes, it shows far from where it starts), or tests written to catch bugs
+  // nobody has found yet. Strong models need more effort on these, not less.
+  isHunt?: true
 }
 
 export type RuleContext = {
@@ -94,16 +98,25 @@ function found(list: readonly Cue[], text: string): string[] {
 
 const word = (source: string): RegExp => new RegExp(`(?:^|[^a-z0-9])(?:${source})`)
 
+// Failures whose cause has to be hunted down: they come and go, lock up, leak,
+// or show far from where they start.
+const ELUSIVE_WORDS = [
+  'race condition', 'deadlock', 'kilitlen', 'memory leak', 'sizinti',
+  'kok neden', 'root cause', 'bazen', 'rastgele', 'ara sira', 'arada bir', 'sometimes', 'randomly', 'intermittent',
+  'flaky', 'donuyor', 'cokuyor', 'takiliyor', 'tutarsiz', 'inconsistent',
+]
+
+const ELUSIVE = cues(ELUSIVE_WORDS)
+
 // Hard on their own: architecture, concurrency, performance, security, and
 // failures that are hard to pin down.
 const HARD = cues([
   'mimari', 'architect', 'refactor', 'refaktor', 'yeniden yapilandir', 'yeniden duzenle', 'restructur', 'katman',
   'monorepo', 'mikroservis', 'microservice', 'monolit', 'design pattern', 'strategy pattern', 'multi.?tenant', 'coklu kiraci',
-  'race condition', 'deadlock', 'kilitlen', 'eszamanli', 'ayni anda', 'concurren', 'thread.?safe',
-  'memory leak', 'sizinti', 'performans', 'performance', 'yavas', 'slow', 'hizlandir', 'speed up', 'latency', 'optimiz', 'optimis', 'olcekle', 'scalab',
+  'eszamanli', 'ayni anda', 'concurren', 'thread.?safe',
+  'performans', 'performance', 'yavas', 'slow', 'hizlandir', 'speed up', 'latency', 'optimiz', 'optimis', 'olcekle', 'scalab',
   'guvenli[kg]?', 'security', 'zafiyet', 'vulnerab', 'injection', 'xss', 'csrf',
-  'kok neden', 'root cause', 'bazen', 'rastgele', 'ara sira', 'arada bir', 'sometimes', 'randomly', 'intermittent',
-  'flaky', 'donuyor', 'cokuyor', 'takiliyor', 'tutarsiz', 'inconsistent',
+  ...ELUSIVE_WORDS,
 ])
 
 // Hard only beside another sign: "neden" may be a quick question or a hunt.
@@ -127,6 +140,12 @@ const AGENTIC = cues([
   'basvur(?![a-z])', 'basvuru(?:mu|yu)? yap', 'formu? doldur', 'yapman gereken (?:her ?seyi|ne varsa)', 'gereken her ?seyi yap',
   'ne gerekiyorsa yap', 'siteye (?:gir(?:ip|erek)?|baglan(?:ip|arak)?)(?![a-z])', 'tarayici(?:yi|da|yla)? (?:kullan(?:arak|ip)?|ac(?:arak|ip)?)(?![a-z])',
 ])
+
+// Asking for a plan: how to go about the work, before doing it. Carrying out a
+// plan ("planı uygula") is not this.
+const PLANNING = word(
+  'plan (?:yap|cikar|hazirla|olustur|kur)|planla(?!n)|yol haritasi|roadmap|nasil (?:yapalim|ilerleyelim|ilerlemeliyiz)|adim adim (?:plan|yol haritasi)|(?:make|write|draft|propose) (?:a |an )?(?:plan|implementation plan)|plan (?:out|for|the|how)(?![a-z])|how should we (?:approach|do|implement|build|structure|tackle)',
+)
 
 // Asking for a look into something: work of its own, which Haiku may not call trivial.
 const INVESTIGATE = word('incele|arastir|investigat|look into')
@@ -218,6 +237,21 @@ const CONVERSION = /(?:typescript|javascript|python|kotlin|swift|go(?:lang)?|rus
 const TEST_WRITE = word(
   '(?:test|birim test|unit test|entegrasyon test|integration test)[a-z]*[^.?!]{0,40}(?:yaz|write|ekle|add|olustur|create)|(?:write|add|create)[^.?!]{0,30}tests?(?![a-z])',
 )
+
+// Tests meant to catch what nobody knows is broken yet: edge cases, a module's
+// hidden bugs, thorough coverage. Tests for a feature just built are not this.
+const TEST_HUNT = word(
+  'edge.?cases?|uc durum|sinir durum|kenar durum|hata(?:lar)?(?:i|ini)? (?:yakala|bul)|hata(?:lari)? yakalayan|bug(?:s|lar)?(?:i)? (?:yakala|bul)|catch(?:es)? (?:bugs|edge)|find bugs|kirmaya calis|try to break|kapsamli|thorough|coverage',
+)
+
+// What makes a bug report clear: the error itself, where it happens, a number
+// to go on, when it happens, what should happen instead. "bu çalışmıyor,
+// düzelt" has none; "tarayıcı açıldığında konsolda hata veriyor" says when.
+const EXPECTED = word('olmali|olmasi gerek|beklen|bekliyor|gerekiyor|yerine|expected|should|instead|supposed to')
+const WHEN = /[a-z]{2,}(?:[iu]nca|[iu]nce|d[iu]g[iu]nd[ae]|t[iu]g[iu]nd[ae]|ken)(?![a-z])|(?:^|[^a-z])(?:when|whenever|after|while|once)(?![a-z])/
+
+// Past this length a report has room to say what is wrong, though it may not.
+const VAGUE_LENGTH = 120
 
 const DEBUG = word(
   'hata(?:si|yi)? (?:veriyor|aliyorum|cikiyor|firlatiyor|donuyor)|kiriliyor|patliyor|calismiyor|calismadi|bozuk|fail(?:s|ed|ing)?(?![a-z])|broken|exception|crash|[45]\\d\\d hatasi|error',
@@ -321,6 +355,11 @@ function isFollowup(text: string): boolean {
   return plain.length <= 40 && ACK.test(plain) && !asksMore
 }
 
+const wordCount = (text: string): number => text.split(/\s+/).filter(Boolean).length
+
+// Code, a path or an identifier anywhere in the prompt: prose() takes them out.
+const hasCode = (raw: string): boolean => wordCount(prose(raw)) !== wordCount(raw)
+
 function countFiles(raw: string): number {
   return new Set((raw.match(FILE) ?? []).map(name => name.trim().replace(/^[(`'"@]/, '').toLowerCase())).size
 }
@@ -340,7 +379,9 @@ export function classify(raw: string, context: RuleContext = {}): RuleResult {
   return result
 }
 
-function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleContext): RuleResult {
+const hunt = (result: RuleResult): RuleResult => ({ ...result, isHunt: true })
+
+function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachments = false }: RuleContext): RuleResult {
   const text = normalize(prose(raw))
   const length = raw.trim().length
   const rule = (
@@ -419,7 +460,12 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
 
   // T3: hard work, decisions, hunts for a cause.
   if (hard.length > 0) {
-    return rule(3, 'high', [`zor iş: ${quote(hard)}`])
+    const result = rule(3, 'high', [`zor iş: ${quote(hard)}`])
+
+    return found(ELUSIVE, rest).length > 0 ? hunt(result) : result
+  }
+  if (PLANNING.test(rest)) {
+    return rule(3, 'high', ['plan istemek'])
   }
   const agentic = found(AGENTIC, rest)
   if (agentic.length > 0) {
@@ -429,7 +475,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
     return rule(3, 'high', ['seçenekler arasında karar'])
   }
   if (WHY.test(rest) && (HUNT.test(rest) || FAILURE.test(rest))) {
-    return rule(3, 'high', ['bir hatanın sebebini bulmak'])
+    const result = rule(3, 'high', ['bir hatanın sebebini bulmak'])
+
+    return FAILURE.test(rest) ? hunt(result) : result
   }
   if (isMigration) {
     return rule(3, 'high', ['bir yapıdan diğerine geçiş'])
@@ -446,13 +494,21 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
   if (scope.length > 0 && (feature.length > 0 || adds.length > 0)) {
     return rule(3, 'high', [`kapsamlı iş: ${quote(scope)}`])
   }
+  if (TEST_WRITE.test(rest) && TEST_HUNT.test(rest)) {
+    return hunt(rule(3, 'high', ['hata yakalayan test yazmak']))
+  }
 
   // T2: debugging with an error in hand, and writing tests.
   if (hasError) {
     return rule(2, 'high', ['hata çıktısı'])
   }
   if (DEBUG.test(rest)) {
-    return rule(2, 'high', ['hata ayıklama'])
+    // "bu çalışmıyor, düzelt": no error, no place, no number, nothing said of
+    // what should happen. A screenshot may say it all, so one beside it is not this.
+    const isVague =
+      files === 0 && !hasCode(raw) && !/\d/.test(rest) && !EXPECTED.test(rest) && !WHEN.test(rest) && length <= VAGUE_LENGTH && !hasAttachments
+
+    return isVague ? hunt(rule(3, 'high', ['belirsiz anlatılmış hata'])) : rule(2, 'high', ['hata ayıklama'])
   }
   if (SYMPTOM.test(rest)) {
     return rule(2, 'high', ['bir şey olması gerektiği gibi olmuyor'])

@@ -4,13 +4,13 @@
 
 Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer, and hard work still goes to the strong model.
 
-> Status: 0.7.1. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.8.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## What you get
 
 - **The right model per message.** "What does this function do" runs on Haiku · low, a clear one-place change on Sonnet · medium, an unclear bug or an architecture question on Opus.
 - **Nothing above your picker.** Set the picker to your strongest model once; gearbox chooses at or below it.
-- **A switch.** A row above the prompt shows whether gearbox is on, with an ON / OFF switch you click.
+- **A state row.** A row above the prompt shows whether gearbox is on, in shadow mode or off, with buttons named for what they do.
 - **Every answer explains itself.** The line under it names the model and effort that answered, the tier and why, and what the turn cost against the picker's model:
 
   ```
@@ -38,15 +38,17 @@ claude plugin marketplace add C:\gearbox
 claude plugin install gearbox@gearbox
 ```
 
-It then runs in every Claude Code session you open, the desktop app included. Needs a Claude Code build with plugin function hooks (tested through 2.1.295).
+It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295 and 2.1.299). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build gearbox does not load at all and cannot say why; 2.1.278 refuses 0.7 as well as 0.8. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
 
 ## Using it
 
 **The picker is the ceiling.** gearbox never spends more than the model and effort the picker holds. Change the picker and it tells you the new ceiling. With the picker on **Opus · high** it is fully automatic.
 
-**The on/off row.** A small row above the prompt shows whether gearbox is on. Its **ON / OFF switch** (green with the knob on the right when on, gray with the knob on the left when off) turns gearbox off and on. When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving.
+**The state row.** A small row above the prompt shows what gearbox is doing: a badge reads **AÇIK** (on, green), **GÖLGE** (shadow, violet), **KAPALI** (off, gray) or **DURDU** (stood down, amber; see Safety nets), with a few words on what that means. Beside it are buttons for the other states, each named for what a press does: **aç** (turn on), **gölgeye al** (shadow mode), **kapat** (turn off); stood down, **yeniden dene** (try again). When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving. While a rate-limit window is nearly full or spent too fast, the row also shows a warning (see Pace below).
 
-**Shadow mode.** `/gear golge` lets gearbox choose without applying the choice: every request goes out as the picker says, and gearbox writes what it would have picked under each answer (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) and in its log. A new version can be tried this way on real work without touching that work, and `/gear yanlis` still marks its choices. `/gear oto` turns routing back on.
+**Shadow mode.** `/gear golge` lets gearbox choose without applying the choice: every request goes out as the picker says, and gearbox writes what it would have picked under each answer (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) and in its log. The picker is the ceiling here too; when it cut the choice, both are written: `⚙ gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium`, so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear yanlis` still marks its choices. `/gear oto` turns routing back on.
+
+**Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. gearbox sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") counts as hard work (T3). The line under the answer and the log say `plan modu`.
 
 **Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). Writing `ultrathink` means T4.
 
@@ -67,7 +69,7 @@ Or say it in words: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, se
 | `/gear haiku aç\|kapa` | may trivial work go to Haiku |
 | `/gear sor aç\|kapa` | may the rules ask Haiku when unsure |
 | `/gear not aç\|kapa` | the line under each answer |
-| `/gear bant aç\|kapa` | the on/off row above the prompt |
+| `/gear bant aç\|kapa` | the state row above the prompt |
 
 (`aç` = on, `kapa` = off, `oto` = auto, `sabitle` = pin, `sifirla` = reset.)
 
@@ -82,10 +84,10 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
 
 1. **Classify** (`hooks/core/signals.ts`): a message becomes tier T0 to T4. Turkish and English cues are read; code, paths and identifiers inside the message are ignored; verbs are read together with their object ("change the color" is not "add a payment system"). The notes Claude Code puts ahead of a message are skipped, a greeting is T0 at once, and a message with nothing written (only an image) carries on with the last choice. When the rules are unsure, one short question goes to Haiku (`hooks/core/llm.ts`).
 2. **Settle** (`hooks/core/settle.ts`): Haiku reads the message alone, without the screenshot or the work around it, so its answer goes at most one tier below what the rules saw, and not under T2 for a request to look into something. A message in the middle of work at T2 or above (a question, a remark, one only Haiku could place) goes at most one tier below that work; new work the rules are sure of, a chore such as a commit, or a greeting starts afresh.
-3. **Decide** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): the tier maps to a model and effort through a profile, then passes three limits:
+3. **Decide** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): the tier maps to a model and effort through a profile, then passes two limits and a look at the rate-limit windows:
    - **Ceiling:** never above the picker's model and effort.
    - **Cache:** with a large context (40K+ tokens) a one-tier difference changes only the effort, because switching models re-sends the whole conversation uncached. A warm cache never keeps harder work on Haiku.
-   - **Pace:** if the 5-hour or weekly window is spent faster than an even pace (30%+ used and 20 points ahead), effort drops one step; at 90% Opus is not used. If a window is nearly over with at most half used, effort goes up one step for standard work and above.
+   - **Pace:** a rate-limit window never lowers the model or the effort: finishing the work matters more than the window. When the 5-hour or weekly window is at 90% or more, or spent faster than an even pace (30%+ used and 20 points ahead), the line under the answer and the state row carry a warning instead (`⚠ 5 saatlik limit %92: bu iş Opus · high ile yapılıyor, limit dolabilir`). If a window is nearly over with at most half used, hard and critical work (T3 and up) gets one step more effort, never as far as max and never above the picker. Standard work is left as it is: on clearly described work more effort did not help in the measurements behind the tier table.
 4. **Apply** (`hooks/register.tsx`, `turn.step`): right before each model request. All requests of a turn use the same model, so the turn keeps its cache. Subagents are left alone.
 5. **Verify** (`turn.complete`): the API names the model that really answered; it is compared with the choice (see Safety nets).
 6. **Count** (`hooks/core/savings.ts`): the turn's real tokens are priced twice, once on the model that answered and once on the picker's model, and added to the session's and the lifetime totals.
@@ -94,15 +96,18 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
 |---|---|---|
 | T0 trivial | "what does this function do", commit message, rename | Haiku · low |
 | T1 routine | clear one-place change | Sonnet · medium |
-| T2 standard | feature, writing tests, debugging with an error | Sonnet · high |
-| T3 hard | unclear bug, architecture, performance, security | Opus · medium |
+| T2 standard | feature, tests for it, debugging with the error in hand | Sonnet · medium |
+| T3 hard | architecture, performance, security, a choice between options | Opus · medium |
+| T3 hunt | a bug told without detail ("this doesn't work, fix it"), one that comes and goes or shows far from its cause, tests written to catch bugs nobody has found yet | Opus · high |
 | T4 critical | long multi-step work, repeated failure | Opus · high |
 
-Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced) and `kalite` (quality) spend more, for Max plans.
+Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced) and `kalite` (quality) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a hunt at high effort at least, and no tier runs at max unless you ask for it (`+max`, "max ile"). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that gearbox's own comparison is to check.
+
+A bug report counts as clear when it holds the error, a file, code, a number, the moment it happens ("when I click...") or what should happen instead; a screenshot beside it counts too.
 
 ## Reviewing its decisions
 
-The classifier numbers below were measured on labels we wrote. To see how gearbox does on your own work, it keeps a log of its decisions on your machine: the start of each message (100 characters), the tier, the model and effort that answered, the source of the choice, what the turn cost, and what happened next. The last 200 are kept.
+The classifier numbers below were measured on labels we wrote. To see how gearbox does on your own work, it keeps a log of its decisions on your machine: the start of each message (100 characters), the tier, the model and effort that answered, what gearbox wanted when the picker cut it, the source of the choice, what the turn cost, and what happened next. The last 200 are kept.
 
 - `/gear kayit` shows the latest 25 as a table, the tiers used, and the **doubtful decisions**: those the work itself called into question (you complained and gearbox moved up a tier; the tests or build failed at the end of the turn) and those you marked.
 - When a decision was wrong, say so right after the answer: `/gear yanlis zayif` (the model was too weak) or `/gear yanlis fazla` (stronger than the work needed). The mark lands on the latest message.
@@ -163,6 +168,8 @@ Dollars per million tokens. A Haiku prompt over 100K tokens costs five times as 
 | **Rules, Haiku when unsure, held to the rules' signs (0.6)** | **88%** | **100%** | **0** | **19%** |
 | Always Haiku, take the higher | 74% | 96% | 0 | 100% |
 
+How the 143 labelled messages are routed, by the rules alone, with the picker on Opus · high (0.8, `tasarruf`; `claude plugin test .` prints it as `EVAL route`): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Opus · medium 26, T3 hunt Opus · high 10, T4 Opus · high 13. Until 0.7 the 33 standard ones ran on Sonnet · high and the 10 hunts on Opus · medium; the tiers themselves did not change.
+
 \* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower. The bound of 0.6 costs one message here ("bu import neden kullanılıyor?" is now T1, not T0) and is what keeps the real-use errors below from happening.
 
 **Real use**: the 49 decisions gearbox made in 11 sessions between 11 and 16 October 2026, each labelled afterwards from what the work turned out to be (one reviewer's judgment, not a panel's). What gearbox chose then, and the same messages played again through 0.6:
@@ -181,7 +188,7 @@ What went wrong in the first row: the note Claude Code puts ahead of a message i
 | Rules alone | 36% | 79% | 9 (3%) | 183 | 0.10 |
 | **gearbox: rules, Haiku when unsure** | **31%** | **78%** | **6 (2%)** | **207** | **0.16** |
 
-By set, gearbox as it runs: SWE-bench Verified 36% exact, 83% within one tier, 1 severe case in 500; Terminal-Bench 30%, 73%, 8 severe cases in 241 (3%). Before the two rule fixes of 0.7 (a chore word such as "commit" inside a long description no longer makes it trivial; a long description of work is no small change) the rules had 21 severe cases (6%) on the held-out half. Asking Haiku where the rules are unsure lowers the severe cases further and raises the rank agreement, at the price of more work sent a tier or two too high, since Haiku answers the higher tier when torn. The measurement asked Haiku 177 times, $0.38 at list price.
+By set, gearbox as it runs: SWE-bench Verified 36% exact, 83% within one tier, 1 severe case in 500; Terminal-Bench 30%, 73%, 8 severe cases in 241 (3%). Before the two rule fixes of 0.7 (a chore word such as "commit" inside a long description no longer makes it trivial; a long description of work is no small change) the rules had 21 severe cases (6%) on the held-out half. Asking Haiku where the rules are unsure lowers the severe cases further and raises the rank agreement, at the price of more work sent a tier or two too high, since Haiku answers the higher tier when torn. The measurement asked Haiku 177 times, $0.38 at list price. These numbers are from 0.7: 0.8 moved three kinds of request up to T3 (a bug told without detail, tests written to catch hidden bugs, a request for a plan) and has not been measured on these sets again.
 
 What it shows: gearbox rarely sends hard work to a weak model, but on long English issues and task statements it hardly tells a fifteen-minute fix from a four-hour one (rank agreement 0.16), and it spends on the safe side. These texts are unlike the short prompts people type, which is what the rules were built for; and the time-to-tier mapping is ours, so some of "too high" is a tier the work may well have deserved (a quick fix in an unfamiliar codebase is still a hunt).
 
@@ -202,20 +209,20 @@ On the 4 tasks run both ways gearbox spent $0.31 against $2.38 on Opus · high t
 
 | Path | What it holds |
 |---|---|
-| `hooks/register.tsx` | the hooks module: events, the `/gear` command, the on/off row, the card hook |
+| `hooks/register.tsx` | the hooks module: events, the `/gear` command, the state row, the card hook |
 | `hooks/card.tsx` | the savings card, a tree of Box and Text |
 | `hooks/core/signals.ts` | the classifier: rules, overrides, Turkish and English cues |
 | `hooks/core/llm.ts` | the question put to Haiku when the rules are unsure |
 | `hooks/core/tiers.ts` | profiles: tier to model and effort |
-| `hooks/core/policy.ts` | ceiling, cache and pace applied to a tier |
-| `hooks/core/pacing.ts` | reads the rate-limit windows |
+| `hooks/core/policy.ts` | ceiling and cache applied to a tier, and the windows it warns about |
+| `hooks/core/pacing.ts` | reads the rate-limit windows and words the warning |
 | `hooks/core/models.ts` | model families, ids, effort levels |
 | `hooks/core/prices.ts` | list prices and the cost of a turn |
 | `hooks/core/journal.ts` | the decision log: entries, complaint and failing-check flags, your marks, the report |
 | `hooks/core/settle.ts` | how the rules, Haiku's answer and the work in hand settle a tier |
 | `hooks/core/savings.ts` | per-model totals, the saving, the markdown report |
 | `hooks/core/settings.ts` | stored settings and statistics, `/gear` parsing |
-| `hooks/core/switch.ts` | the drawing of the on/off switch |
+| `hooks/core/switch.ts` | the drawing of the state badge |
 | `hooks/core/version.ts` | the newest Claude Code version it was tested on |
 | `tests/` | rules, policy, prices and savings; the router against a mock engine; the classifier eval |
 | `eval/` | classifier measurement, the external benchmarks (`external.mjs`) and the output-quality tasks |
@@ -239,7 +246,7 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs a Claude Code build whose plugin API matches (2.1.295 was used): on older builds the hooks module does not load and the router tests fail.
+The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs Claude Code 2.1.295 or newer (2.1.295 and 2.1.299 were used): on older builds the hooks module does not load and the router tests fail (2.1.278: 75 pass, 30 fail). The `claude` on your PATH can be older than the desktop app's own build; that one lives under `%APPDATA%\Claude\claude-code\<version>\` on Windows.
 
 **Developing without making yourself the test.** A new version goes through four steps, each before the next, and only the last touches real work:
 
@@ -273,6 +280,7 @@ Restart the app and open a new chat.
 - [x] Per-turn cost, savings counter and card
 - [x] English README, MIT license, published on GitHub
 - [x] Shadow mode, external benchmarks and a harvest of real decisions, so a new version is judged before it routes anyone's work (0.7)
+- [x] Rate-limit windows warn instead of lowering the choice; the effort table retuned from measurements (Sonnet · medium for clear work, hunts at high, no max unasked); a state row that shows on, shadow and off apart; the shadow log keeps what the picker cut; plan mode goes to Opus (0.8)
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
 - [x] Decision log with your marks, to see where the rules go wrong
 - [x] Review of real use: system notes, the bound on Haiku, the hold on work in hand, models named in words (0.6)

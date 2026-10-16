@@ -15,14 +15,14 @@ import { savingsCard, type LimitRow } from './card'
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
 import { addEntry, flagLast, journalText, markLast, MARK_NAMES, readJournal, snippet, type Mark } from './core/journal'
 import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort, type Family } from './core/models'
-import { pace } from './core/pacing'
+import { pace, paceWarning } from './core/pacing'
 import { decide, type Decision } from './core/policy'
 import { costOf, readTokens, turnMoney, usd } from './core/prices'
 import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from './core/savings'
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
 import { readRule, settle, type Task } from './core/settle'
-import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from './core/switch'
+import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, BADGE_WIDTH, badgeSvg } from './core/switch'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { isNewerThan, TESTED_THROUGH } from './core/version'
 import type { GearboxMode } from '../types'
@@ -51,9 +51,22 @@ const WINDOW_NAMES: Record<string, string> = { five_hour: '5 saatlik', seven_day
 
 const LIMIT_TITLES: Record<string, string> = { five_hour: 'Oturum sınırı · 5 saat', seven_day: 'Haftalık sınır' }
 
-// A desktop Button draws its label and nothing else: three em spaces make one
-// that is blank and wider than the switch it is laid over.
-const BLANK_LABEL = '\u2003'.repeat(3)
+const MODE_NAMES: Record<GearboxMode, string> = { auto: 'açık', shadow: 'gölge', pin: 'kapalı', down: 'durdu' }
+
+// What each state of the band means, beside its badge.
+const MODE_NOTES: Record<GearboxMode, string> = {
+  auto: 'işe göre model ve efor seçiyor',
+  shadow: 'seçimlerini yazıyor, uygulamıyor; cevabı seçicideki model veriyor',
+  pin: 'seçicideki model kullanılıyor',
+  down: 'seçimleri uygulanmıyordu; seçicideki model kullanılıyor',
+}
+
+// The band's buttons, each named for what a press does.
+const MODE_ACTIONS = [
+  { mode: 'auto', key: 'to-auto', label: 'aç' },
+  { mode: 'shadow', key: 'to-shadow', label: 'gölgeye al' },
+  { mode: 'pin', key: 'to-pin', label: 'kapat' },
+] as const
 
 const HELP = [
   '| Komut | İş |',
@@ -105,6 +118,14 @@ type State = {
 }
 
 const modeAtom = atom({ plugin: 'gearbox', key: 'mode' } as const, 'auto')
+
+const warningAtom = atom({ plugin: 'gearbox', key: 'warning' } as const, '')
+
+// In plan mode, as the engine's plan-mode notes say (the session.append hook
+// below). Kept in the session's state, so a reload of the module keeps it.
+// Plan mode set in the middle of a turn counts from the next turn: a turn
+// keeps its one model.
+const planningAtom = atom({ plugin: 'gearbox', key: 'planning' } as const, false)
 
 const kilo = (tokens: number): string => (tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}K` : String(tokens))
 
@@ -222,19 +243,22 @@ async function decideTurn(
     pace: currentPace,
     allowHaiku: state.settings.allowHaiku,
     unavailable: [...state.unavailable],
+    isPlanning: await read($, planningAtom),
   }
   if (taken === undefined) {
     if (state.last === undefined) {
       return undefined
     }
-    const kept = decide({ ...common, tier: state.last.tier, source: 'inherit', reasons: ['kullanıcı mesajı yok: son seçim'] })
+    const kept = decide({ ...common, tier: state.last.tier, source: 'inherit', reasons: ['kullanıcı mesajı yok: son seçim'], isHunt: state.last.isHunt === true })
+    await showWarning($, state, kept, e)
 
     return remember($, state, e.turnId, { ...kept, ceilingModel: e.model })
   }
 
   const { rule } = taken
   let haiku: Tier | undefined
-  if (rule.confidence === 'low' && state.settings.askHaiku && currentPace.level !== 'critical') {
+  // Asked whatever the windows say: a choice is never made worse to spare them.
+  if (rule.confidence === 'low' && state.settings.askHaiku) {
     const asked = await askHaiku($, taken.text, state.last?.tier)
     state.overhead += asked.cost
     haiku = asked.tier
@@ -243,9 +267,22 @@ async function decideTurn(
   const settled = settle(rule, { haiku, task: state.task, carryFailure: state.carryFailure })
   state.carryFailure = false
   state.task = settled.task
-  const decision = decide({ ...common, tier: settled.tier, source: settled.source, reasons: settled.reasons, override: rule.override })
+  // A go-ahead in the middle of a hunt carries it on at its effort.
+  const isHunt = rule.isHunt === true || (rule.source === 'inherit' && state.last?.isHunt === true)
+  const decision = decide({ ...common, tier: settled.tier, source: settled.source, reasons: settled.reasons, override: rule.override, isHunt })
+  await showWarning($, state, decision, e)
 
   return remember($, state, e.turnId, { ...decision, ceilingModel: e.model, prompt: taken.text })
+}
+
+// The band's warning for the turn about to run: the window under pressure and
+// what the work runs on, gearbox's choice or, in shadow mode, the picker's.
+async function showWarning($: EngineInterface, state: State, decision: Decision, e: Pick<TurnStepInput, 'model' | 'effort'>): Promise<void> {
+  const running =
+    state.settings.mode === 'shadow'
+      ? `${displayModel(e.model)} · ${asEffort(e.effort) ?? 'varsayılan efor'}`
+      : `${FAMILY_NAMES[decision.family]} · ${decision.effort}`
+  await update($, warningAtom, () => paceWarning(decision.limit, running) ?? '')
 }
 
 // The prompt as the rules read it. One they cannot read is taken as work, and
@@ -299,7 +336,17 @@ function footer(state: State, decision: Decision, usage: TurnUsage | undefined, 
   const source = SOURCE_NAMES[decision.source] ?? decision.source
   const cost = money === undefined ? '' : ` · ${usd(money.spent)} (seçici modeliyle ${usd(money.baseline)})`
 
-  return `⚙ ${model} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} (${source}: ${why})${cache}${cost}`
+  return `⚙ ${model} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} (${source}: ${why})${cache}${cost}${planned(decision)}${warned(decision, `${model} · ${decision.effort}`)}`
+}
+
+// " · plan modu" for a choice made in plan mode.
+const planned = (decision: Decision): string => (decision.isPlanning === true ? ' · plan modu' : '')
+
+// " · ⚠ 5 saatlik limit %92: ..." while a window is under pressure.
+function warned(decision: Decision, running: string): string {
+  const warning = paceWarning(decision.limit, running)
+
+  return warning === undefined ? '' : ` · ⚠ ${warning}`
 }
 
 // A turn in shadow mode: what gearbox would have chosen, beside what answered.
@@ -307,8 +354,10 @@ function shadowFooter(state: State, decision: Decision, usage: TurnUsage | undef
   const why = (decision.reasons.length > 2 ? [decision.reasons[0], decision.reasons.at(-1)] : decision.reasons).join('; ')
   const source = SOURCE_NAMES[decision.source] ?? decision.source
   const answered = usage === undefined ? 'seçicideki model' : displayModel(usage.model)
+  // The picker is the ceiling in shadow mode too: what it cut is said, so a need for Opus shows.
+  const wanted = decision.wanted === undefined ? '' : `, tavan olmasa ${FAMILY_NAMES[decision.wanted.family]} · ${decision.wanted.effort}`
 
-  return `⚙ gölge: ${FAMILY_NAMES[decision.family]} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} önerirdi (${source}: ${why}) · cevap: ${answered}`
+  return `⚙ gölge: ${FAMILY_NAMES[decision.family]} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} önerirdi${wanted} (${source}: ${why}) · cevap: ${answered}${planned(decision)}${warned(decision, answered)}`
 }
 
 // The end of a turn chosen in shadow mode: nothing was applied, so nothing is
@@ -417,6 +466,8 @@ async function noteDecision(
         mark: undefined,
         reasons: decision.reasons.slice(0, 6),
         ...(decision.isShadow === true ? { isShadow: true as const, ...(answered === undefined ? {} : { answered }) } : {}),
+        ...(decision.wanted === undefined ? {} : { wanted: decision.wanted }),
+        ...(decision.isPlanning === true ? { isPlanning: true as const } : {}),
       })
     }
     await $.store.set('journal', journal)
@@ -442,6 +493,7 @@ async function describe($: EngineInterface, state: State): Promise<string> {
     '',
     `- **Tavan (seçici):** ${state.ceilingSeen ?? 'henüz istek yok'}`,
     `- **Limitler:** ${limits === '' ? 'henüz bilinmiyor' : limits}`,
+    (await read($, planningAtom)) ? "- **Plan modu:** açık; istekler Opus'a, efor planın büyüklüğüne göre (seçicinin altında)" : undefined,
     last === undefined
       ? '- **Son karar:** yok'
       : `- **Son karar:** ${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)} (${SOURCE_NAMES[last.source] ?? last.source}: ${last.reasons.join('; ')})`,
@@ -489,13 +541,19 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
   }
 }
 
-// One switch for the band's button and for /gear: auto turns routing on (and
-// tries again after standing down), pin hands every request to the picker.
+// One switch for the band's buttons and for /gear: auto turns routing on (and
+// tries again after standing down), shadow chooses and writes it down, pin
+// hands every request to the picker. A state picked by hand ends a stand-down,
+// so the band shows the state that was picked.
 async function switchMode($: EngineInterface, state: State, mode: Settings['mode']): Promise<void> {
+  state.isStoodDown = false
+  state.mismatches = 0
   if (mode === 'auto') {
-    state.isStoodDown = false
-    state.mismatches = 0
     state.unavailable.clear()
+  }
+  if (mode === 'pin') {
+    // Off, gearbox reads no windows: an old warning would stand there unchecked.
+    await update($, warningAtom, () => '')
   }
   state.settings = { ...state.settings, mode }
   await $.store.set('settings', state.settings)
@@ -666,6 +724,18 @@ export const register: Register = on => {
     return yield* next(e)
   })
 
+  // The engine tells the model it is in plan mode with a note of its own,
+  // stored before the turn's first request reads the conversation; another
+  // note says plan mode has ended. A subagent's notes are its own.
+  on('session.append', { door: 'attachment' }, async ($, e, next) => {
+    const name = e.message.name
+    if (e.agentId === undefined && (name === 'plan_mode' || name === 'plan_mode_reentry' || name === 'plan_mode_exit')) {
+      await update($, planningAtom, () => name !== 'plan_mode_exit')
+    }
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const ran = await next(e)
     if (e.agentId === undefined && CHECK_COMMAND.test(e.command)) {
@@ -691,51 +761,51 @@ export const register: Register = on => {
     return state.settings.footer ? { ...result, text: footer(state, decision, e.usage, money) } : result
   })
 
-  // A small row above the prompt with the on/off switch: the status text at
-  // the bottom right cannot be pressed, a Button can. The terminal draws the
-  // switch as colored Text inside the Button; a desktop draws a Button as its
-  // label alone, so there the switch is an Svg with a blank Button laid over it.
+  // A small row above the prompt: what gearbox does now, as a badge in the
+  // state's color, and a button for each other state named for what it does,
+  // so a press never does what the row did not say. The status text at the
+  // bottom right cannot be pressed, a Button can. The terminal draws the badge
+  // as colored Text, a desktop as an Svg.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey || !state.settings.band) {
       return next(e)
     }
     const mode = await read($, modeAtom)
-    const isOn = mode === 'auto'
-    const name = mode === 'auto' ? 'açık' : mode === 'pin' ? 'kapalı' : mode === 'shadow' ? 'gölge' : 'devre dışı'
-    const note =
-      mode === 'auto' ? 'açık: işe göre model ve efor seçiyor'
-      : mode === 'pin' ? 'kapalı: seçicideki model kullanılıyor'
-      : mode === 'shadow' ? 'gölgede: seçimlerini yazıyor, cevabı seçicideki model veriyor'
-      : 'devre dışı: seçimler uygulanmıyordu, seçicideki model kullanılıyor'
-    const flip = () => switchMode($, state, isOn ? 'pin' : 'auto')
+    const warning = mode === 'auto' || mode === 'shadow' ? await read($, warningAtom) : ''
+    const actions = MODE_ACTIONS.filter(action => action.mode !== mode)
+    // Stood down, "aç" tries again.
+    const label = (action: (typeof MODE_ACTIONS)[number]): string => (mode === 'down' && action.mode === 'auto' ? 'yeniden dene' : action.label)
 
     if (e.surface === 'terminal') {
       const { Box, Button, Text } = $.ui.resolve(e)
 
       return (
         <Box>
-          <Text dimColor>⚙ gearbox {note} </Text>
-          <Button key="toggle" plain label={`gearbox: ${name}`} onPress={flip}>
-            <Text backgroundColor={isOn ? SWITCH_ON : SWITCH_OFF} color="#ffffff" bold>
-              {isOn ? ' ON  ● ' : ' ● OFF '}
-            </Text>
-          </Button>
+          <Text dimColor>⚙ gearbox </Text>
+          <Text backgroundColor={BADGE_COLORS[mode]} color="#ffffff" bold>
+            {` ${BADGE_NAMES[mode]} `}
+          </Text>
+          <Text dimColor> {MODE_NOTES[mode]} </Text>
+          {warning !== '' && <Text color="warning">⚠ {warning} </Text>}
+          {actions.map(action => (
+            <Button key={action.key} label={label(action)} onPress={() => switchMode($, state, action.mode)} />
+          ))}
         </Box>
       )
     }
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
 
-    // The padding leaves the Button, centered over the Svg, room for its whole
-    // label: squeezed narrower, a desktop Button draws an ellipsis in it.
     return (
       <Box>
-        <Text dimColor>⚙ gearbox {note}</Text>
-        <Box alignSelf="center" flexShrink={0} paddingX={3}>
-          <Svg source={switchSvg(isOn)} alt={`gearbox: ${name}`} width={SWITCH_WIDTH} height={SWITCH_HEIGHT} />
-          <Box position="absolute" top={0} left={0} width="100%" height="100%" alignItems="center" justifyContent="center">
-            <Button key="toggle" plain label={BLANK_LABEL} onPress={flip} />
-          </Box>
+        <Text dimColor>⚙ gearbox </Text>
+        <Box alignSelf="center" flexShrink={0}>
+          <Svg source={badgeSvg(mode)} alt={`gearbox: ${MODE_NAMES[mode]}`} width={BADGE_WIDTH} height={BADGE_HEIGHT} />
         </Box>
+        <Text dimColor> {MODE_NOTES[mode]}</Text>
+        {warning !== '' && <Text color="warning"> ⚠ {warning}</Text>}
+        {actions.map(action => (
+          <Button key={action.key} label={label(action)} onPress={() => switchMode($, state, action.mode)} />
+        ))}
       </Box>
     )
   })

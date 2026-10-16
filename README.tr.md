@@ -4,13 +4,13 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer, zor işler yine güçlü modelle yapılır.
 
-> Durum: 0.7.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.8.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Ne sağlar
 
 - **Mesaj başına doğru model.** "Bu fonksiyon ne yapıyor" Haiku · low ile, net ve tek yerlik bir değişiklik Sonnet · medium ile, belirsiz bir hata ya da mimari sorusu Opus ile çalışır.
 - **Seçicinin üstüne çıkmaz.** Seçiciyi bir kez en güçlü modeline getirirsin; gearbox ona eşit ya da altında seçer.
-- **Bir anahtar.** İstem kutusunun üstündeki satır gearbox'ın açık olup olmadığını gösterir; yanındaki ON / OFF anahtarına tıklarsın.
+- **Bir durum satırı.** İstem kutusunun üstündeki satır gearbox'ın açık mı, gölgede mi, kapalı mı olduğunu gösterir; yanındaki düğmelerin üstünde ne yaptıkları yazar.
 - **Her cevap kendini açıklar.** Altındaki satır cevap veren model ve eforu, kademeyi ve nedenini, bir de turun seçici modeline göre ne tuttuğunu söyler:
 
   ```
@@ -38,15 +38,17 @@ claude plugin marketplace add C:\gearbox
 claude plugin install gearbox@gearbox
 ```
 
-Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Eklenti function hooks özelliği olan bir Claude Code sürümü ister (2.1.295'e kadar denendi).
+Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295 ve 2.1.299'da denendi). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde gearbox hiç yüklenmez ve nedenini söyleyemez; 2.1.278 hem 0.7'yi hem 0.8'i reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
 
 ## Kullanım
 
 **Seçici tavandır.** gearbox, seçicideki model ve eforun üstünde harcama yapmaz. Seçiciyi değiştirdiğinde yeni tavanı bildirir. Seçici **Opus · high** iken tam otomatiktir.
 
-**Aç/kapa satırı.** İstem kutusunun üstündeki küçük satır gearbox'ın açık olup olmadığını gösterir. **ON / OFF anahtarı** (açıkken yeşil ve topuz sağda, kapalıyken gri ve topuz solda) gearbox'ı kapatır ve açar. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir.
+**Durum satırı.** İstem kutusunun üstündeki küçük satır gearbox'ın ne yaptığını gösterir: bir etikette **AÇIK** (yeşil), **GÖLGE** (mor), **KAPALI** (gri) ya da **DURDU** (turuncu; bkz. Güvenlik ağları) yazar, yanında bunun ne demek olduğu. Yanındaki düğmeler öteki durumlar içindir ve her birinin üstünde basınca ne olacağı yazar: **aç**, **gölgeye al**, **kapat**; durmuşsa **yeniden dene**. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir. Bir limit penceresi dolmak üzereyken ya da çok hızlı harcanırken satırda bir de uyarı görünür (aşağıda Tempo).
 
-**Gölge mod.** `/gear golge` ile gearbox seçer ama seçimini uygulamaz: her istek seçici ne diyorsa onunla gider, gearbox da ne seçeceğini her cevabın altına (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) ve günlüğüne yazar. Yeni bir sürüm böylece gerçek iş üzerinde, o işe dokunmadan denenir; `/gear yanlis` seçimlerini yine işaretler. `/gear oto` yönlendirmeyi geri açar.
+**Gölge mod.** `/gear golge` ile gearbox seçer ama seçimini uygulamaz: her istek seçici ne diyorsa onunla gider, gearbox da ne seçeceğini her cevabın altına (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) ve günlüğüne yazar. Seçici burada da tavandır; seçimi kırptıysa ikisi de yazılır: `⚙ gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium`. Böylece seçici Sonnet'teyken de Opus ihtiyacı görünür. Yeni bir sürüm böylece gerçek iş üzerinde, o işe dokunmadan denenir; `/gear yanlis` seçimlerini yine işaretler. `/gear oto` yönlendirmeyi geri açar.
+
+**Plan modu.** Claude Code'un plan modunda her istek Opus'a gider; efor, kuralların okuduğu plan büyüklüğüne göre seçilir: küçük planda medium, ortada high, çok parçalı büyük planda xhigh. Seçicinin üstüne asla çıkmaz; senin adını verdiğin model (`+sonnet`) yine önde gelir. gearbox plan modunu Claude Code'un model için eklediği nottan anlar; bu yüzden bir cevabın ortasında açılan plan modu bir sonraki mesajdan itibaren sayılır. Plan modu dışında da plan isteyen bir mesaj ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") zor iş (T3) sayılır. Cevabın altındaki satırda ve günlükte `plan modu` yazar.
 
 **Etiketler.** Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
 
@@ -67,7 +69,7 @@ Ya da düz yazıyla söyle: "bu görevi sonnet'e max ile ver", "opus ile yap", "
 | `/gear haiku aç\|kapa` | önemsiz işler Haiku'ya gitsin mi |
 | `/gear sor aç\|kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |
 | `/gear not aç\|kapa` | cevabın altındaki satır |
-| `/gear bant aç\|kapa` | istem kutusunun üstündeki aç/kapa satırı |
+| `/gear bant aç\|kapa` | istem kutusunun üstündeki durum satırı |
 
 ## Nasıl çalışır
 
@@ -80,10 +82,10 @@ mesaj ─► sınıfla ─► yerleştir ─► karar  ─► uygula    ─► c
 
 1. **Sınıflandırma** (`hooks/core/signals.ts`): Mesaj T0–T4 kademelerinden birine konur. Türkçe ve İngilizce sinyaller okunur; mesajdaki kod, dosya ve değişken adları dikkate alınmaz. Fiil tek başına değil nesnesiyle değerlendirilir ("rengi değiştir" ≠ "ödeme sistemi ekle"). Claude Code'un mesajın önüne koyduğu notlar okunmaz, selamlaşma doğrudan T0'dır, hiçbir şey yazılmamış bir mesaj (yalnızca görsel) son seçimle devam eder. Kurallar emin olamazsa Haiku'ya tek kısa bir soru sorulur (`hooks/core/llm.ts`).
 2. **Yerleştirme** (`hooks/core/settle.ts`): Haiku mesajı tek başına okur, ekran görüntüsünü ya da etrafındaki işi görmez; bu yüzden cevabı kuralların gördüğünden en çok bir kademe aşağı inebilir, bir şeyi incelemeyi isteyen mesajda T2'nin altına inmez. T2 ve üstü bir işin ortasındaki mesaj (bir soru, bir açıklama, yalnızca Haiku'nun yerleştirebildiği bir mesaj) o işin en çok bir kademe altına iner; kuralların emin olduğu yeni iş, commit gibi bir angarya ya da selamlaşma baştan başlar.
-3. **Karar** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): Kademe, profil tablosundan model ve efora çevrilir, sonra üç sınırdan geçer:
+3. **Karar** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): Kademe, profil tablosundan model ve efora çevrilir, sonra iki sınırdan geçer ve limit pencerelerine bakılır:
    - **Tavan:** Seçicideki model ve efor aşılmaz.
    - **Önbellek:** Bağlam büyükse (40K+ token) bir kademelik farklar için model değiştirilmez, yalnızca efor değişir; model geçişi bütün konuşmayı önbelleksiz yeniden gönderir. Sıcak önbellek daha zor bir işi asla Haiku'da tutmaz.
-   - **Tempo:** 5 saatlik ya da haftalık limit eşit hızın üstünde harcanıyorsa (%30'dan fazlası kullanılmış ve beklenenin 20 puan önünde) efor bir kademe iner; %90'da Opus kullanılmaz. Bir pencere bitmeye yakınsa ve yarısı bile kullanılmadıysa, standart ve üstü işlerde efor bir kademe çıkar.
+   - **Tempo:** Limit penceresi modeli ya da eforu asla düşürmez: işin başarıyla bitmesi limitten önemli. 5 saatlik ya da haftalık limit %90'ı geçtiyse ya da eşit hızın üstünde harcanıyorsa (%30'dan fazlası kullanılmış ve beklenenin 20 puan önünde), bunun yerine cevabın altındaki satırda ve durum satırında uyarı çıkar (`⚠ 5 saatlik limit %92: bu iş Opus · high ile yapılıyor, limit dolabilir`). Bir pencere bitmeye yakınsa ve yarısı bile kullanılmadıysa, zor ve kritik işlerde (T3 ve üstü) efor bir kademe çıkar; max'a kadar çıkmaz, seçicinin üstüne de çıkmaz. Standart işe dokunulmaz: kademe tablosunun dayandığı ölçümlerde net anlatılmış işte fazla efor işe yaramadı.
 4. **Uygulama** (`hooks/register.tsx`, `turn.step`): Her model isteğinden hemen önce kararı uygular. Bir turun bütün istekleri aynı modelle gider, böylece tur önbelleğini korur. Alt ajanlara dokunulmaz.
 5. **Doğrulama** (`turn.complete`): API'nin bildirdiği gerçek model, seçimle karşılaştırılır (bkz. Güvenlik ağları).
 6. **Sayım** (`hooks/core/savings.ts`): Turun gerçek token sayısı iki kez fiyatlanır, bir kez cevap veren modelde, bir kez seçicideki modelde, ve oturumun ile genel toplama eklenir.
@@ -92,15 +94,18 @@ mesaj ─► sınıfla ─► yerleştir ─► karar  ─► uygula    ─► c
 |---|---|---|
 | T0 önemsiz | "bu fonksiyon ne yapıyor", commit mesajı, yeniden adlandırma | Haiku · low |
 | T1 rutin | net, tek yerlik değişiklik | Sonnet · medium |
-| T2 standart | özellik, test yazma, hata çıktılı debug | Sonnet · high |
-| T3 zor | belirsiz hata, mimari, performans, güvenlik | Opus · medium |
+| T2 standart | özellik, onun testleri, hata çıktısı elde olan debug | Sonnet · medium |
+| T3 zor | mimari, performans, güvenlik, seçenekler arasında karar | Opus · medium |
+| T3 hata avı | ayrıntısız anlatılmış hata ("bu çalışmıyor, düzelt"), bazen olup bazen olmayan ya da sebebinden uzakta görünen hata, henüz kimsenin bulmadığı hataları yakalayacak test yazma | Opus · high |
 | T4 kritik | çok adımlı büyük iş, tekrarlayan başarısızlık | Opus · high |
 
-Profiller: `tasarruf` (Pro için), `dengeli` ve `kalite` daha cömert harcar, Max planları içindir.
+Profiller: `tasarruf` (Pro için), `dengeli` ve `kalite` daha cömert harcar, Max planları içindir. Her profilde net anlatılmış rutin ve standart iş Sonnet · medium ile, hata avı en az high eforla çalışır; hiçbir kademe sen istemedikçe (`+max`, "max ile") max ile çalışmaz. Dayanağı: gerçek Python projelerinde gizli testlerle yapılmış açık bir ölçümde (Forn AI, 4 Ekim 2026) Sonnet · medium yeri belli 13 hatanın 13'ünü Opus · high'ın üçte bir maliyetine çözdü, net işte Sonnet'in eforunu artırmak işe yaramadı; hata çıktısının yanlış dosyayı gösterdiği hatada Opus · high 6/6, Sonnet · medium 4/6, aynı hata belirsiz anlatılınca Sonnet 0/2; 22 gizli hatayı yakalaması gereken test yazımında Opus · high 22/22, Sonnet 16–19. Bunların bir kısmı 2–6 denemeye dayanıyor; tablo bir başlangıç, gearbox'ın kendi kıyas ölçümü doğrulayacak.
+
+Bir hata bildirimi şunlardan birini içeriyorsa net sayılır: hata çıktısı, dosya adı, kod, bir sayı, ne zaman olduğu ("tıklayınca ...") ya da ne olması gerektiği; yanındaki ekran görüntüsü de sayılır.
 
 ## Kararlarını gözden geçirme
 
-Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölçüldü. Kendi işlerinde gearbox'ın nasıl yaptığını görmek için kararlarının günlüğünü makinende tutar: her mesajın başı (100 karakter), kademe, cevap veren model ve efor, seçimin kaynağı, turun maliyeti ve sonrasında ne olduğu. Son 200 karar saklanır.
+Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölçüldü. Kendi işlerinde gearbox'ın nasıl yaptığını görmek için kararlarının günlüğünü makinende tutar: her mesajın başı (100 karakter), kademe, cevap veren model ve efor, seçici kırptıysa gearbox'ın istediği, seçimin kaynağı, turun maliyeti ve sonrasında ne olduğu. Son 200 karar saklanır.
 
 - `/gear kayit` son 25 kararı tablo olarak, kullanılan kademeleri ve **şüpheli kararları** gösterir: işin kendisinin sorguladığı kararlar (şikâyet ettin ve gearbox bir kademe yükseltti; turun sonunda testler ya da derleme kırıktı) ve senin işaretlediklerin.
 - Bir karar yanlışsa cevaptan hemen sonra söyle: `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (işin gerektirdiğinden güçlüydü). İşaret son mesaja düşer.
@@ -161,6 +166,8 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 | **Kurallar + emin değilse Haiku, kuralın işaretine bağlı (0.6)** | **%88** | **%100** | **0** | **%19** |
 | Her zaman Haiku, yüksek olan | %74 | %96 | 0 | %100 |
 
+143 etiketli mesajın, yalnızca kurallarla ve seçici Opus · high iken nereye gittiği (0.8, `tasarruf`; `claude plugin test .` bunu `EVAL route` satırında yazar): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Opus · medium 26, T3 hata avı Opus · high 10, T4 Opus · high 13. 0.7'ye kadar 33 standart mesaj Sonnet · high ile, 10 hata avı Opus · medium ile çalışıyordu; kademelerin kendisi değişmedi.
+
 \* Zor bir işi (T3+) T0/T1'e ya da iki kademe aşağı koymak. Not: ayardan önce ayrılan kümenin hataları bir kez görüldü ve yeni kümedeki hatalar "emin değilse sor" eşiğini etkiledi; gerçek isabet bir miktar düşük olabilir. 0.6'nın sınırı burada bir mesaja mal oluyor ("bu import neden kullanılıyor?" artık T0 değil T1) ve aşağıdaki gerçek kullanım hatalarını önleyen de o.
 
 **Gerçek kullanım**: gearbox'ın 11-16 Ekim 2026 arasında 11 oturumda verdiği 49 karar. Her biri, işin sonradan ne çıktığına bakılarak etiketlendi (tek bir kişinin yargısı, bir kurulun değil). gearbox'ın o gün seçtiği, ve aynı mesajların 0.6 ile yeniden oynatılması:
@@ -179,7 +186,7 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 | Yalnızca kurallar | %36 | %79 | 9 (%3) | 183 | 0,10 |
 | **gearbox: kurallar, emin değilse Haiku** | **%31** | **%78** | **6 (%2)** | **207** | **0,16** |
 
-Kümelere göre, çalıştığı haliyle gearbox: SWE-bench Verified'da %36 tam isabet, %83 ±1 kademe, 500'de 1 ciddi hata; Terminal-Bench'te %30, %73, 241'de 8 ciddi hata (%3). 0.7'nin iki kural düzeltmesinden önce (uzun bir tarifin içindeki "commit" gibi bir angarya kelimesi onu artık basit iş yapmıyor; uzun bir iş tarifi küçük değişiklik sayılmıyor) kuralların saklı yarıda 21 ciddi hatası vardı (%6). Kuralların emin olmadığı yerde Haiku'ya sormak ciddi hataları daha da azaltıyor ve sıra uyumunu yükseltiyor; bedeli, bir iki kademe fazla gönderilen işin artması, çünkü Haiku tereddütte üst kademeyi seçiyor. Ölçüm Haiku'ya 177 kez sordu, liste fiyatıyla $0,38.
+Kümelere göre, çalıştığı haliyle gearbox: SWE-bench Verified'da %36 tam isabet, %83 ±1 kademe, 500'de 1 ciddi hata; Terminal-Bench'te %30, %73, 241'de 8 ciddi hata (%3). 0.7'nin iki kural düzeltmesinden önce (uzun bir tarifin içindeki "commit" gibi bir angarya kelimesi onu artık basit iş yapmıyor; uzun bir iş tarifi küçük değişiklik sayılmıyor) kuralların saklı yarıda 21 ciddi hatası vardı (%6). Kuralların emin olmadığı yerde Haiku'ya sormak ciddi hataları daha da azaltıyor ve sıra uyumunu yükseltiyor; bedeli, bir iki kademe fazla gönderilen işin artması, çünkü Haiku tereddütte üst kademeyi seçiyor. Ölçüm Haiku'ya 177 kez sordu, liste fiyatıyla $0,38. Bu rakamlar 0.7'nin: 0.8 üç tür isteği T3'e çıkardı (ayrıntısız anlatılmış hata, gizli hataları yakalayacak test yazma, plan isteği) ve bu kümelerde yeniden ölçülmedi.
 
 Gösterdiği: gearbox zor işi nadiren zayıf bir modele gönderiyor, ama uzun İngilizce hata kayıtlarında ve görev tariflerinde on beş dakikalık bir düzeltmeyi dört saatlik bir işten zor ayırıyor (sıra uyumu 0,16) ve güvenli taraftan harcıyor. Bu metinler insanların yazdığı kısa mesajlara, yani kuralların yapıldığı şeye benzemiyor; süreyi kademeye çeviren eşleme de bizim, bu yüzden "fazla yüksek"in bir kısmı işin pekâlâ hak ettiği bir kademe olabilir (yabancı bir kod tabanında hızlı bir düzeltme de bir aramadır).
 
@@ -200,20 +207,20 @@ Gösterdiği: gearbox zor işi nadiren zayıf bir modele gönderiyor, ama uzun �
 
 | Yol | İçeriği |
 |---|---|
-| `hooks/register.tsx` | hooks modülü: olaylar, `/gear` komutu, aç/kapa satırı, kartı çizen kanca |
+| `hooks/register.tsx` | hooks modülü: olaylar, `/gear` komutu, durum satırı, kartı çizen kanca |
 | `hooks/card.tsx` | tasarruf kartı, Box ve Text'ten bir ağaç |
 | `hooks/core/signals.ts` | sınıflandırıcı: kurallar, etiketler, Türkçe ve İngilizce sinyaller |
 | `hooks/core/llm.ts` | kurallar emin olamayınca Haiku'ya sorulan soru |
 | `hooks/core/tiers.ts` | profiller: kademeden model ve efora |
-| `hooks/core/policy.ts` | bir kademeye uygulanan tavan, önbellek ve tempo |
-| `hooks/core/pacing.ts` | limit pencerelerini okur |
+| `hooks/core/policy.ts` | bir kademeye uygulanan tavan ve önbellek, uyarılacak limit pencereleri |
+| `hooks/core/pacing.ts` | limit pencerelerini okur, uyarıyı yazar |
 | `hooks/core/models.ts` | model aileleri, kimlikler, efor seviyeleri |
 | `hooks/core/prices.ts` | liste fiyatları ve bir turun maliyeti |
 | `hooks/core/journal.ts` | karar günlüğü: kayıtlar, şikâyet ve kırık test işaretleri, senin işaretlerin, rapor |
 | `hooks/core/settle.ts` | kuralların, Haiku'nun cevabının ve süren işin bir kademeyi nasıl belirlediği |
 | `hooks/core/savings.ts` | modele göre toplamlar, tasarruf, markdown rapor |
 | `hooks/core/settings.ts` | kayıtlı ayarlar ve istatistik, `/gear` ayrıştırma |
-| `hooks/core/switch.ts` | aç/kapa anahtarının çizimi |
+| `hooks/core/switch.ts` | durum etiketinin çizimi |
 | `hooks/core/version.ts` | denendiği en yeni Claude Code sürümü |
 | `tests/` | kurallar, politika, fiyat ve tasarruf; sahte motora karşı yönlendirici; sınıflandırıcı ölçümü |
 | `eval/` | sınıflandırma ölçümü, dış ölçütler (`external.mjs`) ve çıktı kalitesi görevleri |
@@ -237,7 +244,7 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, eklenti API'si uyan bir Claude Code sürümü ister (2.1.295 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur.
+Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, Claude Code 2.1.295 ya da daha yenisini ister (2.1.295 ve 2.1.299 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur (2.1.278: 75 geçti, 30 kaldı). PATH'teki `claude` masaüstü uygulamasının kendi sürümünden eski olabilir; Windows'ta o sürüm `%APPDATA%\Claude\claude-code\<sürüm>\` altındadır.
 
 **Kendini test konusu yapmadan geliştirmek.** Yeni bir sürüm dört adımdan geçer, her biri bir sonrakinden önce, ve yalnızca sonuncusu gerçek işe dokunur:
 
@@ -271,6 +278,7 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] Tur başına maliyet, tasarruf sayacı ve kart
 - [x] İngilizce README, MIT lisansı, GitHub'da yayın
 - [x] Gölge mod, dış ölçütler ve gerçek kararların toplanması: yeni bir sürüm, kimsenin işini yönlendirmeden önce sınanır (0.7)
+- [x] Limit pencereleri seçimi düşürmek yerine uyarıyor; efor tablosu ölçümlere göre yeniden ayarlandı (net işte Sonnet · medium, hata avında high, istenmedikçe max yok); açık, gölge ve kapalıyı ayrı gösteren durum satırı; gölge kaydı seçicinin kırptığını da tutuyor; plan modu Opus'a gidiyor (0.8)
 - [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
 - [x] Senin işaretlerinle karar günlüğü, kuralların nerede yanıldığını görmek için
 - [x] Gerçek kullanımın incelenmesi: sistem notları, Haiku'ya sınır, süren işin tutulması, yazıyla istenen model (0.6)

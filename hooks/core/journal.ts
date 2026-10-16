@@ -2,7 +2,7 @@
 // decisions can be looked over afterwards: which ones the work itself called
 // wrong (a complaint, a failing test), and which ones the person marks.
 
-import { FAMILIES, FAMILY_NAMES, type Effort, type Family } from './models'
+import { EFFORTS, FAMILIES, FAMILY_NAMES, familyRank, type Effort, type Family } from './models'
 import { usd } from './prices'
 
 export type Mark = 'zayif' | 'fazla'
@@ -29,6 +29,11 @@ export type Entry = {
   // the picker held, which did answer.
   isShadow?: true
   answered?: Family
+  // What gearbox asked for before the picker's ceiling cut it to family and
+  // effort: a need for Opus the picker hid. Absent when nothing was cut.
+  wanted?: { family: Family; effort: Effort }
+  // Chosen in plan mode.
+  isPlanning?: true
 }
 
 export const MAX_ENTRIES = 200
@@ -75,9 +80,19 @@ export function readJournal(stored: unknown): Entry[] {
         reasons: Array.isArray(value.reasons) ? value.reasons.filter((reason): reason is string => typeof reason === 'string') : undefined,
         ...(value.isShadow === true ? { isShadow: true as const } : {}),
         ...(FAMILIES.includes(value.answered as Family) ? { answered: value.answered as Family } : {}),
+        ...readWanted(value.wanted),
+        ...(value.isPlanning === true ? { isPlanning: true as const } : {}),
       },
     ]
   })
+}
+
+function readWanted(stored: unknown): { wanted?: Entry['wanted'] } {
+  const value = record(stored)
+  const family = FAMILIES.find(one => one === value.family)
+  const effort = EFFORTS.find(one => one === value.effort)
+
+  return family === undefined || effort === undefined ? {} : { wanted: { family, effort } }
 }
 
 export function addEntry(entries: Entry[], entry: Entry): void {
@@ -130,11 +145,16 @@ export function journalText(entries: readonly Entry[]): string {
     .map(([tier, total]) => `T${tier} ${total}`)
     .join(' · ')
   const shadows = entries.filter(entry => entry.isShadow === true).length
+  const cut = entries.filter(entry => entry.wanted !== undefined)
+  const cutModel = cut.filter(entry => entry.wanted !== undefined && familyRank(entry.wanted.family) > familyRank(entry.family)).length
   const rows = entries.slice(-SHOWN).map(entry => {
     const shadow = entry.isShadow === true ? [`gölge, cevap: ${entry.answered === undefined ? 'seçici' : FAMILY_NAMES[entry.answered]}`] : []
-    const notes = [...shadow, ...entry.flags, ...(entry.mark === undefined ? [] : [`siz: ${MARK_NAMES[entry.mark]}`])].join('; ')
+    const planning = entry.isPlanning === true ? ['plan modu'] : []
+    const notes = [...planning, ...shadow, ...entry.flags, ...(entry.mark === undefined ? [] : [`siz: ${MARK_NAMES[entry.mark]}`])].join('; ')
 
-    return `| ${when(entry.at)} | ${cell(entry.text)} | T${entry.tier} | ${FAMILY_NAMES[entry.family]} · ${entry.effort} | ${cell(entry.source)} | ${notes} |`
+    const wanted = entry.wanted === undefined ? '' : ` (tavansız ${FAMILY_NAMES[entry.wanted.family]} · ${entry.wanted.effort})`
+
+    return `| ${when(entry.at)} | ${cell(entry.text)} | T${entry.tier} | ${FAMILY_NAMES[entry.family]} · ${entry.effort}${wanted} | ${cell(entry.source)} | ${notes} |`
   })
   const spent = entries.reduce((sum, entry) => sum + entry.spent, 0)
   const baseline = entries.reduce((sum, entry) => sum + entry.baseline, 0)
@@ -148,6 +168,9 @@ export function journalText(entries: readonly Entry[]): string {
     '',
     `Kademeler: ${byTier}`,
     shadows === 0 ? undefined : `Gölgede seçilip uygulanmayan: ${shadows}. Onlarda cevabı seçicideki model verdi; "Model · efor" gearbox'ın önerisi.`,
+    cut.length === 0
+      ? undefined
+      : `Seçici tavanı yüzünden kırpılan: ${cut.length}, bunların ${cutModel} tanesinde daha güçlü bir model istenmişti. "Model · efor" uygulanabilecek olan, "tavansız" gearbox'ın istediği.`,
     `Şüpheli kararlar: ${doubtful.length} / ${entries.length} (${Math.round((100 * doubtful.length) / entries.length)}%): şikâyetle yükseltilen ${complaints}, testi ya da derlemesi kırık biten ${broken}, sizin işaretlediğiniz ${marked.length}.`,
     `Harcama ${usd(spent)}, seçici modeliyle ${usd(baseline)}.`,
     'Bir karar yanlışsa `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (gereğinden güçlüydü) yazın; son mesajın kararını işaretler.',

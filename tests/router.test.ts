@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { expect, mock, test, type Engine } from 'claude-code/testing'
 
-import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH } from '../hooks/core/switch'
+import { BADGE_COLORS, BADGE_HEIGHT, BADGE_WIDTH } from '../hooks/core/switch'
 
 type Sent = { model: string; effort: unknown }
 
@@ -16,6 +16,8 @@ type WorldOptions = {
   checksFail?: boolean
   // The conversation's size, as the usage reports it.
   contextTokens?: number
+  // The rate-limit windows, as the usage reports them.
+  rateLimits?: { kind: string; percentUsed: number; resetsAt?: string }[]
 }
 
 const NOW = Date.parse('2026-10-11T12:00:00Z')
@@ -24,7 +26,7 @@ const ZERO = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, ca
 
 // The engine beneath the plugin: a model that records what it was sent, and
 // the usage, classifier, tools, store, clock and screen the router touches.
-function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false, contextTokens = 2_000 }: WorldOptions = {}): World {
+function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false, contextTokens = 2_000, rateLimits = [] }: WorldOptions = {}): World {
   const seen: World = { sent: [], prompts: [] }
   mock.store(on)
   mock.clock(on, { now: NOW })
@@ -42,7 +44,7 @@ function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false
   on('turn.complete', ($, e) => ({ text: e.answer }))
   on('tool.call', () => (checksFail ? { isError: true, result: '3 tests failed', text: '3 tests failed' } : { result: 'ok' }))
   // Calls on `$` are answered `{ value }`.
-  on('session.usage', () => ({ value: { startedAt: NOW, context: { window: 1_000_000, tokens: contextTokens }, rateLimits: [] } }))
+  on('session.usage', () => ({ value: { startedAt: NOW, context: { window: 1_000_000, tokens: contextTokens }, rateLimits } }))
   on('model.complete', () => ({ value: { isAnswered: true, text: classifierReply, usage: ZERO } }))
   on('ui.status', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
@@ -149,51 +151,119 @@ test('a turn that ends with failing tests hands the next one a stronger model', 
   expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'medium' })
 })
 
-test('the band switches gearbox off and on, and off means the picker model', async ($, on) => {
+test('a bug told without detail goes to Opus at high, and a go-ahead in its middle keeps it there', async ($, on) => {
+  const { sent } = world(on)
+  await say($, 'bu çalışmıyor, düzelt')
+  await step($, 't1', 0, 'claude-opus-5-5', 'max')
+  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
+  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
+  expect(done.text).toContain('belirsiz anlatılmış hata')
+  expect(done.text).toContain('hata avı: efor high')
+  await say($, 'evet, devam et')
+  await step($, 't2', 0, 'claude-opus-5-5', 'max')
+  expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
+})
+
+test('a nearly full window keeps hard work on Opus and warns under the answer and in the band', async ($, on) => {
+  const resetsAt = new Date(NOW + 2 * 3_600_000).toISOString()
+  const { sent } = world(on, { rateLimits: [{ kind: 'five_hour', percentUsed: 92, resetsAt }] })
+  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
+  await step($, 't1', 0, 'claude-opus-5-5', 'high')
+  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'medium' })
+  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
+  expect(done.text).toContain('⚠ 5 saatlik limit %92: bu iş Opus 5.5 · medium ile yapılıyor, limit dolabilir')
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...BAND, surface })
+    expect(await ui.find({ type: 'Text', text: /5 saatlik limit %92: bu iş Opus · medium ile yapılıyor/ })).toBeDefined()
+    await ui.unmount()
+  }
+  // Off, gearbox reads no windows, and the band says nothing of them.
+  await $.command.run({ command: 'gear', args: 'sabitle' })
+  const off = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await off.find({ type: 'Text', text: /limit/ })).toBeUndefined()
+  await off.unmount()
+})
+
+test('the band shows on, shadow and off apart, and each button does what it is named for', async ($, on) => {
   const { sent } = world(on)
   const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   for (const surface of ['terminal', 'desktop'] as const) {
     sent.length = 0
     await $.command.run({ command: 'gear', args: 'oto' })
     const ui = await $.ui.mount({ ...BAND, surface })
-    expect(await ui.find({ type: 'Text', text: /açık/ })).toBeDefined()
-    await ui.press({ key: 'toggle' })
-    expect(await ui.find({ type: 'Text', text: /kapalı/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /işe göre model ve efor seçiyor/ })).toBeDefined()
+    // On: the buttons offer shadow and off, not on.
+    expect(await ui.find({ type: 'Button', key: 'to-auto' })).toBeUndefined()
+    expect(await ui.find({ type: 'Button', key: 'to-shadow', text: 'gölgeye al' })).toBeDefined()
+
+    await ui.press({ key: 'to-shadow' })
+    expect(await ui.find({ type: 'Text', text: /seçimlerini yazıyor, uygulamıyor/ })).toBeDefined()
+    expect(await ui.find({ type: 'Button', key: 'to-shadow' })).toBeUndefined()
+    await say($, 'bu fonksiyon ne yapıyor?')
+    await step($, `shadow-${surface}`, 0, 'claude-opus-5-5', 'max')
+    expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })
+
+    // From shadow, "kapat" turns it off; it does not turn routing on.
+    await ui.press({ key: 'to-pin' })
+    expect(await ui.find({ type: 'Text', text: /seçicideki model kullanılıyor/ })).toBeDefined()
+    expect(await ui.find({ type: 'Button', key: 'to-auto', text: 'aç' })).toBeDefined()
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, `off-${surface}`, 0, 'claude-opus-5-5', 'max')
-    expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })
-    await ui.press({ key: 'toggle' })
-    expect(await ui.find({ type: 'Text', text: /açık/ })).toBeDefined()
+    expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })
+
+    await ui.press({ key: 'to-auto' })
+    expect(await ui.find({ type: 'Text', text: /işe göre model ve efor seçiyor/ })).toBeDefined()
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, `on-${surface}`, 0, 'claude-opus-5-5', 'max')
-    expect(sent[1]?.model).toBe('claude-haiku-5-5')
+    expect(sent[2]?.model).toBe('claude-haiku-5-5')
     await ui.unmount()
   }
 })
 
-test('the switch is an Svg under a blank Button on the desktop and colored Text on the terminal', async ($, on) => {
+test('the state is an Svg badge on the desktop and colored Text on the terminal, the same on both', async ($, on) => {
   world(on)
   const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
-  await $.command.run({ command: 'gear', args: 'oto' })
+  await $.command.run({ command: 'gear', args: 'golge' })
 
   const desktop = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  const green = await desktop.find({ type: 'Svg' })
-  expect(green?.props).toMatchObject({ alt: 'gearbox: açık', width: SWITCH_WIDTH, height: SWITCH_HEIGHT })
-  expect(green?.props.source).toContain(SWITCH_ON)
-  expect(await desktop.find({ type: 'Button', key: 'toggle' })).toBeDefined()
-  await desktop.press({ key: 'toggle' })
-  const gray = await desktop.find({ type: 'Svg' })
-  expect(gray?.props).toMatchObject({ alt: 'gearbox: kapalı' })
-  expect(gray?.props.source).toContain(SWITCH_OFF)
+  const badge = await desktop.find({ type: 'Svg' })
+  expect(badge?.props).toMatchObject({ alt: 'gearbox: gölge', width: BADGE_WIDTH, height: BADGE_HEIGHT })
+  expect(badge?.props.source).toContain(BADGE_COLORS.shadow)
+  expect(badge?.props.source).toContain('>GÖLGE</text>')
+  await desktop.press({ key: 'to-pin' })
+  const off = await desktop.find({ type: 'Svg' })
+  expect(off?.props).toMatchObject({ alt: 'gearbox: kapalı' })
+  expect(off?.props.source).toContain(BADGE_COLORS.pin)
   await desktop.unmount()
 
   // The desktop's press turned gearbox off: the terminal draws the same state.
   const terminal = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect(await terminal.find({ type: 'Svg' })).toBeUndefined()
-  expect(await terminal.find({ type: 'Text', text: /OFF/ })).toBeDefined()
-  await terminal.press({ key: 'toggle' })
-  expect(await terminal.find({ type: 'Text', text: /ON/ })).toBeDefined()
+  expect(await terminal.find({ type: 'Text', text: /KAPALI/ })).toBeDefined()
+  await terminal.press({ key: 'to-auto' })
+  expect(await terminal.find({ type: 'Text', text: /AÇIK/ })).toBeDefined()
   await terminal.unmount()
+})
+
+test('stood down, the band says so, offers to try again, and a state picked by hand shows as picked', async ($, on) => {
+  const { sent } = world(on)
+  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  for (const turnId of ['t1', 't2', 't3']) {
+    await say($, 'bu fonksiyon ne yapıyor?')
+    await step($, turnId)
+    await finish($, turnId, 'claude-opus-5-5')
+  }
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ type: 'Svg' }))?.props).toMatchObject({ alt: 'gearbox: durdu' })
+  expect(await ui.find({ type: 'Button', key: 'to-auto', text: 'yeniden dene' })).toBeDefined()
+  await ui.press({ key: 'to-shadow' })
+  expect((await ui.find({ type: 'Svg' }))?.props).toMatchObject({ alt: 'gearbox: gölge' })
+  await ui.press({ key: 'to-auto' })
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't4')
+  expect(sent.at(-1)?.model).toBe('claude-haiku-5-5')
+  await ui.unmount()
 })
 
 test('a turn answered by Haiku shows its cost and the saving against the picker, and /gear tasarruf adds it up', async ($, on) => {
@@ -391,4 +461,41 @@ test('in shadow mode gearbox chooses and writes it down, and every request goes 
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't5', 0, 'claude-opus-5-5', 'high')
   expect(sent.at(-1)).toEqual({ model: 'claude-haiku-5-5', effort: 'low' })
+})
+
+test('in shadow mode under a Sonnet picker the log keeps both what gearbox wanted and what the picker allows', async ($, on) => {
+  world(on)
+  await $.command.run({ command: 'gear', args: 'golge' })
+  await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
+  await step($, 't1', 0, 'claude-sonnet-5-5', 'high')
+  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-sonnet-5-5', ...ZERO } })
+  expect(done.text).toContain('gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium')
+  const log = JSON.stringify(await $.command.run({ command: 'gear', args: 'kayit' }))
+  expect(log).toContain('Sonnet · high (tavansız Opus · medium)')
+  expect(log).toContain('Seçici tavanı yüzünden kırpılan: 1, bunların 1 tanesinde daha güçlü bir model istenmişti')
+})
+
+async function note($: Engine, name: string): Promise<void> {
+  await $.session.append({ door: 'attachment', origin: { kind: 'engine' }, uuid: `row-${name}`, message: { type: 'attachment', name, role: 'user', isMeta: true, content: [{ type: 'text', text: name }] } })
+}
+
+test('in plan mode every request goes to Opus at an effort by the plan size, until plan mode ends', async ($, on) => {
+  const { sent } = world(on)
+  await note($, 'plan_mode')
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't1', 0, 'claude-opus-5-5', 'max')
+  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'medium' })
+  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
+  expect(done.text).toContain(' · plan modu')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'kayit' }))).toContain('| plan modu |')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: '' }))).toContain('Plan modu')
+  await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
+  await step($, 't2', 0, 'claude-opus-5-5', 'max')
+  expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'xhigh' })
+  await finish($, 't2', 'claude-opus-5-5')
+  await note($, 'plan_mode_exit')
+  await say($, 'commit mesajı yaz')
+  await step($, 't3', 0, 'claude-opus-5-5', 'max')
+  expect(sent[2]).toEqual({ model: 'claude-haiku-5-5', effort: 'low' })
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: '' }))).not.toContain('Plan modu')
 })

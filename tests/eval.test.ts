@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { DEV, FRESH, HOLDOUT, type Case } from '../eval/prompts'
+import { FAMILY_NAMES } from '../hooks/core/models'
+import { decide } from '../hooks/core/policy'
 import { classify } from '../hooks/core/signals'
+import { PROFILE_IDS, PROFILES } from '../hooks/core/tiers'
 
 type Score = {
   n: number
@@ -62,6 +65,48 @@ describe('classifier quality', () => {
     const s = score(HOLDOUT)
     report('holdout', s)
     expect(s.within1 / s.n).toBeGreaterThan(0.6)
+  })
+})
+
+// What each labelled prompt would run on, by the rules alone, under an Opus ·
+// high picker with calm windows: the effort table measured on the same sets.
+describe('routes of the labelled prompts', () => {
+  test('clear work runs on Sonnet at medium, hunts at high, and nothing at max', () => {
+    const all = [...DEV, ...HOLDOUT, ...FRESH]
+    for (const profile of PROFILE_IDS) {
+      const routes = new Map<string, number>()
+      let hunts = 0
+      for (const item of all) {
+        const rule = classify(item.text, item.prevTier === undefined ? {} : { prevTier: item.prevTier })
+        const decision = decide({
+          tier: rule.tier,
+          source: rule.source,
+          reasons: rule.reasons,
+          override: rule.override,
+          profile,
+          ceiling: { family: 'opus', effort: 'high' },
+          pace: { level: 'normal' },
+          allowHaiku: true,
+          isHunt: rule.isHunt === true,
+        })
+        const route = `T${decision.tier} ${FAMILY_NAMES[decision.family]}·${decision.effort}${rule.isHunt === true ? ' (av)' : ''}`
+        routes.set(route, (routes.get(route) ?? 0) + 1)
+        hunts += rule.isHunt === true ? 1 : 0
+        if (decision.tier >= 1 && decision.tier <= 2 && decision.family === 'sonnet') {
+          expect(decision.effort).toBe('medium')
+        }
+        if (rule.isHunt === true && decision.family === 'opus') {
+          expect(decision.effort).toBe('high')
+        }
+      }
+      const table = [...routes.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([route, count]) => `${route} ${count}`)
+      console.log(`EVAL route ${profile}: n=${all.length} hunts=${hunts} | ${table.join(' | ')}`)
+    }
+    for (const profile of PROFILE_IDS) {
+      for (const spec of PROFILES[profile]) {
+        expect(Object.values(spec.effort)).not.toContain('max')
+      }
+    }
   })
 })
 

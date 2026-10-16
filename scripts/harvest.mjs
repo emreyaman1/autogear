@@ -20,7 +20,10 @@ const PROJECTS = join(homedir(), '.claude', 'projects')
 const OUT = join(ROOT, 'eval', '.work', 'harvest.json')
 const NOTE = /<system-reminder>[\s\S]*?<\/system-reminder>/g
 const NOT_A_PROMPT = ['<local-command-caveat>', '<command-name>', '<local-command-stdout>', 'Base directory for this skill', '<task-notification>', '[Request interrupted']
-const SHADOW = /⚙ gölge: (?<family>\S+) · (?<effort>\w+) · T(?<tier>\d) (?<label>\S+) önerirdi \((?<source>[^:]+): (?<why>.*?)\) · cevap: (?<answered>.+)$/
+// A shadow line names what the picker's ceiling cut (", tavan olmasa Opus · medium", from 0.8)
+// and may end in a rate-limit warning (" · ⚠ ...").
+const SHADOW =
+  /⚙ gölge: (?<family>\S+) · (?<effort>\w+) · T(?<tier>\d) (?<label>\S+) önerirdi(?:, tavan olmasa (?<wantedFamily>\S+) · (?<wantedEffort>\w+))? \((?<source>[^:]+): (?<why>.*?)\) · cevap: (?<answered>[^·]+?)(?: · (?<rest>.*))?$/
 const APPLIED = /⚙ (?<model>[^·]+?) · (?<effort>\w+) · T(?<tier>\d) (?<label>\S+) \((?<source>[^:]+): (?<why>.*?)\)(?<rest>.*)$/
 
 const sinceArg = process.argv.indexOf('--since')
@@ -44,9 +47,10 @@ function promptOf(message) {
 function decisionOf(content) {
   const shadow = SHADOW.exec(content)
   if (shadow !== null) {
-    const { family, effort, tier, label, source, why, answered } = shadow.groups
+    const { family, effort, tier, label, source, why, answered, wantedFamily, wantedEffort, rest } = shadow.groups
+    const wanted = wantedFamily === undefined ? undefined : { family: wantedFamily, effort: wantedEffort }
 
-    return { isShadow: true, family, effort, tier: Number(tier), label, source, why, answered: answered.trim(), haiku: haikuOf(why) }
+    return { isShadow: true, family, effort, tier: Number(tier), label, source, why, answered: answered.trim(), wanted, rest: rest?.trim(), haiku: haikuOf(why) }
   }
   const applied = APPLIED.exec(content)
   if (applied !== null) {

@@ -27,28 +27,34 @@ const row = (
 
 // tasarruf fits Pro's tight windows: Opus only for hard work, at its default
 // effort; dengeli and kalite spend more for Max plans.
+//
+// Clearly described routine and standard work runs on Sonnet at medium in
+// every profile: in the measurements behind this table Sonnet medium did that
+// work as well as Opus high for a fraction of the cost, and raising Sonnet's
+// effort on it did not help. No tier defaults to max; only the person asks
+// for it (+max, "max ile"). A hunt (policy.ts) runs at high at least.
 export const PROFILES: Record<ProfileId, readonly TierSpec[]> = {
   //       label        prefer     haiku     sonnet    opus      fable
   tasarruf: [
     row('önemsiz', 'haiku', 'low', 'low', 'low', 'low'),
     row('rutin', 'sonnet', 'medium', 'medium', 'low', 'low'),
-    row('standart', 'sonnet', 'high', 'high', 'medium', 'low'),
+    row('standart', 'sonnet', 'high', 'medium', 'medium', 'low'),
     row('zor', 'opus', 'xhigh', 'xhigh', 'medium', 'medium'),
-    row('kritik', 'opus', 'max', 'max', 'high', 'medium'),
+    row('kritik', 'opus', 'xhigh', 'xhigh', 'high', 'medium'),
   ],
   dengeli: [
     row('önemsiz', 'haiku', 'low', 'low', 'low', 'low'),
     row('rutin', 'sonnet', 'medium', 'medium', 'low', 'low'),
-    row('standart', 'sonnet', 'high', 'high', 'medium', 'medium'),
+    row('standart', 'sonnet', 'high', 'medium', 'medium', 'medium'),
     row('zor', 'opus', 'xhigh', 'xhigh', 'high', 'medium'),
-    row('kritik', 'opus', 'max', 'max', 'xhigh', 'high'),
+    row('kritik', 'opus', 'xhigh', 'xhigh', 'xhigh', 'high'),
   ],
   kalite: [
     row('önemsiz', 'sonnet', 'low', 'low', 'low', 'low'),
-    row('rutin', 'sonnet', 'medium', 'high', 'medium', 'low'),
-    row('standart', 'opus', 'high', 'xhigh', 'medium', 'medium'),
-    row('zor', 'opus', 'max', 'max', 'high', 'high'),
-    row('kritik', 'opus', 'max', 'max', 'max', 'xhigh'),
+    row('rutin', 'sonnet', 'medium', 'medium', 'medium', 'low'),
+    row('standart', 'opus', 'high', 'medium', 'medium', 'medium'),
+    row('zor', 'opus', 'xhigh', 'xhigh', 'high', 'high'),
+    row('kritik', 'opus', 'xhigh', 'xhigh', 'xhigh', 'xhigh'),
   ],
 }
 

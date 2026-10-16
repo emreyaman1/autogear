@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { pace } from '../hooks/core/pacing'
+import { pace, paceWarning } from '../hooks/core/pacing'
 import { decide } from '../hooks/core/policy'
 import { costOf, readTokens, turnMoney, usd } from '../hooks/core/prices'
 import { addTurn, emptyTotals, savedOf, savingsText, sharesOf, splitCells, sumOf } from '../hooks/core/savings'
@@ -8,7 +8,7 @@ import { addEntry, flagLast, journalText, markLast, MAX_ENTRIES, readJournal, sn
 import { applyCommand, DEFAULTS, readSettings, readStats } from '../hooks/core/settings'
 import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
 import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
-import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from '../hooks/core/switch'
+import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, BADGE_WIDTH, badgeSvg } from '../hooks/core/switch'
 import { isNewerThan } from '../hooks/core/version'
 
 describe('classify', () => {
@@ -46,6 +46,47 @@ describe('classify', () => {
   test('a single work cue leaves the rules unsure', () => {
     expect(classify('şu fonksiyonu düzelt').confidence).toBe('low')
   })
+
+  test('a bug told without detail, or whose cause hides, is a hunt; one with its error or its moment is not', () => {
+    for (const prompt of ['bu çalışmıyor, düzelt', 'login bozuk', 'fix the error', 'uygulama bazen donuyor, neden olduğunu bul', 'why do we get duplicate orders?']) {
+      const result = classify(prompt)
+      expect(result.tier).toBe(3)
+      expect(result.isHunt).toBe(true)
+    }
+    for (const prompt of [
+      "TypeError: Cannot read properties of null (reading 'id')\n    at getUser (src/user.js:14:20)\nbunu düzelt",
+      'tarayıcı açıldığında konsolda hata veriyor',
+      'npm test çalıştırınca 3 test kırılıyor, düzelt',
+      'kaydet butonu çalışmıyor, tıklayınca form gönderilmeli',
+    ]) {
+      expect(classify(prompt).tier).toBe(2)
+      expect(classify(prompt).isHunt).toBeUndefined()
+    }
+    // A screenshot beside it may show all that the words leave out.
+    expect(classify('bu çalışmıyor, düzelt', { hasAttachments: true }).isHunt).toBeUndefined()
+    // Slow is hard, but no hunt.
+    expect(classify('sayfa çok yavaş açılıyor, performansı iyileştir').isHunt).toBeUndefined()
+  })
+
+  test('asking for a plan is hard work; carrying one out is not that', () => {
+    for (const prompt of ['bunun için bir plan çıkar', 'nasıl yapalım, adım adım düşünelim', 'ödeme akışını planla', 'v2 için yol haritası hazırla', 'plan the migration to the new API', 'how should we approach the offline mode?']) {
+      expect(classify(prompt).tier).toBeGreaterThanOrEqual(3)
+    }
+    expect(classify('planı uygula').tier).toBeLessThan(3)
+    expect(classify('plandaki ikinci adımı yap').tier).toBeLessThan(3)
+  })
+
+  test('tests written to catch hidden bugs are a hunt; tests for a feature are standard work', () => {
+    for (const prompt of ["edge case'leri yakalayan testler yaz", 'bu modül için hataları yakalayacak kapsamlı testler yaz', 'write tests that catch edge cases in the parser']) {
+      const result = classify(prompt)
+      expect(result.tier).toBe(3)
+      expect(result.isHunt).toBe(true)
+    }
+    for (const prompt of ['kullanıcı servisi için birim testleri yaz', 'write an integration test for the signup flow']) {
+      expect(classify(prompt).tier).toBe(2)
+      expect(classify(prompt).isHunt).toBeUndefined()
+    }
+  })
 })
 
 describe('parseOverrides', () => {
@@ -72,6 +113,13 @@ describe('decide', () => {
     expect(decision.isClamped).toBe(true)
   })
 
+  test('what the picker cut is kept beside what it allows, and nothing when it cut nothing', () => {
+    expect(decide({ ...base, tier: 3, ceiling: { family: 'sonnet', effort: 'high' } }).wanted).toEqual({ family: 'opus', effort: 'medium' })
+    expect(decide({ ...base, tier: 3, ceiling: { family: 'sonnet', effort: 'high' }, isHunt: true }).wanted).toEqual({ family: 'opus', effort: 'high' })
+    expect(decide({ ...base, tier: 4, ceiling: { family: 'opus', effort: 'medium' } }).wanted).toEqual({ family: 'opus', effort: 'high' })
+    expect(decide({ ...base, tier: 3, ceiling: { family: 'opus', effort: 'high' } }).wanted).toBeUndefined()
+  })
+
   test('a trivial prompt goes to Haiku at low effort', () => {
     const decision = decide({ ...base, tier: 0, ceiling: { family: 'opus', effort: 'high' } })
     expect(decision.family).toBe('haiku')
@@ -95,11 +143,92 @@ describe('decide', () => {
     expect(decision.family).toBe('opus')
   })
 
-  test('a window spent too fast lowers the effort; a nearly full one keeps Opus out', () => {
-    const tight = decide({ ...base, tier: 2, ceiling: { family: 'opus', effort: 'max' }, pace: { level: 'tight', reason: 'x' } })
-    expect(tight.effort).toBe('medium')
-    const critical = decide({ ...base, tier: 4, ceiling: { family: 'opus', effort: 'max' }, pace: { level: 'critical', reason: 'x' } })
-    expect(critical.family).toBe('sonnet')
+  test('clear routine and standard work runs on Sonnet at medium in every profile', () => {
+    for (const profile of ['tasarruf', 'dengeli', 'kalite'] as const) {
+      for (const tier of [1, 2] as const) {
+        const decision = decide({ ...base, profile, tier, ceiling: { family: 'sonnet', effort: 'max' } })
+        expect(decision).toMatchObject({ family: 'sonnet', effort: 'medium' })
+      }
+    }
+  })
+
+  test('a hunt runs on Opus at high; under a Sonnet picker more effort, never above the picker', () => {
+    const ceiling = { family: 'opus', effort: 'max' } as const
+    expect(decide({ ...base, tier: 3, ceiling })).toMatchObject({ family: 'opus', effort: 'medium' })
+    const hunt = decide({ ...base, tier: 3, ceiling, isHunt: true })
+    expect(hunt).toMatchObject({ family: 'opus', effort: 'high', isHunt: true })
+    expect(hunt.reasons.at(-1)).toBe('hata avı: efor high')
+    expect(decide({ ...base, tier: 3, ceiling: { family: 'sonnet', effort: 'max' }, isHunt: true })).toMatchObject({ family: 'sonnet', effort: 'xhigh' })
+    expect(decide({ ...base, tier: 3, ceiling: { family: 'opus', effort: 'medium' }, isHunt: true }).effort).toBe('medium')
+    // The person's own effort outranks it.
+    expect(decide({ ...base, tier: 3, ceiling, isHunt: true, override: { effort: 'low' } }).effort).toBe('low')
+  })
+
+  test('in plan mode a request goes to Opus at an effort by the plan size, within the picker', () => {
+    const ceiling = { family: 'opus', effort: 'max' } as const
+    expect(decide({ ...base, tier: 0, ceiling, isPlanning: true })).toMatchObject({ family: 'opus', effort: 'medium' })
+    expect(decide({ ...base, tier: 2, ceiling, isPlanning: true })).toMatchObject({ family: 'opus', effort: 'medium' })
+    expect(decide({ ...base, tier: 3, ceiling, isPlanning: true })).toMatchObject({ family: 'opus', effort: 'high' })
+    expect(decide({ ...base, tier: 4, ceiling, isPlanning: true })).toMatchObject({ family: 'opus', effort: 'xhigh' })
+    expect(decide({ ...base, tier: 2, ceiling, isPlanning: true }).reasons).toContain('plan modu: Opus, efor planın büyüklüğüne göre')
+    // Never above the picker; a model the person named outranks it.
+    expect(decide({ ...base, tier: 4, ceiling: { family: 'opus', effort: 'high' }, isPlanning: true }).effort).toBe('high')
+    expect(decide({ ...base, tier: 3, ceiling: { family: 'sonnet', effort: 'high' }, isPlanning: true }).family).toBe('sonnet')
+    expect(decide({ ...base, tier: 3, ceiling, isPlanning: true, override: { family: 'sonnet' } }).family).toBe('sonnet')
+    // A warm cache does not hold planning on the model before it.
+    expect(decide({ ...base, tier: 2, ceiling, isPlanning: true, previous: { family: 'sonnet', tier: 2 }, contextTokens: 120_000 }).family).toBe('opus')
+  })
+
+  test('no tier of any profile runs at max unless the person asks', () => {
+    for (const profile of ['tasarruf', 'dengeli', 'kalite'] as const) {
+      for (const tier of [0, 1, 2, 3, 4] as const) {
+        expect(decide({ ...base, profile, tier, ceiling: { family: 'fable', effort: 'max' } }).effort).not.toBe('max')
+        expect(decide({ ...base, profile, tier, ceiling: { family: 'opus', effort: 'max' }, isHunt: true }).effort).not.toBe('max')
+      }
+    }
+    expect(decide({ ...base, tier: 2, ceiling: { family: 'opus', effort: 'max' }, override: { effort: 'max' } }).effort).toBe('max')
+  })
+
+  test('a window under pressure lowers nothing and is carried as a warning', () => {
+    const calm = decide({ ...base, tier: 4, ceiling: { family: 'opus', effort: 'max' } })
+    expect(calm.limit).toBeUndefined()
+    for (const level of ['tight', 'critical'] as const) {
+      const pressed = decide({ ...base, tier: 4, ceiling: { family: 'opus', effort: 'max' }, pace: { level, reason: '5 saatlik limit %92' } })
+      expect(pressed.family).toBe(calm.family)
+      expect(pressed.effort).toBe(calm.effort)
+      expect(pressed.tier).toBe(4)
+      expect(pressed.limit?.level).toBe(level)
+    }
+    const standard = decide({ ...base, tier: 2, ceiling: { family: 'opus', effort: 'max' }, pace: { level: 'tight', reason: 'x' } })
+    expect(standard.effort).toBe(decide({ ...base, tier: 2, ceiling: { family: 'opus', effort: 'max' } }).effort)
+  })
+
+  test('room left before a reset lifts the effort of hard work only, and never to max', () => {
+    const surplus = { level: 'surplus', reason: 'x' } as const
+    const ceiling = { family: 'opus', effort: 'max' } as const
+    const hard = decide({ ...base, tier: 3, ceiling, pace: surplus })
+    expect(hard.effort).toBe('high')
+    const standard = decide({ ...base, tier: 2, ceiling, pace: surplus })
+    expect(standard.effort).toBe(decide({ ...base, tier: 2, ceiling }).effort)
+    // dengeli's critical tier runs Opus at xhigh: the room left takes it no further.
+    expect(decide({ ...base, profile: 'dengeli', tier: 4, ceiling, pace: surplus }).effort).toBe('xhigh')
+    for (const profile of ['tasarruf', 'dengeli', 'kalite'] as const) {
+      for (const tier of [3, 4] as const) {
+        expect(decide({ ...base, profile, tier, ceiling, pace: surplus }).effort).not.toBe('max')
+      }
+    }
+    // Never above the picker either.
+    expect(decide({ ...base, tier: 3, ceiling: { family: 'opus', effort: 'medium' }, pace: surplus }).effort).toBe('medium')
+  })
+})
+
+describe('paceWarning', () => {
+  test('names the window and what the work runs on, and says nothing when the windows are calm', () => {
+    expect(paceWarning({ level: 'critical', reason: '5 saatlik limit %92' }, 'Opus · high')).toBe('5 saatlik limit %92: bu iş Opus · high ile yapılıyor, limit dolabilir')
+    expect(paceWarning({ level: 'tight', reason: 'haftalık limit %55 (beklenen %20)' }, 'Sonnet · medium')).toContain('limit erken dolabilir')
+    expect(paceWarning({ level: 'normal' }, 'Opus · high')).toBeUndefined()
+    expect(paceWarning({ level: 'surplus', reason: 'x' }, 'Opus · high')).toBeUndefined()
+    expect(paceWarning(undefined, 'Opus · high')).toBeUndefined()
   })
 })
 
@@ -109,9 +238,9 @@ describe('pace', () => {
   const resetsAt = new Date(now + 4 * 3_600_000).toISOString()
 
   test('reads a window against a steady pace', () => {
-    expect(pace([{ kind: 'five_hour', percentUsed: 55, resetsAt }], now).level).toBe('tight')
+    expect(pace([{ kind: 'five_hour', percentUsed: 55, resetsAt }], now)).toEqual({ level: 'tight', reason: '5 saatlik limit %55 (beklenen %20)' })
     expect(pace([{ kind: 'five_hour', percentUsed: 25, resetsAt }], now).level).toBe('normal')
-    expect(pace([{ kind: 'five_hour', percentUsed: 92, resetsAt }], now).level).toBe('critical')
+    expect(pace([{ kind: 'five_hour', percentUsed: 92, resetsAt }], now)).toEqual({ level: 'critical', reason: '5 saatlik limit %92' })
   })
 
   test('room left just before a reset is surplus', () => {
@@ -154,22 +283,23 @@ describe('robustness', () => {
   })
 })
 
-describe('switchSvg', () => {
-  test('on is a green track with the knob at the right, off a gray one with the knob at the left', () => {
-    const on = switchSvg(true)
-    const off = switchSvg(false)
-    expect(on).toContain(`<rect width="${SWITCH_WIDTH}" height="${SWITCH_HEIGHT}" rx="${SWITCH_HEIGHT / 2}" fill="${SWITCH_ON}"/>`)
-    expect(off).toContain(`fill="${SWITCH_OFF}"/>`)
-    expect(on).toContain(`<circle cx="${SWITCH_WIDTH - SWITCH_HEIGHT / 2}"`)
-    expect(off).toContain(`<circle cx="${SWITCH_HEIGHT / 2}"`)
-    expect(on).toContain('>ON</text>')
-    expect(off).toContain('>OFF</text>')
+describe('badgeSvg', () => {
+  test('each state is a pill of its own color with its own name', () => {
+    const modes = ['auto', 'shadow', 'pin', 'down'] as const
+    expect(new Set(modes.map(mode => BADGE_COLORS[mode])).size).toBe(modes.length)
+    for (const mode of modes) {
+      const svg = badgeSvg(mode)
+      expect(svg).toContain(`<rect width="${BADGE_WIDTH}" height="${BADGE_HEIGHT}" rx="${BADGE_HEIGHT / 2}" fill="${BADGE_COLORS[mode]}"/>`)
+      expect(svg).toContain(`>${BADGE_NAMES[mode]}</text>`)
+    }
+    expect(badgeSvg('shadow')).toContain('>GÖLGE</text>')
+    expect(badgeSvg('pin')).toContain('>KAPALI</text>')
   })
 
   test('is one svg root of the size the Svg element is given', () => {
-    for (const isOn of [true, false]) {
-      const svg = switchSvg(isOn)
-      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${SWITCH_WIDTH}" height="${SWITCH_HEIGHT}"`)
+    for (const mode of ['auto', 'shadow', 'pin', 'down'] as const) {
+      const svg = badgeSvg(mode)
+      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${BADGE_WIDTH}" height="${BADGE_HEIGHT}"`)
       expect(svg).toEndWith('</svg>')
     }
   })
@@ -325,6 +455,20 @@ describe('journal', () => {
     const entries = readJournal([{ at: 0, text: 'x', tier: 0, family: 'haiku', effort: 'low', source: 'kural', flags: [], isShadow: true, answered: 'opus' }])
     expect(entries[0]).toMatchObject({ isShadow: true, answered: 'opus' })
     expect(journalText(entries)).toContain('Şüpheli kararlar: 0 / 1')
+  })
+
+  test('an entry keeps what the picker cut; an old entry or a broken one reads without it', () => {
+    const entries = readJournal([
+      { at: 0, text: 'mimari', tier: 3, family: 'sonnet', effort: 'xhigh', source: 'kural', flags: [], isShadow: true, wanted: { family: 'opus', effort: 'medium' } },
+      { at: 0, text: 'eski', tier: 3, family: 'sonnet', effort: 'xhigh', source: 'kural', flags: [] },
+      { at: 0, text: 'bozuk', tier: 3, family: 'sonnet', effort: 'xhigh', source: 'kural', flags: [], wanted: { family: 'opus', effort: 'çok' } },
+    ])
+    expect(entries[0]?.wanted).toEqual({ family: 'opus', effort: 'medium' })
+    expect(entries[1]?.wanted).toBeUndefined()
+    expect(entries[2]?.wanted).toBeUndefined()
+    const report = journalText(entries)
+    expect(report).toContain('Sonnet · xhigh (tavansız Opus · medium)')
+    expect(report).toContain('Seçici tavanı yüzünden kırpılan: 1, bunların 1 tanesinde daha güçlü bir model istenmişti')
   })
 })
 
