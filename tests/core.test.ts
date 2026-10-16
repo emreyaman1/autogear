@@ -5,7 +5,7 @@ import { decide } from '../hooks/core/policy'
 import { costOf, readTokens, turnMoney, usd } from '../hooks/core/prices'
 import { addTurn, emptyTotals, savedOf, savingsText, sharesOf, splitCells, sumOf } from '../hooks/core/savings'
 import { addEntry, flagLast, journalText, markLast, MAX_ENTRIES, readJournal, snippet, type Entry } from '../hooks/core/journal'
-import { applyCommand, DEFAULTS, readStats } from '../hooks/core/settings'
+import { applyCommand, DEFAULTS, readSettings, readStats } from '../hooks/core/settings'
 import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
 import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
 import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from '../hooks/core/switch'
@@ -316,6 +316,15 @@ describe('journal', () => {
   test('/gear kayit and yanlis are read', () => {
     expect(applyCommand(DEFAULTS, 'kayit', '')).toBe('journal')
     expect(applyCommand(DEFAULTS, 'yanlis', 'zayif')).toBe('mark')
+  })
+
+  test('shadow mode is a setting of its own, and its entries are no doubtful decisions', () => {
+    expect(applyCommand(DEFAULTS, 'golge', '')).toEqual({ ...DEFAULTS, mode: 'shadow' })
+    expect(readSettings({ mode: 'shadow' }).mode).toBe('shadow')
+    expect(readSettings({ mode: 'other' }).mode).toBe('auto')
+    const entries = readJournal([{ at: 0, text: 'x', tier: 0, family: 'haiku', effort: 'low', source: 'kural', flags: [], isShadow: true, answered: 'opus' }])
+    expect(entries[0]).toMatchObject({ isShadow: true, answered: 'opus' })
+    expect(journalText(entries)).toContain('Şüpheli kararlar: 0 / 1')
   })
 })
 

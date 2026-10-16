@@ -4,3 +4,6 @@
 # Evaluation scratch output
 eval/.work/
 node_modules/
+
+# Written and removed by eval/external.mjs for each run
+eval/external.generated.test.ts

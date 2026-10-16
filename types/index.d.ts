@@ -1,5 +1,5 @@
 // What gearbox keeps for the toggle band above the prompt: the one value it draws from.
-export type GearboxMode = 'auto' | 'pin' | 'down'
+export type GearboxMode = 'auto' | 'pin' | 'shadow' | 'down'
 
 declare module 'claude-code' {
   interface PluginState {

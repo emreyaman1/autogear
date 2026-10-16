@@ -64,6 +64,7 @@ const HELP = [
   '| `/gear yanlis zayif` · `fazla` | son mesajın kararını işaretle: model çok zayıftı · gereğinden güçlüydü |',
   '| `/gear sifirla` | tasarruf sayacını ve günlüğü sıfırla |',
   "| `/gear oto` · `/gear sabitle` | gearbox'ı aç · kapat (kapalıyken seçici model kullanılır) |",
+  '| `/gear golge` | gölge: seçer ve yazar ama uygulamaz, cevabı seçicideki model verir; yeni bir sürümü işini etkilemeden denemek için |',
   '| `/gear profil <ad>` | tasarruf, dengeli ya da kalite |',
   "| `/gear haiku aç` · `kapa` | önemsiz işler Haiku'ya gitsin mi |",
   "| `/gear sor aç` · `kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |",
@@ -141,6 +142,10 @@ function showStatus($: EngineInterface, state: State): void {
   $.ui.status(
     mode === 'down' ? '⚙ gearbox: devre dışı (seçici), /gear'
     : mode === 'pin' ? '⚙ gearbox: kapalı (seçici model)'
+    : mode === 'shadow'
+      ? last === undefined
+        ? '⚙ gearbox: gölgede, seçimleri yazıyor'
+        : `⚙ gölge: ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} önerirdi`
     : last === undefined ? `⚙ gearbox: otomatik · ${settings.profile}`
     : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} ${tierLabel(state, last)}${savedNote(state)}`,
   )
@@ -297,6 +302,35 @@ function footer(state: State, decision: Decision, usage: TurnUsage | undefined, 
   return `⚙ ${model} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} (${source}: ${why})${cache}${cost}`
 }
 
+// A turn in shadow mode: what gearbox would have chosen, beside what answered.
+function shadowFooter(state: State, decision: Decision, usage: TurnUsage | undefined): string {
+  const why = (decision.reasons.length > 2 ? [decision.reasons[0], decision.reasons.at(-1)] : decision.reasons).join('; ')
+  const source = SOURCE_NAMES[decision.source] ?? decision.source
+  const answered = usage === undefined ? 'seçicideki model' : displayModel(usage.model)
+
+  return `⚙ gölge: ${FAMILY_NAMES[decision.family]} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} önerirdi (${source}: ${why}) · cevap: ${answered}`
+}
+
+// The end of a turn chosen in shadow mode: nothing was applied, so nothing is
+// checked against the answer and nothing is saved; the choice goes into the log.
+async function afterShadowTurn($: EngineInterface, state: State, decision: Decision, usage: TurnUsage | undefined): Promise<void> {
+  const isCheckFailed = state.lastCheckFailed
+  state.carryFailure = isCheckFailed && decision.tier < 4
+  state.lastCheckFailed = false
+  const overhead = state.overhead
+  state.overhead = 0
+  state.session.overhead += overhead
+  showStatus($, state)
+  try {
+    const stats = readStats(await $.store.get('stats'))
+    stats.overhead += overhead
+    await $.store.set('stats', stats)
+  } catch {
+    // Statistics are a nicety.
+  }
+  await noteDecision($, decision, familyOf(usage?.model), undefined, isCheckFailed)
+}
+
 async function afterTurn($: EngineInterface, state: State, decision: Decision, usage: TurnUsage | undefined): Promise<TurnMoney | undefined> {
   // The API names the model that answered: if it is not the chosen one, turn
   // after turn, the plugin API has changed under gearbox and it stands down.
@@ -372,7 +406,8 @@ async function noteDecision(
         at: await $.clock.now(),
         text: snippet(decision.prompt),
         tier: decision.tier,
-        family: answered ?? decision.family,
+        // A shadow entry keeps what gearbox chose; the model that answered beside it.
+        family: decision.isShadow === true ? decision.family : (answered ?? decision.family),
         effort: decision.effort,
         source: SOURCE_NAMES[decision.source] ?? decision.source,
         ceiling: familyOf(decision.ceilingModel),
@@ -381,6 +416,7 @@ async function noteDecision(
         flags: isCheckFailed ? ['test/derleme kırık'] : [],
         mark: undefined,
         reasons: decision.reasons.slice(0, 6),
+        ...(decision.isShadow === true ? { isShadow: true as const, ...(answered === undefined ? {} : { answered }) } : {}),
       })
     }
     await $.store.set('journal', journal)
@@ -396,11 +432,13 @@ async function describe($: EngineInterface, state: State): Promise<string> {
   const limits = state.limits
     .map(limit => `${WINDOW_NAMES[limit.kind] ?? limit.kind} %${Math.round(limit.percentUsed)}${limit.resetsAt === undefined ? '' : ` (sıfırlanma ${clock(limit.resetsAt)})`}`)
     .join(' · ')
-  const mode = state.isStoodDown ? 'devre dışı (seçimler uygulanmıyordu)' : settings.mode === 'auto' ? 'açık' : 'kapalı (seçici model)'
+  const mode = state.isStoodDown && settings.mode === 'auto'
+    ? 'devre dışı (seçimler uygulanmıyordu)'
+    : settings.mode === 'auto' ? 'açık' : settings.mode === 'shadow' ? 'gölgede (seçer ve yazar, uygulamaz)' : 'kapalı (seçici model)'
   const total = sumOf(stats)
 
   return [
-    `**gearbox ${mode}** · profil ${settings.profile}`,
+    `**${mode}** · profil ${settings.profile}`,
     '',
     `- **Tavan (seçici):** ${state.ceilingSeen ?? 'henüz istek yok'}`,
     `- **Limitler:** ${limits === '' ? 'henüz bilinmiyor' : limits}`,
@@ -439,7 +477,7 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
   await $.command.register({
     name: 'gear',
     description: 'gearbox: otomatik model ve efor seçimi',
-    argumentHint: '[oto | sabitle | profil <ad> | haiku | sor | not | bant | tasarruf | kayit | yanlis | sifirla]',
+    argumentHint: '[oto | sabitle | golge | profil <ad> | haiku | sor | not | bant | tasarruf | kayit | yanlis | sifirla]',
   })
   await noticeVersion($)
   if ((await $.store.get('tipShown')) !== true) {
@@ -453,7 +491,7 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
 
 // One switch for the band's button and for /gear: auto turns routing on (and
 // tries again after standing down), pin hands every request to the picker.
-async function switchMode($: EngineInterface, state: State, mode: 'auto' | 'pin'): Promise<void> {
+async function switchMode($: EngineInterface, state: State, mode: Settings['mode']): Promise<void> {
   if (mode === 'auto') {
     state.isStoodDown = false
     state.mismatches = 0
@@ -501,7 +539,7 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
     state.session = emptyTotals()
     showStatus($, state)
 
-    return { text: 'gearbox: tasarruf ve tur sayacı sıfırlandı.' }
+    return { text: 'tasarruf sayacı ve günlük sıfırlandı.' }
   }
   // `/gear oto` also tries again after standing down, though the mode was already auto.
   if (changed.mode === 'auto' || changed.mode !== state.settings.mode) {
@@ -511,7 +549,12 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
   await $.store.set('settings', changed)
   showStatus($, state)
 
-  return { text: `gearbox: ${changed.mode === 'auto' ? 'açık' : 'kapalı (seçici model)'} · profil ${changed.profile}` }
+  const name =
+    changed.mode === 'auto' ? 'açık'
+    : changed.mode === 'shadow' ? 'gölgede: seçimlerini yazıyor, uygulamıyor; cevabı seçicideki model veriyor'
+    : 'kapalı (seçici model)'
+
+  return { text: `${name} · profil ${changed.profile}` }
 }
 
 export const register: Register = on => {
@@ -562,7 +605,21 @@ export const register: Register = on => {
   // Every request of a turn goes out on the turn's one model: a switch inside
   // a turn would drop the cache and the thinking the turn has built up.
   on('turn.step', async function* ($, e, next) {
-    if (!isRouting(state) || e.agentId !== undefined) {
+    if (e.agentId !== undefined) {
+      return yield* next(e)
+    }
+    // In shadow mode the choice is made and kept for the log; the request goes as the picker says.
+    if (state.settings.mode === 'shadow') {
+      if (e.index === 0 && !state.decisions.has(e.turnId)) {
+        const decision = await decideTurn($, state, e)
+        if (decision !== undefined) {
+          state.decisions.set(e.turnId, { ...decision, isShadow: true })
+        }
+      }
+
+      return yield* next(e)
+    }
+    if (!isRouting(state)) {
       return yield* next(e)
     }
     const decision = state.decisions.get(e.turnId) ?? (e.index === 0 ? await decideTurn($, state, e) : undefined)
@@ -624,6 +681,11 @@ export const register: Register = on => {
     if (decision === undefined) {
       return result
     }
+    if (decision.isShadow === true) {
+      await afterShadowTurn($, state, decision, e.usage)
+
+      return state.settings.footer ? { ...result, text: shadowFooter(state, decision, e.usage) } : result
+    }
     const money = await afterTurn($, state, decision, e.usage)
 
     return state.settings.footer ? { ...result, text: footer(state, decision, e.usage, money) } : result
@@ -639,10 +701,11 @@ export const register: Register = on => {
     }
     const mode = await read($, modeAtom)
     const isOn = mode === 'auto'
-    const name = mode === 'auto' ? 'açık' : mode === 'pin' ? 'kapalı' : 'devre dışı'
+    const name = mode === 'auto' ? 'açık' : mode === 'pin' ? 'kapalı' : mode === 'shadow' ? 'gölge' : 'devre dışı'
     const note =
       mode === 'auto' ? 'açık: işe göre model ve efor seçiyor'
       : mode === 'pin' ? 'kapalı: seçicideki model kullanılıyor'
+      : mode === 'shadow' ? 'gölgede: seçimlerini yazıyor, cevabı seçicideki model veriyor'
       : 'devre dışı: seçimler uygulanmıyordu, seçicideki model kullanılıyor'
     const flip = () => switchMode($, state, isOn ? 'pin' : 'auto')
 

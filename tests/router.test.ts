@@ -367,3 +367,28 @@ test('a +token after a system note is taken off, the note left for the model', a
   expect(prompts[0]).not.toContain('+haiku')
   expect(prompts[0]).toContain('bu dosyada ne var?')
 })
+
+test('in shadow mode gearbox chooses and writes it down, and every request goes as the picker says', async ($, on) => {
+  const { sent } = world(on)
+  const shown = JSON.stringify(await $.command.run({ command: 'gear', args: 'golge' }))
+  expect(shown).toContain('gölgede')
+  for (const turnId of ['t1', 't2', 't3', 't4']) {
+    await say($, 'bu fonksiyon ne yapıyor?')
+    await step($, turnId, 0, 'claude-opus-5-5', 'high')
+    const done = await $.turn.complete({ turnId, answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
+    expect(done.text).toContain('gölge: Haiku · low')
+    expect(done.text).toContain('cevap: Opus 5.5')
+  }
+  // Not one request was changed.
+  expect(sent.every(one => one.model === 'claude-opus-5-5' && one.effort === 'high')).toBe(true)
+  const log = JSON.stringify(await $.command.run({ command: 'gear', args: 'kayit' }))
+  expect(log).toContain('gölge, cevap: Opus')
+  expect(log).toContain('Gölgede seçilip uygulanmayan: 4')
+  expect(log).toContain('Şüpheli kararlar: 0 / 4')
+  // Nothing was saved, and the answers on another model are no sign of a broken API.
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'tasarruf' }))).toContain('Henüz kayıtlı tur yok')
+  await $.command.run({ command: 'gear', args: 'oto' })
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't5', 0, 'claude-opus-5-5', 'high')
+  expect(sent.at(-1)).toEqual({ model: 'claude-haiku-5-5', effort: 'low' })
+})

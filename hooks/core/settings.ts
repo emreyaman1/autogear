@@ -5,8 +5,10 @@ import { emptyTotals, type Bucket, type Totals } from './savings'
 import { PROFILE_IDS, type ProfileId } from './tiers'
 
 export type Settings = {
-  // auto: the router picks; pin: every request goes out as the picker says.
-  mode: 'auto' | 'pin'
+  // auto: the router picks; pin: every request goes out as the picker says;
+  // shadow: the router picks and writes its choice down, and the request goes
+  // out as the picker says, so a new version is tried without touching work.
+  mode: 'auto' | 'pin' | 'shadow'
   profile: ProfileId
   // May trivial prompts go to Haiku?
   allowHaiku: boolean
@@ -36,7 +38,7 @@ export function readSettings(stored: unknown): Settings {
   const value = asRecord<Settings>(stored)
 
   return {
-    mode: value.mode === 'pin' ? 'pin' : 'auto',
+    mode: value.mode === 'pin' || value.mode === 'shadow' ? value.mode : 'auto',
     profile: PROFILE_IDS.find(id => id === value.profile) ?? DEFAULTS.profile,
     allowHaiku: flag(value.allowHaiku, DEFAULTS.allowHaiku),
     askHaiku: flag(value.askHaiku, DEFAULTS.askHaiku),
@@ -111,6 +113,9 @@ export function applyCommand(settings: Settings, verb: string, value: string): S
     case 'sabit':
     case 'pin':
       return { ...settings, mode: 'pin' }
+    case 'golge':
+    case 'shadow':
+      return { ...settings, mode: 'shadow' }
     case 'profil':
     case 'profile': {
       const profile = PROFILE_IDS.find(id => id === value)

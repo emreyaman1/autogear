@@ -20,6 +20,8 @@ export type Decision = {
   ceilingModel?: string
   // The message the choice was made for; absent when no message prompted it.
   prompt?: string
+  // Chosen in shadow mode: written down, not applied.
+  isShadow?: true
 }
 
 export type PolicyInput = {

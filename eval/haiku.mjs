@@ -6,16 +6,10 @@
 //
 // The first run spends a little usage: one short Haiku call per prompt.
 
-import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { spawnSync } from 'node:child_process'
 
 import { claudeBinary, ROOT } from '../scripts/claude.mjs'
-
-const llm = await import(new URL('../hooks/core/llm.ts', import.meta.url))
-
-const WORK = join(ROOT, 'eval', '.work')
-const CACHE = join(WORK, 'haiku-cache.json')
+import { askMissing, cacheKey, readCache } from './haiku-ask.mjs'
 
 function rulePredictions() {
   const run = spawnSync(claudeBinary(), ['plugin', 'test', '.'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
@@ -36,39 +30,6 @@ function rulePredictions() {
   }
 
   return sets
-}
-
-function askHaiku(item) {
-  const args = [
-    '-p', llm.classifierPrompt(item.text, item.prevTier),
-    '--model', 'claude-haiku-5-5', '--effort', 'low', '--tools', '', '--system-prompt', llm.RUBRIC,
-    '--output-format', 'json', '--setting-sources', 'project',
-  ]
-
-  return new Promise(resolve => {
-    const child = spawn(claudeBinary(), args, { cwd: ROOT })
-    let out = ''
-    child.stdout.on('data', chunk => (out += chunk))
-    child.on('close', () => {
-      try {
-        const result = JSON.parse(out)
-        resolve({ tier: llm.parseTier(result.result ?? ''), cost: result.total_cost_usd ?? 0 })
-      } catch {
-        resolve({ tier: undefined, cost: 0 })
-      }
-    })
-  })
-}
-
-async function pool(items, size, work) {
-  let next = 0
-  await Promise.all(
-    Array.from({ length: size }, async () => {
-      while (next < items.length) {
-        await work(items[next++])
-      }
-    }),
-  )
 }
 
 // Haiku's answer as the router takes it (hooks/core/settle.ts withHaiku): where
@@ -110,23 +71,15 @@ function score(rows, policy) {
   return `isabet ${pct(s.exact)}  ±1 ${pct(s.within1)}  eksik ${String(s.under).padStart(2)}  ciddi ${String(s.severe).padStart(2)}  fazla ${String(s.over).padStart(2)}  Haiku'ya ${pct(s.asked)}  ort. kademe ${(s.tiers / rows.length).toFixed(2)}`
 }
 
-mkdirSync(WORK, { recursive: true })
-const cache = existsSync(CACHE) ? JSON.parse(readFileSync(CACHE, 'utf8')) : {}
+const cache = readCache()
 const sets = rulePredictions()
 const all = Object.values(sets).flat()
-const key = row => `${row.prevTier ?? '-'}|${row.text}`
-const missing = all.filter(row => cache[key(row)] === undefined)
-let spent = 0
-await pool(missing, 6, async row => {
-  const answer = await askHaiku(row)
-  if (answer.tier !== undefined) {
-    cache[key(row)] = answer.tier
-  }
-  spent += answer.cost
+const { asked, spent } = await askMissing(all, cache).catch(error => {
+  console.error(error instanceof Error ? error.message : String(error))
+  process.exit(1)
 })
-writeFileSync(CACHE, JSON.stringify(cache, null, 1))
 for (const row of all) {
-  row.haiku = cache[key(row)] ?? row.got
+  row.haiku = cache[cacheKey(row)] ?? row.got
 }
 
 const groups = { ...sets, 'saklanan + yeni (dürüst ölçüm)': [...sets.holdout, ...sets.fresh] }
@@ -144,4 +97,4 @@ for (const row of groups['saklanan + yeni (dürüst ölçüm)']) {
     console.log(`  T${row.tier}→T${tier} (kural T${row.got}${row.confidence === 'low' ? '?' : ''}, Haiku T${row.haiku})  ${row.text.slice(0, 70)}`)
   }
 }
-console.log(`\n${missing.length} yeni Haiku çağrısı, API liste fiyatıyla $${spent.toFixed(3)}`)
+console.log(`\n${asked} yeni Haiku çağrısı, API liste fiyatıyla $${spent.toFixed(3)}`)

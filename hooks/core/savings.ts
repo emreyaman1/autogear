@@ -137,7 +137,7 @@ const tokenLine = (bucket: Bucket): string =>
 export function savingsText(session: Totals, all: Totals, since: number | undefined): string {
   const [now, ever] = [sumOf(session), sumOf(all)]
   if (ever.turns === 0) {
-    return '**gearbox tasarruf**\n\nHenüz kayıtlı tur yok: rakamlar gearbox bir cevap bitirdikçe birikir.'
+    return '**Tasarruf**\n\nHenüz kayıtlı tur yok: rakamlar gearbox bir cevap bitirdikçe birikir.'
   }
   const gain = (totals: Totals, bucket: Bucket): string => {
     const saved = savedOf(totals)
@@ -152,7 +152,7 @@ export function savingsText(session: Totals, all: Totals, since: number | undefi
   })
 
   return [
-    '**gearbox tasarruf** · tahmin, API liste fiyatıyla',
+    '**Tasarruf** · tahmin, API liste fiyatıyla',
     '',
     '| | Bu oturum | Toplam |',
     '|:--|--:|--:|',

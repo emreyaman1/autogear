@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer, and hard work still goes to the strong model.
 
-> Status: 0.6.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.7.1. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## What you get
 
@@ -46,6 +46,8 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 
 **The on/off row.** A small row above the prompt shows whether gearbox is on. Its **ON / OFF switch** (green with the knob on the right when on, gray with the knob on the left when off) turns gearbox off and on. When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving.
 
+**Shadow mode.** `/gear golge` lets gearbox choose without applying the choice: every request goes out as the picker says, and gearbox writes what it would have picked under each answer (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) and in its log. A new version can be tried this way on real work without touching that work, and `/gear yanlis` still marks its choices. `/gear oto` turns routing back on.
+
 **Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). Writing `ultrathink` means T4.
 
 Or say it in words: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, sen de bak", "use opus" pick the model, and the effort when one is named, for that message. Talking about a model ("haiku ile yaptı", "opus pahalı mı?") picks nothing. A choice made in words, like a token, may go above the picker.
@@ -60,6 +62,7 @@ Or say it in words: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, se
 | `/gear yanlis zayif\|fazla` | mark the latest decision: model too weak, or more than the work needed |
 | `/gear sifirla` | reset the savings counter and the log |
 | `/gear oto` / `/gear sabitle` | turn gearbox on / off (off: the picker's model is used) |
+| `/gear golge` | shadow mode: choose and write it down, apply nothing |
 | `/gear profil tasarruf\|dengeli\|kalite` | which tier table to use |
 | `/gear haiku aç\|kapa` | may trivial work go to Haiku |
 | `/gear sor aç\|kapa` | may the rules ask Haiku when unsure |
@@ -171,6 +174,17 @@ Dollars per million tokens. A Haiku prompt over 100K tokens costs five times as 
 
 What went wrong in the first row: the note Claude Code puts ahead of a message in a new session was read as the message, so a bare "merhaba" went to Opus · high; Haiku called bug reports that came with a screenshot trivial ("o tuş çıkmadı yine", "inceler misin"); a remark in the middle of a long task dropped the task to Haiku; a model asked for in words ("sonnet'e max ile ver") was ignored. The fixes of 0.6 were made from these same messages, so the second row shows that they hold, not how 0.6 does on messages it has not seen, and two of the replayed messages would go to Haiku with no logged answer. The decision log is what will tell. The messages are someone's real work, so the set and the test that replays it are kept on the developer's machine, not in this repository.
 
+**External benchmarks** (`eval/external.mjs`): difficulty set by other people, on public sets of coding-agent work. [SWE-bench Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified): 500 GitHub issues, each with the time annotators judged an engineer would need to fix it. [Terminal-Bench](https://github.com/harbor-framework/terminal-bench-1): 241 tasks done in a terminal, each with its author's estimate of an expert's time. Time maps to tier (under 15 minutes T1, under an hour T2, under four hours T3, more T4); neither set holds trivial work. Each set is split in two by a hash of the task id: the rules may be tuned while looking at one half, the other is only measured. The texts are fetched into `eval/.work` and never kept in this repository, as the benchmarks ask.
+
+| Held-out half of both (350), 0.7 | Exact | Within 1 tier | Severe* | Too high | Rank agreement |
+|---|---|---|---|---|---|
+| Rules alone | 36% | 79% | 9 (3%) | 183 | 0.10 |
+| **gearbox: rules, Haiku when unsure** | **31%** | **78%** | **6 (2%)** | **207** | **0.16** |
+
+By set, gearbox as it runs: SWE-bench Verified 36% exact, 83% within one tier, 1 severe case in 500; Terminal-Bench 30%, 73%, 8 severe cases in 241 (3%). Before the two rule fixes of 0.7 (a chore word such as "commit" inside a long description no longer makes it trivial; a long description of work is no small change) the rules had 21 severe cases (6%) on the held-out half. Asking Haiku where the rules are unsure lowers the severe cases further and raises the rank agreement, at the price of more work sent a tier or two too high, since Haiku answers the higher tier when torn. The measurement asked Haiku 177 times, $0.38 at list price.
+
+What it shows: gearbox rarely sends hard work to a weak model, but on long English issues and task statements it hardly tells a fifteen-minute fix from a four-hour one (rank agreement 0.16), and it spends on the safe side. These texts are unlike the short prompts people type, which is what the rules were built for; and the time-to-tier mapping is ours, so some of "too high" is a tier the work may well have deserved (a quick fix in an unfamiliar codebase is still a hunt).
+
 **Output quality** (`eval/tasks/`): six real tasks on a small project, each checked by tests Claude never saw.
 
 | Task | gearbox chose | Result | Cost | Opus · high, no gearbox |
@@ -204,8 +218,8 @@ On the 4 tasks run both ways gearbox spent $0.31 against $2.38 on Opus · high t
 | `hooks/core/switch.ts` | the drawing of the on/off switch |
 | `hooks/core/version.ts` | the newest Claude Code version it was tested on |
 | `tests/` | rules, policy, prices and savings; the router against a mock engine; the classifier eval |
-| `eval/` | classifier measurement and the output-quality tasks |
-| `scripts/` | the live smoke test |
+| `eval/` | classifier measurement, the external benchmarks (`external.mjs`) and the output-quality tasks |
+| `scripts/` | the live smoke test; `harvest.mjs`, which gathers gearbox's decisions from your transcripts |
 
 ## Development
 
@@ -226,6 +240,13 @@ node eval/tasks.mjs
 ```
 
 The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs a Claude Code build whose plugin API matches (2.1.295 was used): on older builds the hooks module does not load and the router tests fail.
+
+**Developing without making yourself the test.** A new version goes through four steps, each before the next, and only the last touches real work:
+
+1. Offline: `claude plugin test .` (rules, policy, router, the eval sets) and `node eval/external.mjs` (the external benchmarks, free; `--haiku` adds Haiku's answers for a little usage).
+2. In shadow mode (`/gear golge`) on real work: gearbox chooses and writes down, the picker's model answers.
+3. `node scripts/harvest.mjs` gathers those choices from the transcripts into `eval/.work/harvest.json`; labelled, they become a real-use set to replay the next version over.
+4. Only then `/gear oto`.
 
 **Trying a change in your own Claude Code.** Claude Code runs an installed copy of the plugin, not the folder. After editing, raise `version` in `.claude-plugin/plugin.json`, then:
 
@@ -251,6 +272,7 @@ Restart the app and open a new chat.
 - [x] Classifier and output-quality measurements
 - [x] Per-turn cost, savings counter and card
 - [x] English README, MIT license, published on GitHub
+- [x] Shadow mode, external benchmarks and a harvest of real decisions, so a new version is judged before it routes anyone's work (0.7)
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
 - [x] Decision log with your marks, to see where the rules go wrong
 - [x] Review of real use: system notes, the bound on Haiku, the hold on work in hand, models named in words (0.6)

@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer, zor işler yine güçlü modelle yapılır.
 
-> Durum: 0.6.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.7.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Ne sağlar
 
@@ -46,6 +46,8 @@ Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması 
 
 **Aç/kapa satırı.** İstem kutusunun üstündeki küçük satır gearbox'ın açık olup olmadığını gösterir. **ON / OFF anahtarı** (açıkken yeşil ve topuz sağda, kapalıyken gri ve topuz solda) gearbox'ı kapatır ve açar. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir.
 
+**Gölge mod.** `/gear golge` ile gearbox seçer ama seçimini uygulamaz: her istek seçici ne diyorsa onunla gider, gearbox da ne seçeceğini her cevabın altına (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) ve günlüğüne yazar. Yeni bir sürüm böylece gerçek iş üzerinde, o işe dokunmadan denenir; `/gear yanlis` seçimlerini yine işaretler. `/gear oto` yönlendirmeyi geri açar.
+
 **Etiketler.** Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
 
 Ya da düz yazıyla söyle: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, sen de bak", "use opus" o mesaj için modeli, adı geçiyorsa eforu da seçer. Bir model hakkında konuşmak ("haiku ile yaptı", "opus pahalı mı?") bir şey seçmez. Yazıyla yapılan seçim de, etiket gibi, seçicinin üstüne çıkabilir.
@@ -60,6 +62,7 @@ Ya da düz yazıyla söyle: "bu görevi sonnet'e max ile ver", "opus ile yap", "
 | `/gear yanlis zayif\|fazla` | son kararı işaretle: model çok zayıftı, ya da işin gerektirdiğinden güçlüydü |
 | `/gear sifirla` | tasarruf sayacını ve günlüğü sıfırla |
 | `/gear oto` / `/gear sabitle` | gearbox'ı aç / kapat (kapalıyken seçicideki model kullanılır) |
+| `/gear golge` | gölge mod: seç ve yaz, hiçbirini uygulama |
 | `/gear profil tasarruf\|dengeli\|kalite` | hangi kademe tablosu kullanılsın |
 | `/gear haiku aç\|kapa` | önemsiz işler Haiku'ya gitsin mi |
 | `/gear sor aç\|kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |
@@ -169,6 +172,17 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 
 İlk satırda yanlış giden: yeni bir oturumda Claude Code'un mesajın önüne koyduğu not mesaj sanıldı, düz bir "merhaba" Opus · high'a gitti; Haiku ekran görüntüsüyle gelen hata bildirimlerini önemsiz saydı ("o tuş çıkmadı yine", "inceler misin"); uzun bir işin ortasındaki bir açıklama işi Haiku'ya düşürdü; yazıyla istenen model ("sonnet'e max ile ver") dikkate alınmadı. 0.6'nın düzeltmeleri bu mesajlardan yapıldı; ikinci satır düzeltmelerin tuttuğunu gösterir, 0.6'nın görmediği mesajlarda nasıl yaptığını değil. Yeniden oynatılan iki mesaj Haiku'ya sorulacaktı ve kayıtta cevapları yok. Bunu gösterecek olan karar günlüğü. Mesajlar birinin gerçek işi olduğu için küme de onu yeniden oynatan test de geliştiricinin makinesinde duruyor, bu repoda yok.
 
+**Dış ölçütler** (`eval/external.mjs`): zorluğu başkalarının belirlediği, kod ajanı işlerinden oluşan açık kümeler. [SWE-bench Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified): 500 GitHub hata kaydı, her birinde değerlendiricilerin bir mühendisin düzeltmek için ne kadar süreye ihtiyaç duyacağına dair yargısı. [Terminal-Bench](https://github.com/harbor-framework/terminal-bench-1): terminalde yapılan 241 görev, her birinde yazarın bir uzmanın süresine dair tahmini. Süre kademeye çevrilir (15 dakikadan az T1, bir saatten az T2, dört saatten az T3, daha fazlası T4); iki kümede de önemsiz iş yok. Her küme, görev kimliğinin özetiyle ikiye bölünür: kurallar bir yarıya bakılarak ayarlanabilir, öteki yalnızca ölçülür. Metinler `eval/.work` altına indirilir ve kümelerin istediği gibi bu repoda asla tutulmaz.
+
+| İkisinin saklı yarısı (350), 0.7 | Tam isabet | ±1 kademe | Ciddi hata* | Fazla yüksek | Sıra uyumu |
+|---|---|---|---|---|---|
+| Yalnızca kurallar | %36 | %79 | 9 (%3) | 183 | 0,10 |
+| **gearbox: kurallar, emin değilse Haiku** | **%31** | **%78** | **6 (%2)** | **207** | **0,16** |
+
+Kümelere göre, çalıştığı haliyle gearbox: SWE-bench Verified'da %36 tam isabet, %83 ±1 kademe, 500'de 1 ciddi hata; Terminal-Bench'te %30, %73, 241'de 8 ciddi hata (%3). 0.7'nin iki kural düzeltmesinden önce (uzun bir tarifin içindeki "commit" gibi bir angarya kelimesi onu artık basit iş yapmıyor; uzun bir iş tarifi küçük değişiklik sayılmıyor) kuralların saklı yarıda 21 ciddi hatası vardı (%6). Kuralların emin olmadığı yerde Haiku'ya sormak ciddi hataları daha da azaltıyor ve sıra uyumunu yükseltiyor; bedeli, bir iki kademe fazla gönderilen işin artması, çünkü Haiku tereddütte üst kademeyi seçiyor. Ölçüm Haiku'ya 177 kez sordu, liste fiyatıyla $0,38.
+
+Gösterdiği: gearbox zor işi nadiren zayıf bir modele gönderiyor, ama uzun İngilizce hata kayıtlarında ve görev tariflerinde on beş dakikalık bir düzeltmeyi dört saatlik bir işten zor ayırıyor (sıra uyumu 0,16) ve güvenli taraftan harcıyor. Bu metinler insanların yazdığı kısa mesajlara, yani kuralların yapıldığı şeye benzemiyor; süreyi kademeye çeviren eşleme de bizim, bu yüzden "fazla yüksek"in bir kısmı işin pekâlâ hak ettiği bir kademe olabilir (yabancı bir kod tabanında hızlı bir düzeltme de bir aramadır).
+
 **Çıktı kalitesi** (`eval/tasks/`): Küçük bir proje üzerinde 6 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir.
 
 | Görev | gearbox'ın seçtiği | Sonuç | Maliyet | Opus · high, gearbox'sız |
@@ -202,8 +216,8 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 | `hooks/core/switch.ts` | aç/kapa anahtarının çizimi |
 | `hooks/core/version.ts` | denendiği en yeni Claude Code sürümü |
 | `tests/` | kurallar, politika, fiyat ve tasarruf; sahte motora karşı yönlendirici; sınıflandırıcı ölçümü |
-| `eval/` | sınıflandırma ölçümü ve çıktı kalitesi görevleri |
-| `scripts/` | canlı duman testi |
+| `eval/` | sınıflandırma ölçümü, dış ölçütler (`external.mjs`) ve çıktı kalitesi görevleri |
+| `scripts/` | canlı duman testi; gearbox'ın kararlarını oturum kayıtlarından toplayan `harvest.mjs` |
 
 ## Geliştirme
 
@@ -224,6 +238,13 @@ node eval/tasks.mjs
 ```
 
 Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, eklenti API'si uyan bir Claude Code sürümü ister (2.1.295 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur.
+
+**Kendini test konusu yapmadan geliştirmek.** Yeni bir sürüm dört adımdan geçer, her biri bir sonrakinden önce, ve yalnızca sonuncusu gerçek işe dokunur:
+
+1. Çevrimdışı: `claude plugin test .` (kurallar, politika, yönlendirici, eval kümeleri) ve `node eval/external.mjs` (dış ölçütler, ücretsiz; `--haiku` biraz kota harcayarak Haiku'nun cevaplarını ekler).
+2. Gerçek işte gölge modda (`/gear golge`): gearbox seçer ve yazar, cevabı seçicideki model verir.
+3. `node scripts/harvest.mjs` bu seçimleri oturum kayıtlarından `eval/.work/harvest.json` dosyasına toplar; etiketlenince bir sonraki sürümün üzerinden yeniden oynatılacağı bir gerçek kullanım kümesi olurlar.
+4. Ancak ondan sonra `/gear oto`.
 
 **Bir değişikliği kendi Claude Code'unda denemek.** Claude Code klasörü değil, eklentinin kurulu bir kopyasını çalıştırır. Düzenledikten sonra `.claude-plugin/plugin.json` içindeki `version` değerini yükselt, sonra:
 
@@ -249,6 +270,7 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] Sınıflandırma ve çıktı kalitesi ölçümleri
 - [x] Tur başına maliyet, tasarruf sayacı ve kart
 - [x] İngilizce README, MIT lisansı, GitHub'da yayın
+- [x] Gölge mod, dış ölçütler ve gerçek kararların toplanması: yeni bir sürüm, kimsenin işini yönlendirmeden önce sınanır (0.7)
 - [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
 - [x] Senin işaretlerinle karar günlüğü, kuralların nerede yanıldığını görmek için
 - [x] Gerçek kullanımın incelenmesi: sistem notları, Haiku'ya sınır, süren işin tutulması, yazıyla istenen model (0.6)

@@ -260,6 +260,9 @@ const FILE =
 
 const LIST_ITEM = /^\s*(?:\d+[.)]|[-*•])\s+\S/gm
 
+// Past this many characters a prompt describes work rather than names a small change.
+const MID_LENGTH = 300
+
 const QUESTION_START = /^(?:ne|neden|nasil|hangi|nerede|kim|kac|what|why|how|which|where|who|is|are|can|does|do)(?![a-z])/
 
 const ALIASES: Record<string, Override> = {
@@ -463,8 +466,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
     return rule(2, 'high', ['test yazmak'])
   }
 
-  // T0: questions about code in view, and chores.
-  if (trivial.length > 0 && (feature.length === 0 || adds.length === 0)) {
+  // T0: questions about code in view, and chores. A chore is asked for in a
+  // few words: "commit" or "typo" inside a long description is part of it.
+  if (isShort && trivial.length > 0 && (feature.length === 0 || adds.length === 0)) {
     return rule(0, 'high', [`basit iş: ${quote(trivial)}`], 'chore')
   }
   if (isShort && LIST.test(rest) && INFO.test(rest) && feature.length === 0) {
@@ -490,6 +494,11 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
   }
   if (feature.length > 0 && (small.length === 0 || feature.length >= 2) && (adds.length > 0 || changes.length === 0)) {
     return rule(2, 'high', [`özellik: ${quote(feature)}`])
+  }
+
+  // A description of work longer than a few sentences is no small change, whatever its words.
+  if (length > MID_LENGTH) {
+    return rule(2, 'low', ['uzun bir iş tarifi'], adds.length + changes.length + small.length > 0 ? 'work' : 'none')
   }
 
   // T1: small, clearly specified changes. Sending hard work to a weak model
