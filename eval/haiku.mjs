@@ -71,11 +71,20 @@ async function pool(items, size, work) {
   )
 }
 
+// Haiku's answer as the router takes it (hooks/core/settle.ts withHaiku): where
+// the rules saw work, at most one tier below them, and never under their floor.
+function heldHaiku(row) {
+  const floor = row.floor ?? (row.kind === 'work' ? row.got - 1 : 0)
+
+  return Math.max(row.haiku, floor)
+}
+
 // How each way of combining the two picks a tier, and whether it asks Haiku.
 const POLICIES = {
   'sadece kurallar': row => ({ tier: row.got, asked: false }),
   'sadece Haiku': row => ({ tier: row.haiku, asked: true }),
-  'emin değilse Haiku': row => (row.confidence === 'low' ? { tier: row.haiku, asked: true } : { tier: row.got, asked: false }),
+  'emin değilse Haiku (0.5.0)': row => (row.confidence === 'low' ? { tier: row.haiku, asked: true } : { tier: row.got, asked: false }),
+  'emin değilse Haiku, sınırlı': row => (row.confidence === 'low' ? { tier: heldHaiku(row), asked: true } : { tier: row.got, asked: false }),
   'basitse Haiku teyidi': row =>
     row.confidence === 'low' || row.got <= 1 ? { tier: row.haiku, asked: true } : { tier: row.got, asked: false },
   'basitse teyit, yüksek olan': row =>
@@ -127,7 +136,7 @@ for (const [name, rows] of Object.entries(groups)) {
     console.log(`  ${label.padEnd(28)} ${score(rows, policy)}`)
   }
 }
-const chosen = POLICIES['emin değilse Haiku']
+const chosen = POLICIES['emin değilse Haiku, sınırlı']
 console.log('\nŞu anki yöntemin hataları (saklanan + yeni):')
 for (const row of groups['saklanan + yeni (dürüst ölçüm)']) {
   const { tier } = chosen(row)

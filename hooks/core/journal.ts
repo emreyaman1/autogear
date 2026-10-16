@@ -23,6 +23,8 @@ export type Entry = {
   flags: string[]
   // What the person said: the model was too weak, or more than the work needed.
   mark: Mark | undefined
+  // Why gearbox chose as it did, for looking the decision over later.
+  reasons?: string[]
 }
 
 export const MAX_ENTRIES = 200
@@ -66,6 +68,7 @@ export function readJournal(stored: unknown): Entry[] {
         baseline: num(value.baseline),
         flags: Array.isArray(value.flags) ? value.flags.filter((flag): flag is string => typeof flag === 'string') : [],
         mark: value.mark === 'zayif' || value.mark === 'fazla' ? value.mark : undefined,
+        reasons: Array.isArray(value.reasons) ? value.reasons.filter((reason): reason is string => typeof reason === 'string') : undefined,
       },
     ]
   })

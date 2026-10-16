@@ -30,7 +30,9 @@ function score(cases: readonly Case[]): Score {
     result.severe += gap <= -2 || (item.tier >= 3 && got.tier <= 1) ? 1 : 0
     result.unsure += got.confidence === 'low' ? 1 : 0
     // One line per prompt for eval/haiku.mjs, which asks Haiku the same.
-    console.log(`EVALJSON ${JSON.stringify({ text: item.text, tier: item.tier, prevTier: item.prevTier, got: got.tier, confidence: got.confidence })}`)
+    console.log(
+      `EVALJSON ${JSON.stringify({ text: item.text, tier: item.tier, prevTier: item.prevTier, got: got.tier, confidence: got.confidence, kind: got.kind, floor: got.floor })}`,
+    )
     if (gap !== 0) {
       result.misses.push(`T${item.tier}→T${got.tier}${got.confidence === 'low' ? '?' : ''}  ${item.text.replace(/\n/g, ' ').slice(0, 70)}  [${got.reasons.join('; ')}]`)
     }

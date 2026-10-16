@@ -8,13 +8,21 @@ export type Override = { family?: Family; effort?: Effort; tier?: Tier }
 
 export type RuleSource = 'rules' | 'override' | 'inherit' | 'escalate'
 
+// What the prompt is, beside how hard: work asked for, a question, a chore
+// (commit, push, typo), a greeting, a go-ahead, a complaint, or nothing the
+// rules can name. The router holds a task's tier through what is not new work.
+export type RuleKind = 'work' | 'question' | 'chore' | 'greeting' | 'followup' | 'complaint' | 'none'
+
 export type RuleResult = {
   tier: Tier
   // low: the rules could not tell, and the router may ask Haiku.
   confidence: 'high' | 'low'
   source: RuleSource
+  kind: RuleKind
   reasons: string[]
   override?: Override
+  // The least Haiku may answer for it, where the rules saw a sure sign of work.
+  floor?: Tier
 }
 
 export type RuleContext = {
@@ -24,6 +32,12 @@ export type RuleContext = {
   // How many prompts in a row have already complained.
   frustrationStreak?: number
 }
+
+// The notes Claude Code puts ahead of a person's message (the folder it
+// started in, the date, the model): not what the person wrote.
+const SYSTEM_NOTE = /<system-reminder>[\s\S]*?<\/system-reminder>/g
+
+export const withoutNotes = (text: string): string => text.replace(SYSTEM_NOTE, ' ').trim()
 
 const FOLD: Record<string, string> = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u' }
 
@@ -98,11 +112,27 @@ const MAYBE_HARD = cues([
   'compar', 'strateji', 'strateg', 'degerlendir', 'evaluat', 'avantaj', 'dezavantaj', 'artilari', 'eksileri',
   'pros and cons', 'trade.?off', 'arastir', 'investigat', 'incele', 'nasil calisiyor', 'how does', 'kapsamli',
   'derinlemesine', 'in depth', 'deep dive', 'yol haritasi', 'roadmap', 'yetkilendirme', 'authoriz', 'kimlik dogrula',
-  'authenticat', '(?:meli|mali)(?:yim|yiz)', 'should i',
+  'authenticat', 'should i', 'alternatif', 'alternative', 'baska (?:bir )?yol', 'another way',
 ])
 
+// "yapmalıyız", "nasıl tasarlamalıyım": a suffix, so no cue (cues match at a
+// word's start); "geçmeli miyiz" asks to choose.
+const SHOULD = /[a-z](?:meli|mali)(?:yim|yiz)(?![a-z])/
+const SHOULD_WE = /[a-z](?:meli|mali) mi(?:yim|yiz)(?![a-z])/
+
+// Work done step by step on the person's computer or a website, or left open
+// ("yapman gereken ne varsa yap"): long and many-sided, whatever the words.
+const AGENTIC = cues([
+  'bilgisayar(?:im|imiz)?(?:a|i|in)? (?:eris|kullan|kontrol)', 'computer use', 'kayit ol(?![a-z])(?! sayfa| form| buton| ekran| akis)',
+  'basvur(?![a-z])', 'basvuru(?:mu|yu)? yap', 'formu? doldur', 'yapman gereken (?:her ?seyi|ne varsa)', 'gereken her ?seyi yap',
+  'ne gerekiyorsa yap', 'siteye (?:gir(?:ip|erek)?|baglan(?:ip|arak)?)(?![a-z])', 'tarayici(?:yi|da|yla)? (?:kullan(?:arak|ip)?|ac(?:arak|ip)?)(?![a-z])',
+])
+
+// Asking for a look into something: work of its own, which Haiku may not call trivial.
+const INVESTIGATE = word('incele|arastir|investigat|look into')
+
 // A choice between options: "Redux mı Zustand mı", "geçmeli miyiz".
-const DECISION = word('[a-z]+ mi [a-z]+ mi(?![a-z])|(?:meli|mali) miyiz|should we|which (?:one )?(?:is|would be) better|hangisi daha|versus|vs\\.?(?![a-z])')
+const DECISION = word('[a-z]+ mi [a-z]+ mi(?![a-z])|should we|which (?:one )?(?:is|would be) better|hangisi daha|versus|vs\\.?(?![a-z])')
 
 const WHY = word('neden|niye|nicin|sebep|sebeb|why')
 const HUNT = word('bul|find|figure out|arastir|investigat|incele|tespit|anla|understand|debug')
@@ -136,9 +166,9 @@ const FEATURE = cues([
   'yukleme', 'upload', 'entegr', 'integrat', 'sistem', 'system', 'modul', 'module', 'sayfa', 'page', 'form(?!at)',
   'dogrulama', 'validat', 'oturum', 'session', 'bildirim', 'notification', 'cache', 'onbellek', 'sepet', 'cart',
   'odeme', 'payment', 'rapor', 'report', 'dashboard', 'panel', 'disa aktar', 'export', 'sayfalama', 'pagination',
-  'endpoint', 'api', 'hook', 'servis', 'service', 'kutucu', 'checkbox', 'kutusu', 'secici', 'picker', 'dark mode',
+  'endpoint', 'api(?! ?key| anahtar)', 'hook', 'servis', 'service', 'kutucu', 'checkbox', 'kutusu', 'secici', 'picker', 'dark mode',
   'tema', 'theme', 'sifre', 'password', 'e-?posta', 'email', 'tarih', 'timezone', 'saat dilimi', 'rol(?:e|ler)',
-  'izin', 'permission', 'webhook', 'cron', 'zamanla', 'schedul', 'auth', 'login', 'giris', 'kayit', 'signup',
+  'izin(?! ver)', 'permission', 'webhook', 'cron', 'zamanla', 'schedul', 'auth', 'login', 'giris', 'kayit', 'signup',
   'profil', 'user management', 'kullanici yonetimi', 'veritaban', 'database', 'schema', 'backend', 'frontend',
   'arayuz', 'debounce', 'throttle', 'retry', 'yeniden dene', 'cubu[kg]', 'bar(?![a-z])', 'spinner', 'modal', 'popup',
   'tooltip', 'dropdown', 'menu', 'sekme', 'progress', 'ilerleme', 'banner', 'toast', 'badge', 'grafik', 'chart',
@@ -157,7 +187,7 @@ const CHANGE = cues([
 
 // Small things a change touches: a color, a label, a number.
 const SMALL = cues([
-  'ren[kg]', 'colou?r', 'metin', 'metni', 'text', 'yazi', 'label', 'baslik', 'title', 'satir', 'line(?![a-z])', 'yil',
+  'ren[kg]', 'colou?r', 'metin', 'metni', 'text', 'yazi', 'label', 'baslik', 'title', 'satir', 'line(?![a-z])', 'yil(?:i|ini|in)?(?![a-z])',
   'year', 'boyut', 'size', 'port(?![a-z])', 'deger', 'value', 'sure(?:si|sini)', 'timeout', 'duration', 'link',
   'logo', 'ikon', 'icon', 'padding', 'margin', 'bosluk', 'spacing', 'font', 'kalin', 'bold', 'versiyon', 'version',
   'sabit', 'constant', 'import', 'yorum', 'comment', 'mesaj', 'message', 'varsayilan', 'default',
@@ -172,7 +202,7 @@ const TRIVIAL = cues([
 
 // Questions about code already in view.
 const QUESTION = cues([
-  'ne yapiyor', 'ne ise yariyor', 'nedir', 'ne demek', 'ne anlama', 'acikla(?:r mi|yabilir|yin)?(?![a-z])',
+  'ne yapiyor', 'ne ise yariyor', 'nedir', 'ne demek', 'ne anlama gel', 'acikla(?:r mi|yabilir|yin)?(?![a-z])',
   'anlat(?:ir mi|abilir|in)?(?![a-z])', 'ozetle', 'ozet(?![a-z])', 'ne degisti',
   'hangi dosya', 'nerede', 'kac tane', 'what does', 'what is', 'what.?s', 'explain', 'summari[sz]', 'how many',
   'where is', 'which file', 'what changed',
@@ -193,15 +223,34 @@ const DEBUG = word(
   'hata(?:si|yi)? (?:veriyor|aliyorum|cikiyor|firlatiyor|donuyor)|kiriliyor|patliyor|calismiyor|calismadi|bozuk|fail(?:s|ed|ing)?(?![a-z])|broken|exception|crash|[45]\\d\\d hatasi|error',
 )
 
+// Something that should be on screen, or should happen, is not: "düğme
+// görünmüyor", "pencere açılmadı", "it doesn't show".
+const SYMPTOM = word(
+  '(?:gorun|gozuk|cik|gel|acil|yuklen|kaydedil|degis|guncellen|tetiklen)(?:mi|mu)yor|(?:gorun|gozuk|cik|gel|acil|yuklen|kaydedil|degis|guncellen|tetiklen)(?:me|ma)(?:di|du)(?![a-z])|tepki vermiyor|yanit vermiyor|(?:does ?n.?t|does not|did ?n.?t|not) (?:show|appear|load|open|update|fire|trigger)',
+)
+
 const FRUSTRATION = cues([
   'olmadi', 'olmuyor', 'hala (?:ayni|hata|calism|olm|bozuk)', 'yine (?:ayni|hata|olmadi|calism|bozuk)', 'tekrar hata',
   'calismiyor', 'calismadi', 'yanlis', 'bozuldu', 'bozdun', 'duzelmedi', 'ayni hata', 'anlamadin',
-  'istedigim (?:bu|gibi) degil', 'still', 'same error', 'doesn.?t work', 'does not work', 'didn.?t work',
+  'istedigim (?:bu|gibi) degil', 'istedigim (?:sey(?:i)? )?(?:bu degil|olmamis|olmadi)', 'istedigim gibi (?:olmamis|olmadi)',
+  'yapmamissin', 'yanlis anla', 'anlamamissin', 'still', 'same error', 'doesn.?t work', 'does not work', 'didn.?t work',
   'not working', 'wrong', 'broken', 'that.?s not', 'not what i',
 ])
 
+// "o tuş çıkmadı yine", "hâlâ görünmüyor": it did not happen, again.
+const AGAIN = /[a-z]{2,}(?:ma|me)(?:di|du) (?:yine|gene)(?![a-z])|(?:yine|gene|hala) [a-z]{2,}(?:ma|me)(?:di|du)(?![a-z])|hala [a-z]{2,}(?:mi|mu)yor/
+
 const ACK =
-  /^(?:evet|tamam|tamamdir|ok|okay|okey|olur|devam|peki|aynen|guzel|super|harika|tesekkur|sagol|eyvallah|uygula|yap|yes|yep|yeah|sure|go|continue|proceed|thanks|thank you|lgtm)(?![a-z])/
+  /^(?:evet|tamam|tamamdir|ok|okay|okey|olur|devam|peki|aynen|guzel|super|harika|tesekkur|sagol|eyvallah|uygula|yap|onayladim|onayliyorum|onaylandi|kabul|yes|yep|yeah|sure|go|continue|proceed|thanks|thank you|lgtm)(?![a-z])/
+
+// "sonraki iki bölümü de yap", "onu da yap", "kalanları da hallet": more of the
+// work in hand, at its tier.
+const MORE_OF_THE_SAME =
+  /^(?:simdi |peki |tamam |o zaman )?(?:sonraki|kalan(?:lar)?(?:i|ini)?|geri kalan(?:lar)?(?:i|ini)?|diger(?:ler)?(?:i|ini)?|digerlerini|devami(?:ni)?|aynisini|bunu ?da|onu ?da|onlari ?da|hepsini)(?![a-z])[^.?!]{0,60}?(?:^|\s)(?:yap|et|hallet|bitir|tamamla|uygula|devam)(?:in|iver|ar misin|abilir misin)?(?![a-z])/
+
+// A greeting and nothing else: "merhaba", "merhba", "selam", "hi".
+const GREETING =
+  /^(?:mer?h?a?b+a+|mrb|slm|selam(?:lar)?|selamun aleykum|gunaydin|iyi (?:gunler|aksamlar|geceler)|hey|hi|hello|naber|nasilsin)(?:\s+(?:claude|dostum|abi|hocam))?[\s!.,?]*$/
 
 const ERROR_OUTPUT =
   /traceback \(most recent call last\)|\b\w*(?:error|exception)\b:|\berr!|^\s+at \S.*:\d+(?::\d+)?\)?\s*$|segmentation fault|panic:|exit code [1-9]|failed to compile|stack ?trace|uncaught|unhandled|\bhata:/im
@@ -291,25 +340,39 @@ export function classify(raw: string, context: RuleContext = {}): RuleResult {
 function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleContext): RuleResult {
   const text = normalize(prose(raw))
   const length = raw.trim().length
-  const rule = (tier: number, confidence: RuleResult['confidence'], reasons: string[], source: RuleSource = 'rules'): RuleResult => ({
+  const rule = (
+    tier: number,
+    confidence: RuleResult['confidence'],
+    reasons: string[],
+    kind: RuleKind = 'work',
+    source: RuleSource = 'rules',
+  ): RuleResult => ({
     tier: toTier(tier),
     confidence,
     source,
+    kind,
     reasons,
   })
 
   if (/(?:^|[^a-z])ultrathink/.test(normalize(raw))) {
     return rule(4, 'high', ['"ultrathink"'])
   }
+  const plain = text.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  if (GREETING.test(plain)) {
+    return rule(0, 'high', ['selamlaşma'], 'greeting')
+  }
+  const complaint = length <= 400 ? [...found(FRUSTRATION, text), ...(AGAIN.test(text) ? ['yine olmadı'] : [])] : []
   if (prevTier !== undefined && length <= 400) {
-    const complaint = found(FRUSTRATION, text)
     if (complaint.length > 0) {
       const bump = frustrationStreak >= 1 ? 2 : 1
 
-      return rule(prevTier + bump, 'high', [`şikâyet ${quote(complaint)}: +${bump} kademe`], 'escalate')
+      return rule(prevTier + bump, 'high', [`şikâyet ${quote(complaint)}: +${bump} kademe`], 'complaint', 'escalate')
     }
     if (isFollowup(text)) {
-      return rule(prevTier, 'high', ['kısa onay: önceki kademe'], 'inherit')
+      return rule(prevTier, 'high', ['kısa onay: önceki kademe'], 'followup', 'inherit')
+    }
+    if (MORE_OF_THE_SAME.test(plain) && found(HARD, plain).length === 0 && found(FEATURE, plain).length === 0) {
+      return rule(prevTier, 'high', ['aynı işin devamı: önceki kademe'], 'followup', 'inherit')
     }
   }
 
@@ -317,7 +380,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
   // A trivial phrase's own verb ("yorum ekle") is no sign of other work.
   const rest = TRIVIAL.reduce((left, cue) => left.replace(new RegExp(cue.pattern.source, 'g'), ' '), text)
   const hard = found(HARD, rest)
-  const maybeHard = found(MAYBE_HARD, rest)
+  const maybeHard = [...found(MAYBE_HARD, rest), ...(SHOULD.test(rest) ? ['-malı'] : [])]
   const feature = found(FEATURE, rest)
   const adds = found(ADD, rest)
   const changes = found(CHANGE, rest)
@@ -355,7 +418,11 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
   if (hard.length > 0) {
     return rule(3, 'high', [`zor iş: ${quote(hard)}`])
   }
-  if (DECISION.test(rest)) {
+  const agentic = found(AGENTIC, rest)
+  if (agentic.length > 0) {
+    return rule(3, 'high', [`uzun, çok adımlı iş: ${quote(agentic)}`])
+  }
+  if (DECISION.test(rest) || SHOULD_WE.test(rest)) {
     return rule(3, 'high', ['seçenekler arasında karar'])
   }
   if (WHY.test(rest) && (HUNT.test(rest) || FAILURE.test(rest))) {
@@ -384,23 +451,35 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
   if (DEBUG.test(rest)) {
     return rule(2, 'high', ['hata ayıklama'])
   }
+  if (SYMPTOM.test(rest)) {
+    return rule(2, 'high', ['bir şey olması gerektiği gibi olmuyor'])
+  }
+  // A complaint whose earlier turn gearbox did not see (a restart since):
+  // something is broken, so it is debugging.
+  if (complaint.length > 0) {
+    return rule(2, 'high', [`şikâyet ${quote(complaint)}`], 'complaint')
+  }
   if (TEST_WRITE.test(rest)) {
     return rule(2, 'high', ['test yazmak'])
   }
 
   // T0: questions about code in view, and chores.
   if (trivial.length > 0 && (feature.length === 0 || adds.length === 0)) {
-    return rule(0, 'high', [`basit iş: ${quote(trivial)}`])
+    return rule(0, 'high', [`basit iş: ${quote(trivial)}`], 'chore')
   }
   if (isShort && LIST.test(rest) && INFO.test(rest) && feature.length === 0) {
-    return rule(0, 'high', ['bilgi listeleme'])
+    return rule(0, 'high', ['bilgi listeleme'], 'question')
   }
   if (isShort && question.length > 0 && adds.length === 0) {
-    return rule(0, 'high', [`soru: ${quote(question)}`])
+    return rule(0, 'high', [`soru: ${quote(question)}`], 'question')
   }
 
   // T2: features, conversions, wide requests.
   if (maybeHard.length === 1) {
+    if (INVESTIGATE.test(rest)) {
+      return { ...rule(2, 'low', [`inceleme isteği: ${quote(maybeHard)}`]), floor: 2 }
+    }
+
     return rule(2, 'low', [`tek zor sinyali: ${quote(maybeHard)}`])
   }
   if (CONVERSION.test(rest)) {
@@ -425,8 +504,54 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0 }: RuleCont
     return rule(1, 'low', [`iş: ${quote(adds)}`])
   }
   if (isShort && (/\?\s*$/.test(raw.trim()) || QUESTION_START.test(text) || question.length > 0)) {
-    return rule(1, 'low', ['soru'])
+    return rule(1, 'low', ['soru'], 'question')
   }
 
-  return rule(1, 'low', ['belirgin sinyal yok'])
+  return rule(1, 'low', ['belirgin sinyal yok'], 'none')
 }
+
+// "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, sen de bir bak": a
+// model asked for by name, in words. Talk about a model is no request: past
+// tense ("haiku ile yaptı") and opinions ("opus pahalı") name no verb here.
+const REQUEST_VERB =
+  '(?:ver(?:ir misin|ebilir misin|sene|in|iver)?|gec(?:ir|elim|ebilir misin|in)?|kullan(?:arak|ir misin|abilir misin|in|sana)?|yap(?:ar misin|abilir misin|sana|sin|in|iver)?|bak(?:ar misin|abilir misin|sana|sin|in)?|incele(?:r misin|yebilir misin|sin|yin)?|devam(?: et)?|hallet|ustlen|sen ?de|use|switch to)(?![a-z])'
+const NAMED_FAMILY = new RegExp(
+  String.raw`(?:^|[^a-z])(haiku|sonnet|opus|fable)(?:'?(?:ye|ya|e|a|yle|yla|le|la))?(?:\s+ile)?,?(?=\s+(?:[a-z]+\s+){0,2}?` + `${REQUEST_VERB})`,
+  'g',
+)
+const NAMED_EFFORT: readonly [RegExp, Effort][] = [
+  [/(?:^|[^a-z])(?:max|maks|maksimum|en yuksek)(?:'?(?:a|e|ta|te|la|le|ile))?(?![a-z])/, 'max'],
+  [/(?:^|[^a-z])xhigh(?![a-z])/, 'xhigh'],
+  [/(?:^|[^a-z])yuksek (?:efor|effort)/, 'high'],
+  [/(?:^|[^a-z])(?:dusuk|low) (?:efor|effort)/, 'low'],
+]
+const EFFORT_ALONE = /(?:^|[^a-z])(max|maks(?:imum)?|en yuksek|xhigh|yuksek|dusuk|orta) (?:efor|effort)(?:la|le|da|de|ile)?(?![a-z])/
+
+// "use opus", "switch to sonnet": the English order, the verb first.
+const NAMED_FAMILY_EN = /(?:^|[^a-z])(?:use|switch to|go with) (haiku|sonnet|opus|fable)(?![a-z])/g
+
+export type NamedChoice = { override: Override; words: string[] }
+
+export function namedChoice(raw: string): NamedChoice | undefined {
+  const text = normalize(prose(raw))
+  const families = [...text.matchAll(NAMED_FAMILY), ...text.matchAll(NAMED_FAMILY_EN)].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+  const last = families.at(-1)
+  const family = FAMILY_WORDS.find(one => one === last?.[1])
+  if (last !== undefined && family !== undefined) {
+    const near = text.slice(last.index ?? 0, (last.index ?? 0) + 60)
+    const effort = NAMED_EFFORT.find(([pattern]) => pattern.test(near))?.[1]
+
+    return { override: effort === undefined ? { family } : { family, effort }, words: [family, ...(effort === undefined ? [] : [effort])] }
+  }
+  const alone = EFFORT_ALONE.exec(text)
+  if (alone !== null) {
+    const word = alone[1] ?? ''
+    const effort: Effort = /max|maks|en yuksek/.test(word) ? 'max' : word === 'xhigh' ? 'xhigh' : word === 'yuksek' ? 'high' : word === 'orta' ? 'medium' : 'low'
+
+    return { override: { effort }, words: [`${effort} efor`] }
+  }
+
+  return undefined
+}
+
+const FAMILY_WORDS: readonly Family[] = ['haiku', 'sonnet', 'opus', 'fable']

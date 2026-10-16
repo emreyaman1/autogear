@@ -14,6 +14,8 @@ type WorldOptions = {
   silentModel?: string
   // Whether test and build commands fail.
   checksFail?: boolean
+  // The conversation's size, as the usage reports it.
+  contextTokens?: number
 }
 
 const NOW = Date.parse('2026-10-11T12:00:00Z')
@@ -22,7 +24,7 @@ const ZERO = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, ca
 
 // The engine beneath the plugin: a model that records what it was sent, and
 // the usage, classifier, tools, store, clock and screen the router touches.
-function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false }: WorldOptions = {}): World {
+function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false, contextTokens = 2_000 }: WorldOptions = {}): World {
   const seen: World = { sent: [], prompts: [] }
   mock.store(on)
   mock.clock(on, { now: NOW })
@@ -40,7 +42,7 @@ function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false
   on('turn.complete', ($, e) => ({ text: e.answer }))
   on('tool.call', () => (checksFail ? { isError: true, result: '3 tests failed', text: '3 tests failed' } : { result: 'ok' }))
   // Calls on `$` are answered `{ value }`.
-  on('session.usage', () => ({ value: { startedAt: NOW, context: { window: 1_000_000, tokens: 2_000 }, rateLimits: [] } }))
+  on('session.usage', () => ({ value: { startedAt: NOW, context: { window: 1_000_000, tokens: contextTokens }, rateLimits: [] } }))
   on('model.complete', () => ({ value: { isAnswered: true, text: classifierReply, usage: ZERO } }))
   on('ui.status', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
@@ -290,4 +292,78 @@ test('every decision is logged, a complaint flags the answer before it, and a ma
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'yanlis' }))).toContain('Kullanım')
   await $.command.run({ command: 'gear', args: 'sifirla' })
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'kayit' }))).toContain('Henüz kayıtlı karar yok')
+})
+
+test('a system note ahead of the message is not classified: a plain greeting stays trivial', async ($, on) => {
+  // Were the note read, Haiku's T4 would win; a greeting needs no question.
+  const { sent } = world(on, { classifierReply: 'T4' })
+  await say($, '<system-reminder>\nThe user started this session without choosing a project folder, so your working directory is a scratch workspace the app created for it. Claude Code is installed; the session model is Opus 5.5.\n</system-reminder>\nmerhaba')
+  await step($, 't1')
+  expect(sent[0]).toEqual({ model: 'claude-haiku-5-5', effort: 'low' })
+})
+
+test('a message that is only a system note carries on with the last choice', async ($, on) => {
+  const { sent } = world(on)
+  await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
+  await step($, 't1', 0, 'claude-opus-5-5', 'high')
+  await finish($, 't1', 'claude-opus-5-5')
+  await say($, '<system-reminder>Claude Code bildirimi: yeni sürüm hazır.</system-reminder>')
+  await step($, 't2', 0, 'claude-opus-5-5', 'high')
+  expect(sent[1]?.model).toBe(sent[0]?.model)
+})
+
+test('a model asked for in words is used, above the picker included', async ($, on) => {
+  const { sent } = world(on)
+  await say($, 'istediğim şeyi yapmamışsın, bu görevi sonnete maxa verir misin')
+  await step($, 't1', 0, 'claude-opus-5-5', 'high')
+  expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'max' })
+  await finish($, 't1', 'claude-sonnet-5-5')
+  await say($, 'haiku low ile yaptı ve o modele güvenmiyorum, opus sende göz gezdirip anlatır mısın')
+  await step($, 't2', 0, 'claude-opus-5-5', 'high')
+  expect(sent[1]?.model).toBe('claude-opus-5-5')
+})
+
+test('a remark Haiku calls trivial, in the middle of hard work, stays one tier below the work', async ($, on) => {
+  const { sent } = world(on, { classifierReply: 'T0' })
+  await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
+  await step($, 't1')
+  await finish($, 't1', 'claude-opus-5-5')
+  await say($, 'bilgin olsun, bunu akşama kadar bitirmek istiyorum ama acelem yok')
+  await step($, 't2')
+  expect(sent[1]?.model).toBe('claude-sonnet-5-5')
+  await finish($, 't2', 'claude-sonnet-5-5')
+  // A chore the rules are sure of is new work of its own.
+  await say($, 'commit et')
+  await step($, 't3')
+  expect(sent[2]?.model).toBe('claude-haiku-5-5')
+})
+
+test('a warm cache never keeps harder work on Haiku', async ($, on) => {
+  const { sent } = world(on, { contextTokens: 60_000 })
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't1')
+  await finish($, 't1', 'claude-haiku-5-5')
+  await say($, 'butonun rengini kırmızı yap')
+  await step($, 't2')
+  expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'medium' })
+})
+
+test('a message with nothing written (a bare image) carries on with the last choice', async ($, on) => {
+  const { sent } = world(on, { classifierReply: 'T0' })
+  await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
+  await step($, 't1')
+  await finish($, 't1', 'claude-opus-5-5')
+  await say($, '')
+  await step($, 't2')
+  expect(sent[1]).toEqual(sent[0])
+})
+
+test('a +token after a system note is taken off, the note left for the model', async ($, on) => {
+  const { sent, prompts } = world(on)
+  await say($, '<system-reminder>\nscratch workspace\n</system-reminder>\n+haiku bu dosyada ne var?')
+  await step($, 't1')
+  expect(sent[0]?.model).toBe('claude-haiku-5-5')
+  expect(prompts[0]).toContain('<system-reminder>')
+  expect(prompts[0]).not.toContain('+haiku')
+  expect(prompts[0]).toContain('bu dosyada ne var?')
 })

@@ -6,7 +6,8 @@ import { costOf, readTokens, turnMoney, usd } from '../hooks/core/prices'
 import { addTurn, emptyTotals, savedOf, savingsText, sharesOf, splitCells, sumOf } from '../hooks/core/savings'
 import { addEntry, flagLast, journalText, markLast, MAX_ENTRIES, readJournal, snippet, type Entry } from '../hooks/core/journal'
 import { applyCommand, DEFAULTS, readStats } from '../hooks/core/settings'
-import { classify, parseOverrides } from '../hooks/core/signals'
+import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
+import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
 import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from '../hooks/core/switch'
 import { isNewerThan } from '../hooks/core/version'
 
@@ -315,5 +316,115 @@ describe('journal', () => {
   test('/gear kayit and yanlis are read', () => {
     expect(applyCommand(DEFAULTS, 'kayit', '')).toBe('journal')
     expect(applyCommand(DEFAULTS, 'yanlis', 'zayif')).toBe('mark')
+  })
+})
+
+describe('what real use taught (0.6)', () => {
+  test('a greeting, typos and all, is trivial and needs no question to Haiku', () => {
+    for (const text of ['merhaba', 'merhba', 'Merhabaa!', 'selam', 'hi']) {
+      expect(classify(text)).toMatchObject({ tier: 0, confidence: 'high', kind: 'greeting' })
+    }
+    expect(classify('merhaba, login sayfası açılmıyor').kind).not.toBe('greeting')
+  })
+
+  test('the notes Claude Code puts ahead of a message are not read as the message', () => {
+    expect(withoutNotes('<system-reminder>\nThe session, the picker, the page.\n</system-reminder>\nmerhaba')).toBe('merhaba')
+    expect(withoutNotes('<system-reminder>only a note</system-reminder>')).toBe('')
+  })
+
+  test('something that should show up and does not is debugging', () => {
+    expect(classify('aç/kapa düğmesi masaüstü uygulamasında görünmüyor')).toMatchObject({ tier: 2, confidence: 'high' })
+    expect(classify('pencere açılmadı')).toMatchObject({ tier: 2, confidence: 'high' })
+  })
+
+  test('"çıkmadı yine" is a complaint; after a restart, with no earlier tier, it is debugging', () => {
+    const again = classify('o tuş çıkmadı yine', { prevTier: 2 })
+    expect(again).toMatchObject({ tier: 3, source: 'escalate', kind: 'complaint' })
+    expect(again.reasons[0]).toContain('yine olmadı')
+    expect(classify('olmadı gibi sanki')).toMatchObject({ tier: 2, kind: 'complaint' })
+  })
+
+  test('a remark about something that had not worked is no complaint', () => {
+    expect(classify('tasarruf yazdım olmamıştı haberin olsun', { prevTier: 2 }).source).not.toBe('escalate')
+  })
+
+  test('"do the next two too" and "onayladım" carry the work on at its tier', () => {
+    expect(classify('sonraki iki bölümü de yap', { prevTier: 3 })).toMatchObject({ tier: 3, source: 'inherit' })
+    expect(classify('onu da yap yapman gereken herşeyi', { prevTier: 2 })).toMatchObject({ tier: 2, source: 'inherit' })
+    expect(classify('onayladım', { prevTier: 3 })).toMatchObject({ tier: 3, source: 'inherit' })
+  })
+
+  test('"-malıyız" and "-meli miyiz" are read as asking what to do', () => {
+    expect(classify('bunu neden yapmalıyız?').tier).toBe(3)
+    expect(classify('bu projede TypeScript kullanmalı mıyız').reasons).toContain('seçenekler arasında karar')
+  })
+
+  test('cues that misfired in real use stay quiet', () => {
+    expect(classify('valla ne anlamadım bana karar bırakma').kind).not.toBe('question')
+    expect(classify('1 yıllık plan istiyorum').reasons.join(' ')).not.toContain('yil')
+    expect(classify('izin verilecekse şimdi sor').reasons.join(' ')).not.toContain('izin')
+    expect(classify('API key belki gerekmez').reasons.join(' ')).not.toContain('api')
+  })
+
+  test('long work done on a computer or a website is hard, a signup page is a feature', () => {
+    expect(classify('raporu yaz, programda gerekenleri bilgisayarıma erişerek yap').tier).toBe(3)
+    expect(classify('bu siteye kayıt ol, yapman gereken ne varsa yap').tier).toBe(3)
+    expect(classify('kayıt ol sayfası ekle').tier).toBe(2)
+    expect(classify('siteye giriş sayfası ekle').tier).toBe(2)
+    expect(classify('tarayıcı açıldığında konsolda hata veriyor').tier).toBe(2)
+  })
+
+  test('"more of the same" is the work in hand, a new feature after "sonraki" is not', () => {
+    expect(classify('sonraki adımda ödeme sayfası ekle', { prevTier: 0 }).source).not.toBe('inherit')
+    expect(classify('sonraki detaylı raporu da yaz', { prevTier: 0 }).source).not.toBe('inherit')
+  })
+
+  test('a request to look into something keeps Haiku from calling it trivial', () => {
+    const rule = classify('dümdüz yeni sohbette merhaba yazdım T4 olarak derecelendirdi? inceler misin', { hasAttachments: true })
+    expect(rule).toMatchObject({ tier: 2, confidence: 'low', floor: 2 })
+    expect(withHaiku(rule, 0).tier).toBe(2)
+    expect(withHaiku(rule, 3).tier).toBe(3)
+  })
+
+  test('a model named in words is a choice; talk about a model is not', () => {
+    expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
+    expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })
+    expect(namedChoice("bunu opus'la yap")?.override).toEqual({ family: 'opus' })
+    expect(namedChoice('max eforla düzelt')?.override).toEqual({ effort: 'max' })
+    expect(namedChoice('please use opus for this')?.override).toEqual({ family: 'opus' })
+    expect(namedChoice('haiku low ile yaptı ve o modele güvenmiyorum')).toBeUndefined()
+    expect(namedChoice('opus ile sonnet arasındaki fark ne?')).toBeUndefined()
+    expect(namedChoice('opus pahalı mı?')).toBeUndefined()
+  })
+})
+
+describe('settle', () => {
+  const work = (tier: 0 | 1 | 2 | 3 | 4, confidence: 'high' | 'low' = 'low') =>
+    ({ tier, confidence, source: 'rules', kind: 'work', reasons: [] }) as const
+  const remark = { tier: 1, confidence: 'low', source: 'rules', kind: 'none', reasons: [] } as const
+
+  test('Haiku goes at most one tier below what the rules saw as work', () => {
+    expect(withHaiku(work(2), 0).tier).toBe(1)
+    expect(withHaiku(work(2), 3).tier).toBe(3)
+    expect(withHaiku(remark, 0).tier).toBe(0)
+  })
+
+  test('a remark in the middle of work goes at most one tier below it', () => {
+    expect(holdTask(0, remark, { tier: 3 }).tier).toBe(2)
+    expect(holdTask(0, remark, { tier: 1 }).tier).toBe(0)
+    expect(holdTask(0, work(0, 'high'), { tier: 3 }).tier).toBe(0)
+  })
+
+  test('sure work, a chore or a greeting sets the task; a remark leaves it', () => {
+    expect(nextTask({ tier: 3 }, { ...work(0, 'high'), kind: 'chore' }, 0)).toEqual({ tier: 0 })
+    expect(nextTask({ tier: 3 }, remark, 2)).toEqual({ tier: 3 })
+    expect(nextTask(undefined, work(1), 3)).toEqual({ tier: 3 })
+  })
+
+  test('the whole of it, for a remark Haiku calls trivial in the middle of hard work', () => {
+    const settled = settle(remark, { haiku: 0, task: { tier: 3 } })
+    expect(settled.tier).toBe(2)
+    expect(settled.reasons.at(-1)).toContain('süren iş T3')
+    expect(settled.task).toEqual({ tier: 3 })
   })
 })

@@ -59,7 +59,9 @@ export function decide(input: PolicyInput): Decision {
   }
   const isDeliberate = override !== undefined || input.source === 'escalate'
   const isLargeContext = (input.contextTokens ?? 0) >= STICKY_CONTEXT_TOKENS
-  if (previous !== undefined && previous.family !== family && !isDeliberate && isLargeContext && Math.abs(tier - previous.tier) < 2) {
+  // Haiku is for trivial work alone: a warm cache never keeps harder work on it.
+  const isLeavingHaiku = previous?.family === 'haiku' && family !== 'haiku'
+  if (previous !== undefined && previous.family !== family && !isDeliberate && !isLeavingHaiku && isLargeContext && Math.abs(tier - previous.tier) < 2) {
     family = previous.family
     reasons.push('bağlam büyük: model aynı kaldı (önbellek)')
   }

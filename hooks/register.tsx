@@ -20,7 +20,8 @@ import { decide, type Decision } from './core/policy'
 import { costOf, readTokens, turnMoney, usd } from './core/prices'
 import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from './core/savings'
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
-import { classify, normalize, parseOverrides, type RuleResult } from './core/signals'
+import { normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
+import { readRule, settle, type Task } from './core/settle'
 import { SWITCH_HEIGHT, SWITCH_OFF, SWITCH_ON, SWITCH_WIDTH, switchSvg } from './core/switch'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { isNewerThan, TESTED_THROUGH } from './core/version'
@@ -70,6 +71,7 @@ const HELP = [
   '| `/gear bant aç` · `kapa` | istem kutusunun üstündeki aç/kapa düğmesi |',
   '',
   'Mesajın başına yazılan etiketler: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz`, `+derin`.',
+  "Ya da yazıyla: \"bu görevi sonnet'e max ile ver\", \"opus ile yap\", \"use opus\".",
 ].join('\n')
 
 // What the router remembers within one load of the module.
@@ -96,6 +98,9 @@ type State = {
   lastAnswered: Family | undefined
   // What gearbox's own questions to Haiku cost since the last turn ended.
   overhead: number
+  // The tier of the work in hand, which a question or a remark in its middle
+  // does not drop far below.
+  task: Task
 }
 
 const modeAtom = atom({ plugin: 'gearbox', key: 'mode' } as const, 'auto')
@@ -222,25 +227,43 @@ async function decideTurn(
     return remember($, state, e.turnId, { ...kept, ceilingModel: e.model })
   }
 
-  let { tier, reasons } = taken.rule
-  let source: string = taken.rule.source
-  if (taken.rule.confidence === 'low' && state.settings.askHaiku && currentPace.level !== 'critical') {
+  const { rule } = taken
+  let haiku: Tier | undefined
+  if (rule.confidence === 'low' && state.settings.askHaiku && currentPace.level !== 'critical') {
     const asked = await askHaiku($, taken.text, state.last?.tier)
     state.overhead += asked.cost
-    if (asked.tier !== undefined) {
-      tier = asked.tier
-      source = 'haiku'
-      reasons = [...reasons, `Haiku: T${asked.tier}`]
-    }
+    haiku = asked.tier
   }
   // A step that ended with failing tests is not built on by a weaker model.
-  if (state.carryFailure && taken.rule.override === undefined) {
-    tier = toTier(tier + 1)
-    reasons = [...reasons, 'önceki turda test/derleme başarısız kaldı: +1 kademe']
-  }
+  const settled = settle(rule, { haiku, task: state.task, carryFailure: state.carryFailure })
   state.carryFailure = false
+  state.task = settled.task
+  const decision = decide({ ...common, tier: settled.tier, source: settled.source, reasons: settled.reasons, override: rule.override })
 
-  return remember($, state, e.turnId, { ...decide({ ...common, tier, source, reasons, override: taken.rule.override }), ceilingModel: e.model, prompt: taken.text })
+  return remember($, state, e.turnId, { ...decision, ceilingModel: e.model, prompt: taken.text })
+}
+
+// The prompt as the rules read it. One they cannot read is taken as work, and
+// Haiku is asked: a prompt is never let through unread.
+function readPrompt(state: State, parsed: ParsedPrompt, hasAttachments: boolean): RuleResult {
+  let rule: RuleResult
+  try {
+    rule = readRule(parsed, { prevTier: state.last?.tier, hasAttachments, frustrationStreak: state.complaints })
+  } catch (error) {
+    const why = error instanceof Error ? error.message : String(error)
+    rule = { tier: toTier(Math.max(2, state.last?.tier ?? 2)), confidence: 'low', source: 'rules', kind: 'work', reasons: [`okunamadı: ${why}`.slice(0, 120)] }
+  }
+  state.complaints = rule.kind === 'complaint' ? state.complaints + 1 : 0
+
+  return rule
+}
+
+// The prompt with its leading +tokens taken off, notes ahead of it kept.
+function withoutTokens(text: string, said: string, rest: string): string {
+  const tokens = said.slice(0, said.length - rest.length)
+  const at = text.indexOf(tokens)
+
+  return at < 0 ? text : `${text.slice(0, at)}${text.slice(at + tokens.length)}`
 }
 
 // The routed request got no answer at all (a retired model id, a model the
@@ -262,7 +285,8 @@ type TurnMoney = { spent: number; baseline: number }
 
 function footer(state: State, decision: Decision, usage: TurnUsage | undefined, money: TurnMoney | undefined): string {
   const model = usage === undefined ? FAMILY_NAMES[decision.family] : displayModel(usage.model)
-  const why = decision.reasons.slice(0, 2).join('; ')
+  // The reading and the last thing that moved it: what the choice rests on.
+  const why = (decision.reasons.length > 2 ? [decision.reasons[0], decision.reasons.at(-1)] : decision.reasons).join('; ')
   const cache =
     usage === undefined
       ? ''
@@ -356,6 +380,7 @@ async function noteDecision(
         baseline: money?.baseline ?? 0,
         flags: isCheckFailed ? ['test/derleme kırık'] : [],
         mark: undefined,
+        reasons: decision.reasons.slice(0, 6),
       })
     }
     await $.store.set('journal', journal)
@@ -506,6 +531,7 @@ export const register: Register = on => {
     session: emptyTotals(),
     lastAnswered: undefined,
     overhead: 0,
+    task: undefined,
   }
 
   on('session.start', async ($, e, next) => {
@@ -518,28 +544,19 @@ export const register: Register = on => {
     if (!USER_ORIGINS.has(e.origin.kind)) {
       return next(e)
     }
-    const parsed = parseOverrides(e.text)
-    const rule = classify(parsed.text, {
-      prevTier: state.last?.tier,
-      hasAttachments: (e.attachments?.length ?? 0) > 0,
-      frustrationStreak: state.complaints,
-    })
-    state.complaints = rule.source === 'escalate' ? state.complaints + 1 : 0
-    state.pending = {
-      text: parsed.text,
-      rule:
-        parsed.override === undefined
-          ? rule
-          : {
-              ...rule,
-              confidence: 'high',
-              source: 'override',
-              override: parsed.override,
-              reasons: [`elle: ${parsed.tokens.join(' ')}`, ...rule.reasons],
-            },
-    }
+    const said = withoutNotes(e.text)
+    if (said === '') {
+      // Nothing the person wrote (a bare attachment, or only a note): the turn
+      // carries on with the last choice.
+      state.pending = undefined
 
-    return parsed.text === e.text ? next(e) : next({ ...e, text: parsed.text })
+      return next(e)
+    }
+    const parsed = parseOverrides(said)
+    state.pending = { text: parsed.text, rule: readPrompt(state, parsed, (e.attachments?.length ?? 0) > 0) }
+
+    // The text the model gets is the person's, with any leading +token taken off.
+    return parsed.tokens.length === 0 ? next(e) : next({ ...e, text: withoutTokens(e.text, said, parsed.text) })
   }).catch(($, e, next) => next(e))
 
   // Every request of a turn goes out on the turn's one model: a switch inside

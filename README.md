@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer, and hard work still goes to the strong model.
 
-> Status: 0.5.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.6.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## What you get
 
@@ -48,6 +48,8 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 
 **Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). Writing `ultrathink` means T4.
 
+Or say it in words: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, sen de bak", "use opus" pick the model, and the effort when one is named, for that message. Talking about a model ("haiku ile yaptı", "opus pahalı mı?") picks nothing. A choice made in words, like a token, may go above the picker.
+
 **Commands.**
 
 | Command | Does |
@@ -69,20 +71,21 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 ## How it works
 
 ```
-message ─► classify ─► decide ─► apply     ─► answer ─► verify        ─► count
-           signals     tiers     turn.step              turn.complete    savings
-           llm         policy                                            prices
-                       pacing
+message ─► classify ─► settle ─► decide ─► apply     ─► answer ─► verify        ─► count
+           signals     settle    tiers     turn.step              turn.complete    savings
+           llm                   policy                                            prices
+                                 pacing
 ```
 
-1. **Classify** (`hooks/core/signals.ts`): a message becomes tier T0 to T4. Turkish and English cues are read; code, paths and identifiers inside the message are ignored; verbs are read together with their object ("change the color" is not "add a payment system"). When the rules are unsure, one short question goes to Haiku (`hooks/core/llm.ts`).
-2. **Decide** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): the tier maps to a model and effort through a profile, then passes three limits:
+1. **Classify** (`hooks/core/signals.ts`): a message becomes tier T0 to T4. Turkish and English cues are read; code, paths and identifiers inside the message are ignored; verbs are read together with their object ("change the color" is not "add a payment system"). The notes Claude Code puts ahead of a message are skipped, a greeting is T0 at once, and a message with nothing written (only an image) carries on with the last choice. When the rules are unsure, one short question goes to Haiku (`hooks/core/llm.ts`).
+2. **Settle** (`hooks/core/settle.ts`): Haiku reads the message alone, without the screenshot or the work around it, so its answer goes at most one tier below what the rules saw, and not under T2 for a request to look into something. A message in the middle of work at T2 or above (a question, a remark, one only Haiku could place) goes at most one tier below that work; new work the rules are sure of, a chore such as a commit, or a greeting starts afresh.
+3. **Decide** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): the tier maps to a model and effort through a profile, then passes three limits:
    - **Ceiling:** never above the picker's model and effort.
-   - **Cache:** with a large context (40K+ tokens) a one-tier difference changes only the effort, because switching models re-sends the whole conversation uncached.
+   - **Cache:** with a large context (40K+ tokens) a one-tier difference changes only the effort, because switching models re-sends the whole conversation uncached. A warm cache never keeps harder work on Haiku.
    - **Pace:** if the 5-hour or weekly window is spent faster than an even pace (30%+ used and 20 points ahead), effort drops one step; at 90% Opus is not used. If a window is nearly over with at most half used, effort goes up one step for standard work and above.
-3. **Apply** (`hooks/register.tsx`, `turn.step`): right before each model request. All requests of a turn use the same model, so the turn keeps its cache. Subagents are left alone.
-4. **Verify** (`turn.complete`): the API names the model that really answered; it is compared with the choice (see Safety nets).
-5. **Count** (`hooks/core/savings.ts`): the turn's real tokens are priced twice, once on the model that answered and once on the picker's model, and added to the session's and the lifetime totals.
+4. **Apply** (`hooks/register.tsx`, `turn.step`): right before each model request. All requests of a turn use the same model, so the turn keeps its cache. Subagents are left alone.
+5. **Verify** (`turn.complete`): the API names the model that really answered; it is compared with the choice (see Safety nets).
+6. **Count** (`hooks/core/savings.ts`): the turn's real tokens are priced twice, once on the model that answered and once on the picker's model, and added to the session's and the lifetime totals.
 
 | Tier | Example | `tasarruf` (Pro) |
 |---|---|---|
@@ -153,10 +156,20 @@ Dollars per million tokens. A Haiku prompt over 100K tokens costs five times as 
 |---|---|---|---|---|
 | Rules only | 83% | 94% | 4 | 0% |
 | Haiku only | 77% | 97% | 0 | 100% |
-| **Rules, Haiku when unsure (gearbox)** | **90%** | **100%** | **0** | **19%** |
+| Rules, Haiku when unsure (0.5) | 90% | 100% | 0 | 19% |
+| **Rules, Haiku when unsure, held to the rules' signs (0.6)** | **88%** | **100%** | **0** | **19%** |
 | Always Haiku, take the higher | 74% | 96% | 0 | 100% |
 
-\* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower.
+\* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower. The bound of 0.6 costs one message here ("bu import neden kullanılıyor?" is now T1, not T0) and is what keeps the real-use errors below from happening.
+
+**Real use**: the 49 decisions gearbox made in 11 sessions between 11 and 16 October 2026, each labelled afterwards from what the work turned out to be (one reviewer's judgment, not a panel's). What gearbox chose then, and the same messages played again through 0.6:
+
+| | Exact | Within 1 tier | Severe* | Too low | Too high |
+|---|---|---|---|---|---|
+| gearbox 0.3 to 0.5, as it ran | 51% | 82% | 7 | 17 | 7 |
+| gearbox 0.6, played again | 61% | 100% | 0 | 10 | 9 |
+
+What went wrong in the first row: the note Claude Code puts ahead of a message in a new session was read as the message, so a bare "merhaba" went to Opus · high; Haiku called bug reports that came with a screenshot trivial ("o tuş çıkmadı yine", "inceler misin"); a remark in the middle of a long task dropped the task to Haiku; a model asked for in words ("sonnet'e max ile ver") was ignored. The fixes of 0.6 were made from these same messages, so the second row shows that they hold, not how 0.6 does on messages it has not seen, and two of the replayed messages would go to Haiku with no logged answer. The decision log is what will tell. The messages are someone's real work, so the set and the test that replays it are kept on the developer's machine, not in this repository.
 
 **Output quality** (`eval/tasks/`): six real tasks on a small project, each checked by tests Claude never saw.
 
@@ -185,6 +198,7 @@ On the 4 tasks run both ways gearbox spent $0.31 against $2.38 on Opus · high t
 | `hooks/core/models.ts` | model families, ids, effort levels |
 | `hooks/core/prices.ts` | list prices and the cost of a turn |
 | `hooks/core/journal.ts` | the decision log: entries, complaint and failing-check flags, your marks, the report |
+| `hooks/core/settle.ts` | how the rules, Haiku's answer and the work in hand settle a tier |
 | `hooks/core/savings.ts` | per-model totals, the saving, the markdown report |
 | `hooks/core/settings.ts` | stored settings and statistics, `/gear` parsing |
 | `hooks/core/switch.ts` | the drawing of the on/off switch |
@@ -239,6 +253,7 @@ Restart the app and open a new chat.
 - [x] English README, MIT license, published on GitHub
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
 - [x] Decision log with your marks, to see where the rules go wrong
+- [x] Review of real use: system notes, the bound on Haiku, the hold on work in hand, models named in words (0.6)
 - [ ] Learning from those corrections
 
 ## License
