@@ -8,7 +8,7 @@ import { addEntry, flagLast, journalText, markLast, MAX_ENTRIES, readJournal, sn
 import { applyCommand, DEFAULTS, readSettings, readStats } from '../hooks/core/settings'
 import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
 import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
-import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, BADGE_WIDTH, badgeSvg } from '../hooks/core/switch'
+import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, badgeSvg, badgeWidth } from '../hooks/core/switch'
 import { isNewerThan } from '../hooks/core/version'
 
 describe('classify', () => {
@@ -284,22 +284,32 @@ describe('robustness', () => {
 })
 
 describe('badgeSvg', () => {
-  test('each state is a pill of its own color with its own name', () => {
-    const modes = ['auto', 'shadow', 'pin', 'down'] as const
+  const modes = ['auto', 'shadow', 'pin', 'down'] as const
+
+  test('each state is a pill of its own color with its own name, sized to it', () => {
     expect(new Set(modes.map(mode => BADGE_COLORS[mode])).size).toBe(modes.length)
     for (const mode of modes) {
       const svg = badgeSvg(mode)
-      expect(svg).toContain(`<rect width="${BADGE_WIDTH}" height="${BADGE_HEIGHT}" rx="${BADGE_HEIGHT / 2}" fill="${BADGE_COLORS[mode]}"/>`)
+      expect(svg).toContain(`<rect width="${badgeWidth(mode)}" height="${BADGE_HEIGHT}" rx="${BADGE_HEIGHT / 2}" fill="${BADGE_COLORS[mode]}"/>`)
       expect(svg).toContain(`>${BADGE_NAMES[mode]}</text>`)
     }
-    expect(badgeSvg('shadow')).toContain('>GÖLGE</text>')
-    expect(badgeSvg('pin')).toContain('>KAPALI</text>')
+    expect(badgeWidth('pin')).toBeGreaterThan(badgeWidth('auto'))
+  })
+
+  test('the dot moves to say what gearbox does, and stands still for less motion', () => {
+    expect(badgeSvg('auto')).toContain('animation:pulse')
+    expect(badgeSvg('shadow')).toContain('animation:breathe')
+    expect(badgeSvg('down')).toContain('animation:blink')
+    expect(badgeSvg('pin')).not.toMatch(/animation:(?!none)/)
+    for (const mode of modes) {
+      expect(badgeSvg(mode)).toContain('@media (prefers-reduced-motion:reduce){*{animation:none!important}}')
+    }
   })
 
   test('is one svg root of the size the Svg element is given', () => {
-    for (const mode of ['auto', 'shadow', 'pin', 'down'] as const) {
+    for (const mode of modes) {
       const svg = badgeSvg(mode)
-      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${BADGE_WIDTH}" height="${BADGE_HEIGHT}"`)
+      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${badgeWidth(mode)}" height="${BADGE_HEIGHT}"`)
       expect(svg).toEndWith('</svg>')
     }
   })

@@ -22,7 +22,7 @@ import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from '
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
 import { readRule, settle, type Task } from './core/settle'
-import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, BADGE_WIDTH, badgeSvg } from './core/switch'
+import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, badgeSvg, badgeWidth } from './core/switch'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { isNewerThan, TESTED_THROUGH } from './core/version'
 import type { GearboxMode } from '../types'
@@ -56,7 +56,7 @@ const MODE_NAMES: Record<GearboxMode, string> = { auto: 'açık', shadow: 'gölg
 // What each state of the band means, beside its badge.
 const MODE_NOTES: Record<GearboxMode, string> = {
   auto: 'işe göre model ve efor seçiyor',
-  shadow: 'seçimlerini yazıyor, uygulamıyor; cevabı seçicideki model veriyor',
+  shadow: 'seçip yazıyor, uygulamıyor; cevabı seçici veriyor',
   pin: 'seçicideki model kullanılıyor',
   down: 'seçimleri uygulanmıyordu; seçicideki model kullanılıyor',
 }
@@ -121,6 +121,9 @@ const modeAtom = atom({ plugin: 'gearbox', key: 'mode' } as const, 'auto')
 
 const warningAtom = atom({ plugin: 'gearbox', key: 'warning' } as const, '')
 
+// The last choice as the band shows it; '' before one.
+const noteAtom = atom({ plugin: 'gearbox', key: 'note' } as const, '')
+
 // In plan mode, as the engine's plan-mode notes say (the session.append hook
 // below). Kept in the session's state, so a reload of the module keeps it.
 // Plan mode set in the middle of a turn counts from the next turn: a turn
@@ -160,6 +163,10 @@ function showStatus($: EngineInterface, state: State): void {
   const { settings, last } = state
   const mode = modeOf(state)
   void update($, modeAtom, () => mode)
+  // The band says what the last choice was beside the badge, or what the state means before one.
+  const choice = last === undefined ? undefined : `${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)}`
+  const note = choice === undefined ? '' : mode === 'shadow' ? `önerisi ${choice} · cevabı seçici veriyor` : choice
+  void update($, noteAtom, () => note)
   $.ui.status(
     mode === 'down' ? '⚙ gearbox: devre dışı (seçici), /gear'
     : mode === 'pin' ? '⚙ gearbox: kapalı (seçici model)'
@@ -761,17 +768,21 @@ export const register: Register = on => {
     return state.settings.footer ? { ...result, text: footer(state, decision, e.usage, money) } : result
   })
 
-  // A small row above the prompt: what gearbox does now, as a badge in the
-  // state's color, and a button for each other state named for what it does,
-  // so a press never does what the row did not say. The status text at the
-  // bottom right cannot be pressed, a Button can. The terminal draws the badge
-  // as colored Text, a desktop as an Svg.
+  // A small row above the prompt: a badge in the state's color whose dot
+  // moves a little to say what gearbox is doing, the last choice beside it,
+  // and a button for each other state named for what it does, so a press
+  // never does what the row did not say. The terminal draws the badge as
+  // colored Text; a desktop draws it as an Svg in an interactive frame, where
+  // its motion runs (none for a person who asked for less motion).
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey || !state.settings.band) {
       return next(e)
     }
     const mode = await read($, modeAtom)
-    const warning = mode === 'auto' || mode === 'shadow' ? await read($, warningAtom) : ''
+    const isWorking = mode === 'auto' || mode === 'shadow'
+    const warning = isWorking ? await read($, warningAtom) : ''
+    const last = isWorking ? await read($, noteAtom) : ''
+    const note = last === '' ? MODE_NOTES[mode] : last
     const actions = MODE_ACTIONS.filter(action => action.mode !== mode)
     // Stood down, "aç" tries again.
     const label = (action: (typeof MODE_ACTIONS)[number]): string => (mode === 'down' && action.mode === 'auto' ? 'yeniden dene' : action.label)
@@ -783,12 +794,12 @@ export const register: Register = on => {
         <Box>
           <Text dimColor>⚙ gearbox </Text>
           <Text backgroundColor={BADGE_COLORS[mode]} color="#ffffff" bold>
-            {` ${BADGE_NAMES[mode]} `}
+            {` ${mode === 'pin' ? '○' : '●'} ${BADGE_NAMES[mode]} `}
           </Text>
-          <Text dimColor> {MODE_NOTES[mode]} </Text>
+          <Text dimColor> {note} </Text>
           {warning !== '' && <Text color="warning">⚠ {warning} </Text>}
           {actions.map(action => (
-            <Button key={action.key} label={label(action)} onPress={() => switchMode($, state, action.mode)} />
+            <Button key={action.key} dimColor label={label(action)} onPress={() => switchMode($, state, action.mode)} />
           ))}
         </Box>
       )
@@ -796,15 +807,15 @@ export const register: Register = on => {
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
 
     return (
-      <Box>
-        <Text dimColor>⚙ gearbox </Text>
-        <Box alignSelf="center" flexShrink={0}>
-          <Svg source={badgeSvg(mode)} alt={`gearbox: ${MODE_NAMES[mode]}`} width={BADGE_WIDTH} height={BADGE_HEIGHT} />
+      <Box alignItems="center" columnGap={1}>
+        <Text dimColor>⚙ gearbox</Text>
+        <Box flexShrink={0}>
+          <Svg source={badgeSvg(mode)} alt={`gearbox: ${MODE_NAMES[mode]}`} width={badgeWidth(mode)} height={BADGE_HEIGHT} isInteractive />
         </Box>
-        <Text dimColor> {MODE_NOTES[mode]}</Text>
-        {warning !== '' && <Text color="warning"> ⚠ {warning}</Text>}
+        <Text dimColor>{note}</Text>
+        {warning !== '' && <Text color="warning">⚠ {warning}</Text>}
         {actions.map(action => (
-          <Button key={action.key} label={label(action)} onPress={() => switchMode($, state, action.mode)} />
+          <Button key={action.key} dimColor label={label(action)} onPress={() => switchMode($, state, action.mode)} />
         ))}
       </Box>
     )

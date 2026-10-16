@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer, zor işler yine güçlü modelle yapılır.
 
-> Durum: 0.8.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.8.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Ne sağlar
 
@@ -44,7 +44,7 @@ Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması 
 
 **Seçici tavandır.** gearbox, seçicideki model ve eforun üstünde harcama yapmaz. Seçiciyi değiştirdiğinde yeni tavanı bildirir. Seçici **Opus · high** iken tam otomatiktir.
 
-**Durum satırı.** İstem kutusunun üstündeki küçük satır gearbox'ın ne yaptığını gösterir: bir etikette **AÇIK** (yeşil), **GÖLGE** (mor), **KAPALI** (gri) ya da **DURDU** (turuncu; bkz. Güvenlik ağları) yazar, yanında bunun ne demek olduğu. Yanındaki düğmeler öteki durumlar içindir ve her birinin üstünde basınca ne olacağı yazar: **aç**, **gölgeye al**, **kapat**; durmuşsa **yeniden dene**. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir. Bir limit penceresi dolmak üzereyken ya da çok hızlı harcanırken satırda bir de uyarı görünür (aşağıda Tempo).
+**Durum satırı.** İstem kutusunun üstündeki küçük satır gearbox'ın ne yaptığını gösterir: bir etikette **AÇIK** (yeşil), **GÖLGE** (mor), **KAPALI** (gri) ya da **DURDU** (turuncu; bkz. Güvenlik ağları) yazar. Etiketteki nokta gearbox'ın ne yaptığını hafifçe hareket ederek söyler: seçerken yumuşak bir nabız, gölgede yavaş bir nefes, kapalıyken durgun, durmuşken yavaş yanıp sönme; sisteminde "hareketi azalt" açıksa kıpırdamaz. Yanında son seçim durur ("Sonnet · medium · T1 rutin"; gölgede gearbox'ın önerisi), henüz seçim yoksa durumun ne demek olduğu. Yanındaki düğmeler öteki durumlar içindir ve her birinin üstünde basınca ne olacağı yazar: **aç**, **gölgeye al**, **kapat**; durmuşsa **yeniden dene**. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir. Bir limit penceresi dolmak üzereyken ya da çok hızlı harcanırken satırda bir de uyarı görünür (aşağıda Tempo).
 
 **Gölge mod.** `/gear golge` ile gearbox seçer ama seçimini uygulamaz: her istek seçici ne diyorsa onunla gider, gearbox da ne seçeceğini her cevabın altına (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) ve günlüğüne yazar. Seçici burada da tavandır; seçimi kırptıysa ikisi de yazılır: `⚙ gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium`. Böylece seçici Sonnet'teyken de Opus ihtiyacı görünür. Yeni bir sürüm böylece gerçek iş üzerinde, o işe dokunmadan denenir; `/gear yanlis` seçimlerini yine işaretler. `/gear oto` yönlendirmeyi geri açar.
 

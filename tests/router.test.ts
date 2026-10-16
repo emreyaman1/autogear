@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { expect, mock, test, type Engine } from 'claude-code/testing'
 
-import { BADGE_COLORS, BADGE_HEIGHT, BADGE_WIDTH } from '../hooks/core/switch'
+import { BADGE_COLORS, BADGE_HEIGHT, badgeWidth } from '../hooks/core/switch'
 
 type Sent = { model: string; effort: unknown }
 
@@ -185,6 +185,20 @@ test('a nearly full window keeps hard work on Opus and warns under the answer an
   await off.unmount()
 })
 
+// The state a mounted band shows: the desktop badge's alt, or the terminal badge's name.
+async function badgeOf(ui: Awaited<ReturnType<Engine['ui']['mount']>>, surface: 'terminal' | 'desktop'): Promise<string | undefined> {
+  if (surface === 'desktop') {
+    return (await ui.find({ type: 'Svg' }))?.props.alt as string | undefined
+  }
+  for (const [name, state] of [['AÇIK', 'açık'], ['GÖLGE', 'gölge'], ['KAPALI', 'kapalı'], ['DURDU', 'durdu']] as const) {
+    if ((await ui.find({ type: 'Text', text: new RegExp(` ${name} $`) })) !== undefined) {
+      return `gearbox: ${state}`
+    }
+  }
+
+  return undefined
+}
+
 test('the band shows on, shadow and off apart, and each button does what it is named for', async ($, on) => {
   const { sent } = world(on)
   const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
@@ -192,13 +206,13 @@ test('the band shows on, shadow and off apart, and each button does what it is n
     sent.length = 0
     await $.command.run({ command: 'gear', args: 'oto' })
     const ui = await $.ui.mount({ ...BAND, surface })
-    expect(await ui.find({ type: 'Text', text: /işe göre model ve efor seçiyor/ })).toBeDefined()
+    expect(await badgeOf(ui, surface)).toBe('gearbox: açık')
     // On: the buttons offer shadow and off, not on.
     expect(await ui.find({ type: 'Button', key: 'to-auto' })).toBeUndefined()
     expect(await ui.find({ type: 'Button', key: 'to-shadow', text: 'gölgeye al' })).toBeDefined()
 
     await ui.press({ key: 'to-shadow' })
-    expect(await ui.find({ type: 'Text', text: /seçimlerini yazıyor, uygulamıyor/ })).toBeDefined()
+    expect(await badgeOf(ui, surface)).toBe('gearbox: gölge')
     expect(await ui.find({ type: 'Button', key: 'to-shadow' })).toBeUndefined()
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, `shadow-${surface}`, 0, 'claude-opus-5-5', 'max')
@@ -206,6 +220,7 @@ test('the band shows on, shadow and off apart, and each button does what it is n
 
     // From shadow, "kapat" turns it off; it does not turn routing on.
     await ui.press({ key: 'to-pin' })
+    expect(await badgeOf(ui, surface)).toBe('gearbox: kapalı')
     expect(await ui.find({ type: 'Text', text: /seçicideki model kullanılıyor/ })).toBeDefined()
     expect(await ui.find({ type: 'Button', key: 'to-auto', text: 'aç' })).toBeDefined()
     await say($, 'bu fonksiyon ne yapıyor?')
@@ -213,10 +228,12 @@ test('the band shows on, shadow and off apart, and each button does what it is n
     expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })
 
     await ui.press({ key: 'to-auto' })
-    expect(await ui.find({ type: 'Text', text: /işe göre model ve efor seçiyor/ })).toBeDefined()
+    expect(await badgeOf(ui, surface)).toBe('gearbox: açık')
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, `on-${surface}`, 0, 'claude-opus-5-5', 'max')
     expect(sent[2]?.model).toBe('claude-haiku-5-5')
+    // The last choice stands beside the badge.
+    expect(await ui.find({ type: 'Text', text: /^Haiku · low · T0 önemsiz$|Haiku · low · T0 önemsiz/ })).toBeDefined()
     await ui.unmount()
   }
 })
@@ -228,7 +245,7 @@ test('the state is an Svg badge on the desktop and colored Text on the terminal,
 
   const desktop = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const badge = await desktop.find({ type: 'Svg' })
-  expect(badge?.props).toMatchObject({ alt: 'gearbox: gölge', width: BADGE_WIDTH, height: BADGE_HEIGHT })
+  expect(badge?.props).toMatchObject({ alt: 'gearbox: gölge', width: badgeWidth('shadow'), height: BADGE_HEIGHT, isInteractive: true })
   expect(badge?.props.source).toContain(BADGE_COLORS.shadow)
   expect(badge?.props.source).toContain('>GÖLGE</text>')
   await desktop.press({ key: 'to-pin' })
@@ -498,4 +515,16 @@ test('in plan mode every request goes to Opus at an effort by the plan size, unt
   await step($, 't3', 0, 'claude-opus-5-5', 'max')
   expect(sent[2]).toEqual({ model: 'claude-haiku-5-5', effort: 'low' })
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: '' }))).not.toContain('Plan modu')
+})
+
+test('before a choice the band says what the state means; in shadow mode it shows what gearbox would pick', async ($, on) => {
+  world(on)
+  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  await $.command.run({ command: 'gear', args: 'golge' })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await ui.find({ type: 'Text', text: /seçip yazıyor, uygulamıyor/ })).toBeDefined()
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't1', 0, 'claude-opus-5-5', 'high')
+  expect(await ui.find({ type: 'Text', text: /önerisi Haiku · low · T0 önemsiz · cevabı seçici veriyor/ })).toBeDefined()
+  await ui.unmount()
 })

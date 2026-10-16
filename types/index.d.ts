@@ -6,6 +6,7 @@ declare module 'claude-code' {
   interface PluginState {
     // warning: a rate-limit window under pressure, as the band shows it; '' when none.
     // planning: the session is in plan mode, as the engine's plan-mode notes say.
-    gearbox: { mode: GearboxMode; warning: string; planning: boolean }
+    // note: the last choice as the band shows it; '' before one.
+    gearbox: { mode: GearboxMode; warning: string; planning: boolean; note: string }
   }
 }

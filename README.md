@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer, and hard work still goes to the strong model.
 
-> Status: 0.8.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.8.1. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## What you get
 
@@ -44,7 +44,7 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 
 **The picker is the ceiling.** gearbox never spends more than the model and effort the picker holds. Change the picker and it tells you the new ceiling. With the picker on **Opus · high** it is fully automatic.
 
-**The state row.** A small row above the prompt shows what gearbox is doing: a badge reads **AÇIK** (on, green), **GÖLGE** (shadow, violet), **KAPALI** (off, gray) or **DURDU** (stood down, amber; see Safety nets), with a few words on what that means. Beside it are buttons for the other states, each named for what a press does: **aç** (turn on), **gölgeye al** (shadow mode), **kapat** (turn off); stood down, **yeniden dene** (try again). When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving. While a rate-limit window is nearly full or spent too fast, the row also shows a warning (see Pace below).
+**The state row.** A small row above the prompt shows what gearbox is doing: a badge reads **AÇIK** (on, green), **GÖLGE** (shadow, violet), **KAPALI** (off, gray) or **DURDU** (stood down, amber; see Safety nets). Its dot moves a little to say what gearbox is doing: a soft pulse while it routes, a slow breath in shadow mode, still when off, a slow blink when stood down; with "reduce motion" set in your system it stays still. Beside it stands the last choice ("Sonnet · medium · T1 rutin"; in shadow mode what gearbox would have picked), or before one, what the state means. Beside it are buttons for the other states, each named for what a press does: **aç** (turn on), **gölgeye al** (shadow mode), **kapat** (turn off); stood down, **yeniden dene** (try again). When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving. While a rate-limit window is nearly full or spent too fast, the row also shows a warning (see Pace below).
 
 **Shadow mode.** `/gear golge` lets gearbox choose without applying the choice: every request goes out as the picker says, and gearbox writes what it would have picked under each answer (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) and in its log. The picker is the ceiling here too; when it cut the choice, both are written: `⚙ gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium`, so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear yanlis` still marks its choices. `/gear oto` turns routing back on.
 
