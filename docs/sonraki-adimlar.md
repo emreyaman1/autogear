@@ -45,7 +45,7 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 | 1 | Plan işlerinde Opus (yapıldı, 0.8.0) | Kullanıcı + Claude |
 | 2 | Gölge kayıt ve açma-kapama düğmesi düzeltmesi (yapıldı, 0.8.0) | Claude |
 | 3 | Limit kuralı: düşürme yok, uyarı var (yapıldı, 0.8.0) | Kullanıcı kararı |
-| 4 | Dürüst kıyas: Opus, opusplan, Sonnet + Opus danışman | Kullanıcı + Claude |
+| 4 | Dürüst kıyas: Opus, opusplan, Sonnet + Opus danışman (bir tur yapıldı, 17 Ekim) | Kullanıcı + Claude |
 | 5 | Dil ve uzunluktan bağımsız sınıflandırma | Kullanıcı + Claude |
 | 6 | Efor tablosunu ölçüme göre yeniden ayarlamak (yapıldı, 0.8.0) | Claude (video) |
 | 7 | Alt ajan yönlendirme | Claude |
@@ -147,6 +147,27 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 - **Sadece efor seçeneği:** gearbox modeli hiç değiştirmeden yalnızca eforu ayarlarsa önbellek hiç bozulmaz. Anthropic'in model rehberi de "efor ayarlamak çoğu zaman model değiştirmekten daha iyi bir kaldıraç" diyor. Bu da kıyasa ayrı bir seçenek olarak girsin.
 - Her hücreyi en az 3 kez çalıştır; tek çalıştırma gürültülü. Ölçüm ücretli: önce tahmini maliyet söylenip onay alınır.
 - **README'ye yazmak:** sonuç ne çıkarsa çıksın yazılır. Sadece iyi sonucu koymak güveni zedeler.
+
+**Yapıldı, bir tur (17 Ekim 2026, kullanıcı onayıyla; harcama liste fiyatıyla yaklaşık $10,6, tahmin $17'ydi):**
+
+- 10 görev × 6 düzen, her biri bir kez, Claude Code 2.1.299. 4 yeni görev eklendi: yanıltıcı hata, aynı hatanın belirsiz anlatımı, 6 gizli hatayı yakalayan test yazma, küçük yeniden düzenleme.
+- **Sonuç:**
+
+| Düzen | Geçen | Maliyet | Süre |
+|---|---|---|---|
+| gearbox | 10/10 | $1,96 | 489 sn |
+| Opus · high | 10/10 | $3,09 | 808 sn |
+| Opus · medium | 10/10 | $2,33 | 531 sn |
+| Sonnet · medium | 10/10 | $0,81 | 234 sn |
+| opusplan (plan modu yok, hep Sonnet) | 10/10 | $0,85 | 212 sn |
+| Sonnet + Opus danışman | 9/10 (yanıltıcı hatada kaldı) | $0,92 | 390 sn |
+
+- **Dürüst okuma:** görevler fazla kolay, modelleri ayıramıyor. Bu sette tek başına Sonnet · medium en ucuz ve tam başarılı. gearbox, üç hata avını (5, 8, 9) Opus · high'a verdiği için Sonnet'in 2,4 katı harcadı; $1,96'nın $1,50'si bu üç görev. Opus'lara göre %16–37 ucuz.
+- Model mi efor mu: Opus medium, high ile aynı sonucu %25 ucuza verdi; Sonnet medium, Opus medium'un üçte birine.
+- **Açık karar (kullanıcıya sorulacak):** "hata avı Opus high" kuralı bu sette karşılığını vermedi; videodaki kanıt da az denemeye dayanıyordu. Seçenekler: kuralı daha zor görevlerle ölçene kadar tutmak, ya da hata avını Opus medium'a indirmek. Karar adım 12'deki zor görev ölçümüne bağlanmalı.
+- Ölçüm sırasında iki şey düzeltildi: test yazma görevinin metni iki türlü okunuyordu ("mevcut hataları bul" mu, "ileride bozulursa yakala" mı); netleştirildi, gearbox'ın o görevi yeniden çalıştırıldı. İnternet kopması üç görevi yarıda bıraktı (Sonnet'te 2, danışmanlıda 1); yeniden çalıştırıldılar.
+- **Yapılmayanlar:** her hücre 3 kez (yaklaşık $32 daha); "sadece efor" düzeni (gearbox'ta bunun için bir ayar yok, eklenmesi gerekiyor); danışmanın gerçekten çağrılıp çağrılmadığı ölçülmedi (danışmanlı düzenin maliyeti tek başına Sonnet'e çok yakın).
+- Ölçüm gearbox'ı `--plugin-dir` ile yüklüyor; kullanıcının kurulu gearbox'ıyla aynı tasarruf sayacını ve günlüğü paylaşıp paylaşmadığı doğrulanmadı.
 
 ### 5. Dil ve uzunluktan bağımsız sınıflandırma (kullanıcı isteği)
 

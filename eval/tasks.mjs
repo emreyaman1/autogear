@@ -108,7 +108,10 @@ for (let run = 1; run <= runs; run += 1) {
 }
 
 mkdirSync(WORK, { recursive: true })
-writeFileSync(join(WORK, `tasks-${arm}.json`), JSON.stringify(results, null, 2))
+// A run of some tasks replaces their rows and keeps the rest of the arm's.
+const file = join(WORK, `tasks-${arm}.json`)
+const kept = only.length > 0 && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).filter(result => !only.includes(result.name)) : []
+writeFileSync(file, JSON.stringify([...kept, ...results], null, 2))
 const passed = results.filter(result => result.passed).length
 const spent = results.reduce((sum, result) => sum + result.cost, 0)
 console.log(`\n${arm}: ${passed}/${results.length} geçti, API liste fiyatıyla toplam $${spent.toFixed(3)}`)

@@ -192,18 +192,31 @@ By set, gearbox as it runs: SWE-bench Verified 36% exact, 83% within one tier, 1
 
 What it shows: gearbox rarely sends hard work to a weak model, but on long English issues and task statements it hardly tells a fifteen-minute fix from a four-hour one (rank agreement 0.16), and it spends on the safe side. These texts are unlike the short prompts people type, which is what the rules were built for; and the time-to-tier mapping is ours, so some of "too high" is a tier the work may well have deserved (a quick fix in an unfamiliar codebase is still a hunt).
 
-**Output quality** (`eval/tasks/`): six real tasks on a small project, each checked by tests Claude never saw.
+**Output quality** (`eval/tasks/`): ten real tasks on a small project, each checked by tests Claude never saw, run under six setups (`node eval/tasks.mjs <arm>`). Costs at API list prices, one run each, on Claude Code 2.1.299, 17 October 2026; ✗ marks a failed task.
 
-| Task | gearbox chose | Result | Cost | Opus · high, no gearbox |
-|---|---|---|---|---|
-| 1 Rename | Haiku | Pass | $0.011 | Pass, $0.277 |
-| 2 Shipping threshold | Sonnet | Pass | $0.173 | n/a |
-| 3 Coupon feature and tests | Sonnet | Pass | $0.124 | Pass, $1.387 |
-| 4 Pagination bug, error given | Sonnet | Pass | $0.072 | Pass, $0.255 |
-| 5 Subtle cent-rounding bug | Opus | Pass | $0.423 | n/a |
-| 6 Discount also applied to shipping | Sonnet | Pass | $0.099 | Pass, $0.460 |
+| Task | Kind | gearbox | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus advisor |
+|---|---|---|---|---|---|---|---|
+| 1 | rename | $0.01 Haiku | $0.21 | $0.21 | $0.06 | $0.09 | $0.10 |
+| 2 | small change | $0.06 Sonnet | $0.21 | $0.14 | $0.06 | $0.06 | $0.07 |
+| 3 | feature with tests | $0.10 Sonnet | $0.29 | $0.25 | $0.09 | $0.10 | $0.10 |
+| 4 | bug, place given | $0.06 Sonnet | $0.24 | $0.18 | $0.06 | $0.06 | $0.07 |
+| 5 | bug whose cause hides | $0.36 Opus | $0.34 | $0.23 | $0.10 | $0.08 | $0.11 |
+| 6 | bug, place given | $0.07 Sonnet | $0.26 | $0.21 | $0.07 | $0.07 | $0.09 |
+| 7 | misleading bug: the error points at the wrong file | $0.08 Sonnet | $0.33 | $0.24 | $0.07 | $0.08 | ✗ $0.09 |
+| 8 | the same bug told as "bu çalışmıyor, düzelt" | $0.33 Opus | $0.35 | $0.24 | $0.08 | $0.09 | $0.11 |
+| 9 | tests that must catch six inserted bugs | $0.81 Opus | $0.58 | $0.45 | $0.12 | $0.13 | $0.13 |
+| 10 | small refactor | $0.08 Sonnet | $0.28 | $0.19 | $0.09 | $0.09 | $0.04 |
+| **Total** | | **10/10, $1.96** | **10/10, $3.09** | **10/10, $2.33** | **10/10, $0.81** | **10/10, $0.85** | **9/10, $0.92** |
 
-On the 4 tasks run both ways gearbox spent $0.31 against $2.38 on Opus · high throughout: the same result, about 8x cheaper and 8x faster (73 s against 619 s). Costs are at API list prices. One run per task on a small project, so this shows direction, not certainty.
+What it shows, the unflattering part first:
+
+- **On these tasks Sonnet · medium alone did as well as anything, for the least.** Every setup but one passed all ten, so this set does not tell the models apart: it is too easy. Sonnet · medium spent $0.81, gearbox $1.96, Opus · high $3.09.
+- **gearbox costs more than Sonnet alone here** because it sent the three hunts (5, 8, 9) to Opus · high: $1.50 of its $1.96, on work Sonnet also passed. Whether that pays off on harder work is what the next measurement has to show (bigger projects, three runs each).
+- gearbox is 37% cheaper than Opus · high and 16% cheaper than Opus · medium, at the same result, and 40% faster than Opus · high.
+- **Model or effort:** Opus · medium did what Opus · high did for 25% less; Sonnet · medium did it for a third of Opus · medium.
+- opusplan ran Sonnet throughout: these tasks were not done in plan mode.
+- The one failure was Sonnet with Opus as its advisor, on the misleading bug: it fixed the file the error pointed at, not the cause. gearbox sent that task to Sonnet too, since an error message in hand reads as a clear bug, and passed. One run, so this is luck as much as anything; the measurement does not show whether the advisor was consulted.
+- One run per cell on a small project: direction, not certainty. In an earlier run (0.7, six tasks) gearbox matched Opus · high on four tasks for $0.31 against $2.38.
 
 ## Project layout
 

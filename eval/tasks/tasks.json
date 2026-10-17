@@ -51,7 +51,7 @@
     "name": "9-catch-tests",
     "tier": 3,
     "kind": "hata yakalayan test",
-    "prompt": "src/cart.js ve src/shipping.js için hataları yakalayacak kapsamlı testler yaz, test/ klasörüne koy. Kaynak kodu değiştirme."
+    "prompt": "src/cart.js ve src/shipping.js şu an doğru çalışıyor. İleride biri bu kodu bozarsa hataları yakalayacak kapsamlı testler yaz, test/ klasörüne koy. Testlerin şimdiki kodda geçmeli. Kaynak kodu değiştirme."
   },
   {
     "name": "10-money",

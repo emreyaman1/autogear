@@ -190,18 +190,31 @@ Kümelere göre, çalıştığı haliyle gearbox: SWE-bench Verified'da %36 tam 
 
 Gösterdiği: gearbox zor işi nadiren zayıf bir modele gönderiyor, ama uzun İngilizce hata kayıtlarında ve görev tariflerinde on beş dakikalık bir düzeltmeyi dört saatlik bir işten zor ayırıyor (sıra uyumu 0,16) ve güvenli taraftan harcıyor. Bu metinler insanların yazdığı kısa mesajlara, yani kuralların yapıldığı şeye benzemiyor; süreyi kademeye çeviren eşleme de bizim, bu yüzden "fazla yüksek"in bir kısmı işin pekâlâ hak ettiği bir kademe olabilir (yabancı bir kod tabanında hızlı bir düzeltme de bir aramadır).
 
-**Çıktı kalitesi** (`eval/tasks/`): Küçük bir proje üzerinde 6 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir.
+**Çıktı kalitesi** (`eval/tasks/`): Küçük bir proje üzerinde 10 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir. Altı düzende çalıştırıldı (`node eval/tasks.mjs <kol>`). Maliyetler API liste fiyatıyla, her hücre bir kez, Claude Code 2.1.299, 17 Ekim 2026; ✗ kalan görev.
 
-| Görev | gearbox'ın seçtiği | Sonuç | Maliyet | Opus · high, gearbox'sız |
-|---|---|---|---|---|
-| 1 Yeniden adlandırma | Haiku | Geçti | $0,011 | Geçti, $0,277 |
-| 2 Kargo eşiği | Sonnet | Geçti | $0,173 | — |
-| 3 Kupon özelliği ve testleri | Sonnet | Geçti | $0,124 | Geçti, $1,387 |
-| 4 Hata mesajıyla verilen sayfalama hatası | Sonnet | Geçti | $0,072 | Geçti, $0,255 |
-| 5 İnce kuruş yuvarlama hatası | Opus | Geçti | $0,423 | — |
-| 6 İndirimin kargoya da uygulanması | Sonnet | Geçti | $0,099 | Geçti, $0,460 |
+| Görev | Tür | gearbox | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus danışman |
+|---|---|---|---|---|---|---|---|
+| 1 | yeniden adlandırma | $0,01 Haiku | $0,21 | $0,21 | $0,06 | $0,09 | $0,10 |
+| 2 | küçük değişiklik | $0,06 Sonnet | $0,21 | $0,14 | $0,06 | $0,06 | $0,07 |
+| 3 | testleriyle yeni özellik | $0,10 Sonnet | $0,29 | $0,25 | $0,09 | $0,10 | $0,10 |
+| 4 | yeri belli hata | $0,06 Sonnet | $0,24 | $0,18 | $0,06 | $0,06 | $0,07 |
+| 5 | sebebi saklı hata | $0,36 Opus | $0,34 | $0,23 | $0,10 | $0,08 | $0,11 |
+| 6 | yeri belli hata | $0,07 Sonnet | $0,26 | $0,21 | $0,07 | $0,07 | $0,09 |
+| 7 | yanıltıcı hata: hata çıktısı yanlış dosyayı gösteriyor | $0,08 Sonnet | $0,33 | $0,24 | $0,07 | $0,08 | ✗ $0,09 |
+| 8 | aynı hata "bu çalışmıyor, düzelt" diye anlatılmış | $0,33 Opus | $0,35 | $0,24 | $0,08 | $0,09 | $0,11 |
+| 9 | gizlenmiş 6 hatayı yakalaması gereken test yazma | $0,81 Opus | $0,58 | $0,45 | $0,12 | $0,13 | $0,13 |
+| 10 | küçük yeniden düzenleme | $0,08 Sonnet | $0,28 | $0,19 | $0,09 | $0,09 | $0,04 |
+| **Toplam** | | **10/10, $1,96** | **10/10, $3,09** | **10/10, $2,33** | **10/10, $0,81** | **10/10, $0,85** | **9/10, $0,92** |
 
-İki yolla da denenen 4 görevde gearbox $0,31, hep Opus · high $2,38 harcadı: aynı sonuçla yaklaşık 8 kat ucuz, 8 kat hızlı (73 sn'ye karşı 619 sn). Maliyetler API liste fiyatıyla. Her görev bir kez, küçük bir projede çalıştırıldı: sonuç kesin değil, yön gösterici.
+Gösterdiği, önce gearbox'ın aleyhine olan:
+
+- **Bu görevlerde tek başına Sonnet · medium herkes kadar iyi ve en ucuza yaptı.** Biri hariç bütün düzenler onda on geçti; yani bu set modelleri birbirinden ayıramıyor, fazla kolay. Sonnet · medium $0,81, gearbox $1,96, Opus · high $3,09 harcadı.
+- **gearbox burada tek başına Sonnet'ten pahalı**, çünkü üç hata avını (5, 8, 9) Opus · high'a verdi: $1,96'nın $1,50'si; Sonnet bunları da geçti. Bunun daha zor işte karşılığını verip vermediğini bir sonraki ölçüm gösterecek (büyük projeler, her biri üç kez).
+- Aynı sonuçla gearbox Opus · high'tan %37, Opus · medium'dan %16 ucuz ve Opus · high'tan %40 hızlı.
+- **Model mi efor mu:** Opus · medium, Opus · high'ın yaptığını %25 daha ucuza yaptı; Sonnet · medium da Opus · medium'un üçte birine.
+- opusplan baştan sona Sonnet çalıştı: bu görevler plan modunda yapılmadı.
+- Tek başarısızlık Opus danışmanlı Sonnet'te, yanıltıcı hatada: hata mesajının gösterdiği dosyayı düzeltti, asıl sebebi değil. gearbox bu görevi de Sonnet'e verdi (elde hata mesajı olan bir hata net sayılıyor) ve geçti. Tek çalıştırma, yani şans payı büyük; ölçüm danışmana gerçekten sorulup sorulmadığını göstermiyor.
+- Her hücre bir kez, küçük bir projede: yön gösterir, kesin değildir. Daha önceki bir çalıştırmada (0.7, altı görev) gearbox dört görevde Opus · high ile aynı sonucu $2,38 yerine $0,31'e almıştı.
 
 ## Proje yapısı
 
