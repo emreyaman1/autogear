@@ -6,6 +6,10 @@ Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) 
 
 > Durum: 0.12.0. Claude Code için bir Mod; eklenti API'sinin function hooks'una dayanır, o API Claude Code sürümleri arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var. Sürüm notları: [CHANGELOG.md](CHANGELOG.md). Neyi sakladığı ve neyi gönderdiği: [Gizlilik](#gizlilik).
 
+![autogear 28 saniyede: her mesaj ihtiyacı olan modeli alır, seçicinin üstüne çıkılmaz](docs/demo/autogear-demo.gif)
+
+*autogear'ın kendi kademelerinden ve ölçümlerinden yapılmış bir çizim, ekran kaydı değil. Kaynağı `docs/demo/demo.html`; `docs/demo/render.py` onu görüntüye çevirir.*
+
 ## Ne sağlar
 
 - **Mesaj başına doğru model.** "Bu fonksiyon ne yapıyor" Haiku · low ile, net ve tek yerlik bir değişiklik Sonnet · medium ile, belirsiz bir hata ya da mimari sorusu Sonnet · high ile, çok parçalı uzun iş ve plan modu Opus ile çalışır.

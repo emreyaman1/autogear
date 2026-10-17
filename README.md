@@ -6,6 +6,10 @@ Automatic gear shifting for Claude Code. For every message autogear picks the mo
 
 > Status: 0.12.0. A Claude Code Mod, built on the plugin API's function hooks, which can change between Claude Code releases. The safety nets below exist for that reason. Release notes: [CHANGELOG.md](CHANGELOG.md). What it keeps and what it sends: [Privacy](#privacy).
 
+![autogear in 28 seconds: each message gets the model it needs, never above your picker](docs/demo/autogear-demo.gif)
+
+*An illustration made from autogear's own tiers and measurements, not a screen recording. The source is `docs/demo/demo.html`; `docs/demo/render.py` renders it.*
+
 ## What you get
 
 - **The right model per message.** "What does this function do" runs on Haiku · low, a clear one-place change on Sonnet · medium, an unclear bug or an architecture question on Sonnet · high, long many-sided work and plan mode on Opus.

@@ -7,3 +7,6 @@ node_modules/
 
 # Written and removed by eval/external.mjs for each run
 eval/external.generated.test.ts
+
+# Frames and the MP4 made by docs/demo/render.py
+docs/demo/out/

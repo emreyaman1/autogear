@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>autogear demo</title>
+<style>
+  :root { --bg:#0d0f14; --ink:#e8eaf0; --dim:#8b93a7; --line:#262b38; --haiku:#38bdf8; --sonnet:#a78bfa; --opus:#fb923c; --good:#34d399; }
+  * { box-sizing:border-box; margin:0; }
+  html, body { width:1280px; height:720px; overflow:hidden; background:var(--bg); color:var(--ink); font-family:'Segoe UI',system-ui,sans-serif; }
+  #stage { position:relative; width:1280px; height:720px; background:radial-gradient(900px 500px at 50% 0%, #1a2033 0%, var(--bg) 70%); }
+  .scene { position:absolute; inset:0; opacity:0; }
+  .mono { font-family:Consolas,'Cascadia Mono',monospace; }
+  .footer { position:absolute; left:0; right:0; bottom:22px; text-align:center; color:#5d6579; font-size:15px; letter-spacing:.3px; }
+
+  /* intro and outro */
+  .center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  .brand { font-size:104px; font-weight:700; letter-spacing:-2px; }
+  .brand span { background:linear-gradient(90deg,var(--haiku),var(--sonnet),var(--opus)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .tag { margin-top:14px; font-size:34px; color:var(--dim); }
+  .gear { width:150px; height:150px; margin-bottom:18px; }
+  .cmds { margin-top:34px; display:flex; gap:18px; }
+  .cmd { padding:10px 20px; border:1px solid var(--line); border-radius:12px; background:#131724; font-size:24px; color:#c6cbe0; }
+  .url { margin-top:30px; font-size:26px; color:var(--dim); }
+
+  /* scene 2 */
+  .h2 { position:absolute; left:80px; top:54px; font-size:40px; font-weight:600; }
+  .h2 small { display:block; margin-top:8px; font-size:22px; font-weight:400; color:var(--dim); }
+  .row { position:absolute; left:80px; right:80px; height:92px; opacity:0; }
+  .bubble { position:absolute; left:0; top:0; width:600px; height:92px; border:1px solid var(--line); border-radius:18px; background:#131724; padding:0 28px; display:flex; align-items:center; font-size:28px; color:#dfe3f1; }
+  .cursor { display:inline-block; width:3px; height:30px; margin-left:3px; background:#dfe3f1; vertical-align:middle; }
+  .chip { position:absolute; left:660px; top:0; width:460px; white-space:nowrap; height:92px; border-radius:18px; padding:0 26px; display:flex; flex-direction:column; justify-content:center; opacity:0; border:1.5px solid; }
+  .chip b { font-size:30px; font-weight:600; }
+  .chip i { font-style:normal; font-size:20px; color:var(--dim); margin-top:2px; }
+  .arrow { position:absolute; left:616px; top:34px; font-size:30px; color:var(--dim); opacity:0; }
+
+  /* scene 3 */
+  .ladder { position:absolute; left:140px; bottom:110px; width:1000px; height:360px; }
+  .col { position:absolute; bottom:0; width:200px; border-radius:16px 16px 0 0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:16px; }
+  .col b { font-size:26px; } .col i { font-style:normal; font-size:19px; color:#0d0f14; opacity:.75; }
+  .ceil { position:absolute; left:-40px; width:1080px; border-top:3px dashed #f5f5f5; opacity:0; }
+  .ceil span { position:absolute; right:0; top:-42px; font-size:24px; background:#f5f5f5; color:#0d0f14; padding:4px 14px; border-radius:10px; font-weight:600; }
+
+  /* scene 4 */
+  .metric { position:absolute; left:80px; right:80px; }
+  .metric .label { font-size:26px; color:var(--dim); margin-bottom:12px; }
+  .barbg { height:64px; border-radius:14px; background:#171b28; position:relative; overflow:hidden; }
+  .bar { position:absolute; left:0; top:0; bottom:0; border-radius:14px; display:flex; align-items:center; padding-left:22px; font-size:28px; font-weight:600; color:#0d0f14; white-space:nowrap; }
+  .note { position:absolute; left:80px; right:80px; font-size:22px; color:#7b8398; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <div class="scene" id="s1"><div class="center">
+    <svg class="gear" id="gearsvg" viewBox="-60 -60 120 120">
+      <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset=".5" stop-color="#a78bfa"/><stop offset="1" stop-color="#fb923c"/></linearGradient></defs>
+      <g id="gearg"></g>
+    </svg>
+    <div class="brand" id="brand"><span>autogear</span></div>
+    <div class="tag" id="tag">Every message gets the model it needs.</div>
+  </div></div>
+
+  <div class="scene" id="s2">
+    <div class="h2">The right model for each message<small>autogear reads the work and picks, message by message.</small></div>
+    <div id="rows"></div>
+    <div class="footer">Illustration. The models and efforts are the ones autogear's tiers use.</div>
+  </div>
+
+  <div class="scene" id="s3">
+    <div class="h2">Never above your model picker<small>Set it once to your strongest model. autogear chooses at or below it.</small></div>
+    <div class="ladder" id="ladder">
+      <div class="ceil" id="ceil"><span>your model picker</span></div>
+    </div>
+    <div class="footer">Illustration.</div>
+  </div>
+
+  <div class="scene" id="s4">
+    <div class="h2">Does the strong model earn its price?<small>autogear's own comparison: 20 tasks, 10 of them real sqlglot bugs.</small></div>
+    <div class="metric" style="top:210px">
+      <div class="label">Tasks solved</div>
+      <div class="barbg" style="margin-bottom:12px"><div class="bar" id="b1" style="background:var(--sonnet)"></div></div>
+      <div class="barbg"><div class="bar" id="b2" style="background:var(--opus)"></div></div>
+    </div>
+    <div class="metric" style="top:430px">
+      <div class="label">What it cost</div>
+      <div class="barbg" style="margin-bottom:12px"><div class="bar" id="b3" style="background:var(--sonnet)"></div></div>
+      <div class="barbg"><div class="bar" id="b4" style="background:var(--opus)"></div></div>
+    </div>
+    <div class="note" style="bottom:46px">One run each, at API list prices. Opus solved nothing that Sonnet missed. Measured, not promised.</div>
+  </div>
+
+  <div class="scene" id="s5"><div class="center">
+    <div class="brand" style="font-size:96px"><span>autogear</span></div>
+    <div class="tag" style="color:#e8eaf0">Your usage limits last longer.</div>
+    <div class="cmds"><div class="cmd mono">/gear doctor</div><div class="cmd mono">/gear savings</div><div class="cmd mono">/gear off</div></div>
+    <div class="url mono">github.com/emreyaman1/autogear</div>
+  </div></div>
+
+</div>
+<script>
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const ease = (x) => 1 - Math.pow(1 - x, 3);
+const out = (x) => x * x * (3 - 2 * x);
+const $ = (id) => document.getElementById(id);
+const DURATION = 28;
+
+// gear drawing
+(function () {
+  const teeth = 10, R = 40, r = 30, hole = 12;
+  let d = '';
+  for (let i = 0; i < teeth; i++) {
+    const a = (i / teeth) * Math.PI * 2, w = Math.PI / teeth * 0.55, step = Math.PI * 2 / teeth;
+    const pts = [[a - w * 1.1, r], [a - w * 0.7, R], [a + w * 0.7, R], [a + w * 1.1, r]];
+    pts.forEach(([ang, rad], k) => { d += (i === 0 && k === 0 ? 'M' : 'L') + (Math.cos(ang) * rad).toFixed(2) + ' ' + (Math.sin(ang) * rad).toFixed(2) + ' '; });
+    const b = a + step - w * 1.1;
+    d += 'L' + (Math.cos(b) * r).toFixed(2) + ' ' + (Math.sin(b) * r).toFixed(2) + ' ';
+  }
+  d += 'Z M' + hole + ' 0 A' + hole + ' ' + hole + ' 0 1 0 ' + (-hole) + ' 0 A' + hole + ' ' + hole + ' 0 1 0 ' + hole + ' 0 Z';
+  $('gearg').innerHTML = '<path d="' + d + '" fill="url(#gg)" fill-rule="evenodd"/>';
+})();
+
+const MESSAGES = [
+  { text: 'What does this function do?', model: 'Haiku 5.5', effort: 'low', kind: 'trivial', color: '#38bdf8' },
+  { text: 'Make the submit button full width', model: 'Sonnet 5.5', effort: 'medium', kind: 'clear, one place', color: '#a78bfa' },
+  { text: 'The page freezes sometimes. Find out why.', model: 'Sonnet 5.5', effort: 'high', kind: 'hard, cause unknown', color: '#a78bfa' },
+  { text: 'Move the whole app from Express to NestJS', model: 'Opus 5.5', effort: 'high', kind: 'critical, many parts', color: '#fb923c' },
+];
+const ROW_TOP = 190, ROW_GAP = 118, FIRST = 4.2, GAP = 2.7;
+MESSAGES.forEach((m, i) => {
+  const row = document.createElement('div');
+  row.className = 'row'; row.id = 'row' + i; row.style.top = (ROW_TOP + i * ROW_GAP) + 'px';
+  row.innerHTML = '<div class="bubble"><span id="txt' + i + '"></span><span class="cursor" id="cur' + i + '"></span></div>' +
+    '<div class="arrow" id="arr' + i + '">&rarr;</div>' +
+    '<div class="chip" id="chip' + i + '" style="border-color:' + m.color + ';background:' + m.color + '1f"><b style="color:' + m.color + '">' + m.model + ' · effort ' + m.effort + '</b><i>' + m.kind + '</i></div>';
+  $('rows').appendChild(row);
+});
+
+const STEPS = [
+  { name: 'Haiku 5.5', sub: 'effort low', color: '#38bdf8', h: 110 },
+  { name: 'Sonnet 5.5', sub: 'effort medium', color: '#a78bfa', h: 190 },
+  { name: 'Sonnet 5.5', sub: 'effort high', color: '#8b7cf0', h: 270 },
+  { name: 'Opus 5.5', sub: 'effort high', color: '#fb923c', h: 350 },
+];
+STEPS.forEach((s, i) => {
+  const c = document.createElement('div');
+  c.className = 'col'; c.id = 'col' + i; c.style.left = (i * 270 + 30) + 'px'; c.style.background = s.color;
+  c.innerHTML = '<b style="color:#0d0f14">' + s.name + '</b><i>' + s.sub + '</i>';
+  $('ladder').appendChild(c);
+});
+
+function scene(id, a, b, fade) {
+  return (t) => { const e = Math.min(seg(t, a, a + fade), 1 - seg(t, b - fade, b)); $(id).style.opacity = out(clamp(e)); };
+}
+const S = [scene('s1', 0, 3.9, 0.5), scene('s2', 3.7, 15.2, 0.5), scene('s3', 15.0, 20.4, 0.5), scene('s4', 20.2, 25.0, 0.5), scene('s5', 24.8, 28.01, 0.5)];
+
+function render(t) {
+  S.forEach((f) => f(t));
+  // intro
+  $('gearg').setAttribute('transform', 'rotate(' + (t * 40) + ')');
+  const g = $('gearsvg'); g.style.opacity = ease(seg(t, 0.1, 0.9)); g.style.transform = 'scale(' + (0.7 + 0.3 * ease(seg(t, 0.1, 1.1))) + ')';
+  $('brand').style.opacity = ease(seg(t, 0.5, 1.4)); $('brand').style.transform = 'translateY(' + (20 * (1 - ease(seg(t, 0.5, 1.4)))) + 'px)';
+  $('tag').style.opacity = ease(seg(t, 1.5, 2.3));
+  // messages
+  MESSAGES.forEach((m, i) => {
+    const t0 = FIRST + i * GAP;
+    const row = $('row' + i), p = ease(seg(t, t0, t0 + 0.4));
+    row.style.opacity = p; row.style.transform = 'translateX(' + (-30 * (1 - p)) + 'px)';
+    const typed = Math.floor(m.text.length * seg(t, t0 + 0.2, t0 + 1.2));
+    $('txt' + i).textContent = m.text.slice(0, typed);
+    $('cur' + i).style.opacity = (typed < m.text.length || Math.floor(t * 2) % 2 === 0) && t < t0 + 2.6 ? 1 : 0;
+    const q = ease(seg(t, t0 + 1.4, t0 + 1.9));
+    $('chip' + i).style.opacity = q; $('chip' + i).style.transform = 'scale(' + (0.92 + 0.08 * q) + ')';
+    $('arr' + i).style.opacity = q;
+  });
+  // ladder
+  STEPS.forEach((s, i) => {
+    const p = ease(seg(t, 15.5 + i * 0.35, 16.4 + i * 0.35));
+    $('col' + i).style.height = (s.h * p) + 'px';
+    $('col' + i).style.opacity = p > 0 ? 1 : 0;
+  });
+  const cp = ease(seg(t, 17.6, 18.4));
+  $('ceil').style.opacity = cp; $('ceil').style.bottom = (350 + 6 + (1 - cp) * 60) + 'px';
+  // bars
+  const bar = (id, w, text, a) => { const e = $(id); e.style.width = (w * ease(seg(t, a, a + 1.0))) + '%'; e.textContent = seg(t, a + 0.6, a + 1.0) > 0 ? text : ''; };
+  bar('b1', 95, 'Sonnet · medium  19 of 20', 21.0);
+  bar('b2', 95, 'Opus · high  19 of 20', 21.5);
+  bar('b3', 26, '1×', 22.6);
+  bar('b4', 95, 'Opus · high  3.6× the cost', 23.1);
+  // outro
+  const o = $('s5').querySelector('.cmds'); o.style.opacity = ease(seg(t, 25.6, 26.3));
+  $('s5').querySelector('.url').style.opacity = ease(seg(t, 26.1, 26.8));
+}
+window.render = render;
+window.DURATION = DURATION;
+render(0);
+</script>
+</body>
+</html>
