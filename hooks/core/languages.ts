@@ -318,8 +318,9 @@ export const MOVE_WHOLE = new RegExp(
     '(?:pasa|pasar|traslada|trasladar|lleva|llevar|migra|migrar|porta|portar|cambia|cambiar|reescribe|reescribir)[^.?!]{0,20}(?:toda|todo|todos|todas|entera|entero)',
     '(?:ganze|ganzen|gesamte|gesamten|komplette)[^.?!]{0,50} auf [^.?!]{1,40} um(?![a-z])',
     '(?:passe|migre|porte|bascule|convertis|deplace|reecris)[^.?!]{0,20}(?:tout|toute|tous|toutes|entier|entiere)',
-    '(?:переведи|перенеси|перепиши|мигрируй|перейди)[^.?!]{0,20}(?:весь|вся|все|всё|целиком|полностью)',
-    '(?:整个|全部|所有)[^。，]{0,25}(?:迁移|重写|移植)',
+    '(?:переведи|перенеси|перепиши|мигрируй|перейди|перевести|перенести|переписать|мигрировать|перейти|переехать)[^.?!]{0,30}(?:весь|вся|все|всё|целиком|полностью|проект)',
+    '(?:upgrade)[^.?!]{0,25}(?:whole|entire|all (?:the|our|of)|everything)',
+    '(?:整个|全部|所有)[^。，]{0,25}(?:迁移|重写|移植|升级)',
     '(?:整个|全部|所有)(?:前端|后端|项目|应用|产品|系统|代码库)[^。，]{0,25}(?:改成|换成|切换|转换)',
     '(?:全体|すべて|全て|丸ごと)[^。、]{0,30}(?:移行|書き直)',
     '(?:製品|プロジェクト|アプリ|システム|コード)全体[^。、]{0,40}(?:置き換|変え)',
@@ -389,3 +390,53 @@ export const STRUCTURE_I18N = [
 export const MONEY_I18N =['pago', 'zahlung', 'paiement', 'платеж', 'платёж', 'оплат', '支付', '付款', '決済', '支払']
 
 export const INTEGRATION_I18N = ['integracion', 'integra(?:r|lo)?(?![a-z])', 'integrier', 'integration', 'интеграц', '集成', '对接', '統合', '連携']
+
+// A fault that comes and goes, or shows on some devices only, said by a ratio or a place.
+export const ELUSIVE_MORE = [
+  'one (?:in|out of) (?:ten|[0-9]+)', '1 in [0-9]+', 'only on some (?:devices|phones|machines)', 'on some (?:samsung|android|iphone|huawei)', 'on some devices',
+  'bazi cihazlarda', 'on denemede bir',
+  'una de cada (?:diez|[0-9]+)', 'solo en algunos (?:dispositivos|moviles|equipos)',
+  'jedes (?:zehnte|[0-9]+\.?) mal', 'nur auf (?:manchen|einigen)', 'auf manchen [^.?!]{0,15}geraten',
+  'une fois sur (?:dix|[0-9]+)', 'sur certains (?:appareils|telephones)',
+  'раз из десяти|один раз из|только на некоторых', 'на некоторых [а-я]*(?:телефон|устройств)',
+  '十次[^，。]{0,3}一次', '[0-9]+次[^，。]{0,3}一次', '部分[^，。]{0,6}(?:手机|设备|机型)',
+  '[0-9]+回に[0-9]+回', '十回に一度', '一部の(?:端末|機種|デバイス)',
+]
+
+// Slowness told by size or place: a bottleneck, millions of rows, minutes or hours.
+export const HARD_MORE = [
+  'bottleneck', '(?:million|billion) (?:rows|records)', 'millions of (?:rows|records)', 'taking (?:minutes|hours)', 'takes (?:minutes|hours)',
+  'stolen', 'rotate (?:them|the |tokens?|keys?|secrets?)', 'upgrade (?:the )?(?:whole|entire)',
+  'dar bogaz', 'milyon (?:satir|kayit)',
+  'cuello de botella', 'tardan? (?:minutos|horas)', 'millones de (?:filas|registros)',
+  'flaschenhals|engpass', 'millionen (?:datensatz|zeilen|eintrag)', 'dauert [^.?!]{0,25}(?:sekunden|minuten|stunden)',
+  'goulot', 'millions de (?:lignes|enregistrements)', 'prend maintenant', 'mettait [0-9]+', 'heures alors que',
+  'узк[а-я]* мест', 'миллион[а-я]* (?:строк|записей)',
+  '瓶颈', '(?:万|亿)行', '要 ?[0-9]+ ?多秒', '(?:几十|四十)秒',
+  'ボトルネック', '時間かか', '終わらなく', 'データ増加',
+]
+
+// Not knowing the cause, suspecting, fearing: a weak sign of a hunt; and the
+// words of a login check in the languages whose lists stay weak on them.
+export const MAYBE_HARD_MORE = [
+  'not sure', 'no idea why', 'don.?t know (?:why|if|whether)', 'i suspect', 'worried', 'afraid',
+  'emin degilim', 'nedenini bilmiyorum', 'supheleniyorum', 'endiseliyim',
+  'no se si', 'no se por que', 'sospecho', 'temo(?![a-z])', 'no estoy segur', 'no entiendo por que', 'contrasena', 'token', 'jwt', 'sesion',
+  'ich weiss nicht', 'nicht sicher', 'ich vermute', 'ich furchte', 'woran es liegt', 'verstehe nicht warum', 'passwort', 'passworter', 'token', 'jwt', 'sitzung',
+  'je ne sais pas', 'je crains', 'je soupconne', 'pas sur', 'je ne comprends pas pourquoi', 'mots? de passe', 'token', 'jwt', 'session',
+  'не знаю', 'не понимаю', 'подозреваю', 'боюсь', 'не уверен', 'непонятно', 'в ч[её]м дело', 'парол', 'токен', 'jwt', 'сесси',
+  '不知道', '不确定', '怀疑', '担心', '不明白', '不清楚', '搞不懂', '怎么回事', '密码', '令牌', 'token', 'jwt', '会话', '鉴权',
+  '分からない', 'わからない', '不明', '怖い', '心配', 'っぽい', '疑', 'パスワード', 'トークン', 'jwt', 'セッション',
+]
+
+// Failing for the third, fourth or fifth time.
+export const REPEATED_MORE = [
+  '(?:third|fourth|fifth|3rd|4th|5th) (?:time|attempt|try)', 'for the (?:third|fourth|fifth) time',
+  '(?:ucuncu|dorduncu|besinci) (?:kez|deneme)',
+  '(?:tercera|cuarta|quinta) (?:vez|intento)', 'por (?:tercera|cuarta|quinta) vez',
+  'zum (?:dritten|vierten|funften) mal', '(?:dritten|vierten|funften) versuch',
+  '(?:troisieme|quatrieme|cinquieme) (?:fois|tentative)', 'pour la (?:troisieme|quatrieme|cinquieme) fois',
+  '(?:трет|четв[её]рт|пят)[а-я]* (?:попытк|раз)', 'в который раз',
+  '第[三四五六七八九十]次(?:尝试|修|试|了)', '第 ?[3-9] ?次(?:尝试|修|试|了)',
+  '[3-9]回目[^。]{0,8}(?:お願い|依頼|試|修正|直)', '(?:三|四|五)回目[^。]{0,8}(?:お願い|依頼|試|修正|直)',
+]

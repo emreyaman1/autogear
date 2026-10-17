@@ -139,6 +139,14 @@ const SMALL_ASKS: readonly string[] = [
   'すべてのタブをスペースに置き換えて',
   'アニメーションを速くして',
   'ボタンの色を青に変えて',
+  'añade el token al header de la petición',
+  'ändere den Platzhalter im Passwort-Feld',
+  'change le texte du champ mot de passe',
+  'измени подпись у поля пароль',
+  '把密码输入框的提示改成请输入密码',
+  'パスワード欄のラベルを変えて',
+  'rename the session variable to currentSession',
+  'make the loading text "not sure yet" gray',
 ]
 
 // The fourth set, written by another model that was not shown the rules

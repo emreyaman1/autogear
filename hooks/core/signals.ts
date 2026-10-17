@@ -127,6 +127,7 @@ const ELUSIVE_WORDS = [
   'kok neden', 'root cause', 'bazen', 'rastgele', 'ara sira', 'arada bir', 'sometimes', 'randomly', 'intermittent',
   'flaky', 'donuyor', 'cokuyor', 'takiliyor', 'tutarsiz', 'inconsistent',
   ...words.ELUSIVE_I18N,
+  ...words.ELUSIVE_MORE,
 ]
 
 const ELUSIVE = cues(ELUSIVE_WORDS)
@@ -140,6 +141,7 @@ const HARD = cues([
   'performans', 'performance', 'yavas', 'slow', 'hizlandir', 'speed up', 'latency', 'optimiz', 'optimis', 'olcekle', 'scalab',
   'guvenli[kg]?', 'security', 'zafiyet', 'vulnerab', 'injection', 'xss', 'csrf',
   ...words.HARD_I18N,
+  ...words.HARD_MORE,
   ...words.SLOW_I18N,
   ...words.CAUSE_I18N,
   ...ELUSIVE_WORDS,
@@ -153,6 +155,7 @@ const MAYBE_HARD = cues([
   'derinlemesine', 'in depth', 'deep dive', 'yol haritasi', 'roadmap', 'yetkilendirme', 'authoriz', 'kimlik dogrula',
   'authenticat', 'should i', 'alternatif', 'alternative', 'baska (?:bir )?yol', 'another way',
   ...words.MAYBE_HARD_I18N,
+  ...words.MAYBE_HARD_MORE,
 ])
 
 // "yapmalıyız", "nasıl tasarlamalıyım": a suffix, so no cue (cues match at a
@@ -202,6 +205,7 @@ const REPEATED_FAILURE = cues([
   'for days', 'for hours', 'for (?:a |two |several )?weeks?(?![a-z])', 'keeps? (?:failing|breaking)', 'nothing works', 'tried everything',
   'for [0-9]+ (?:days?|hours?|weeks?|months?)', 'every attempt', 'each attempt',
   ...words.REPEATED_FAILURE_I18N,
+  ...words.REPEATED_MORE,
 ])
 
 const SCOPE = cues([
