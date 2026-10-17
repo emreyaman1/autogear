@@ -1,6 +1,7 @@
 // Reads a prompt and guesses how much model it needs: a tier from 0 (trivial)
 // to 4 (critical), the reasons, and whether the rules are sure of it.
 
+import * as words from './languages'
 import type { Effort, Family } from './models'
 import { toTier, type Tier } from './tiers'
 
@@ -48,12 +49,30 @@ export const withoutNotes = (text: string): string => text.replace(SYSTEM_NOTE, 
 
 const FOLD: Record<string, string> = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u' }
 
-// Lowercases and folds Turkish letters, so "Çalışmıyor" and "calismiyor" read alike.
+// Other Latin letters that have no accent to take off.
+const LATIN_EXTRA: Record<string, string> = { ß: 'ss', æ: 'ae', œ: 'oe', ø: 'o', ł: 'l', đ: 'd' }
+
+// Lowercases and folds Turkish letters, so "Çalışmıyor" and "calismiyor" read alike;
+// other Latin accents come off the same way ("café", "über", "señor").
 export function normalize(text: string): string {
   return text
     .toLowerCase()
     .replace(/̇/g, '')
     .replace(/[çğıöşüâîû]/g, letter => FOLD[letter] ?? letter)
+    .replace(/[à-ɏ]/g, letter => LATIN_EXTRA[letter] ?? letter.normalize('NFD').replace(/[̀-ͯ]/g, ''))
+}
+
+// Chinese, Japanese and Korean run on without spaces.
+const CJK_RUN = /([぀-ヿ㐀-鿿가-힯]+)/g
+
+// The prompt with its Chinese, Japanese and Korean runs set apart, so that a
+// sentence is not one "word" that happens to hold a file name.
+const spaced = (raw: string): string => raw.replace(CJK_RUN, ' $1 ')
+
+// How long a prompt reads: a Chinese, Japanese or Korean character says as
+// much as a few Latin ones.
+export function weight(text: string): number {
+  return text.length + 2 * (text.match(CJK_RUN)?.join('').length ?? 0)
 }
 
 // A token that is code, a path or an identifier, not words: `add(a, b)`,
@@ -65,7 +84,7 @@ const EDGE_PUNCTUATION = /^["'“”‘’([]+|["'“”‘’)\],.:;!?]+$/g
 // The prompt's prose: code and names in it carry words ("add", "test",
 // "DATABASE") that say nothing about how hard the work is.
 export function prose(raw: string): string {
-  return raw
+  return spaced(raw)
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`[^`\n]*`/g, ' ')
     .replace(/\{[^{}]*\}/g, ' ')
@@ -81,7 +100,7 @@ type Cue = { word: string; pattern: RegExp }
 // needs ("hata", "hatayı", "hatası"); stems stop before a consonant that
 // mutates ("özelli" for özellik/özelliği, "ren[kg]" for renk/rengi).
 function cues(words: readonly string[]): readonly Cue[] {
-  return [...new Set(words)].map(word => ({ word, pattern: new RegExp(`(?:^|[^a-z0-9])(?:${word})`) }))
+  return [...new Set(words)].map(word => ({ word, pattern: new RegExp(`(?:^|[^a-z0-9а-яё])(?:${word})`) }))
 }
 
 // The cue as a reason shows it: its regex syntax taken out.
@@ -99,7 +118,7 @@ function found(list: readonly Cue[], text: string): string[] {
   return list.filter(cue => cue.pattern.test(text)).map(cue => label(cue.word))
 }
 
-const word = (source: string): RegExp => new RegExp(`(?:^|[^a-z0-9])(?:${source})`)
+const word = (source: string): RegExp => new RegExp(`(?:^|[^a-z0-9а-яё])(?:${source})`)
 
 // Failures whose cause has to be hunted down: they come and go, lock up, leak,
 // or show far from where they start.
@@ -107,6 +126,7 @@ const ELUSIVE_WORDS = [
   'race condition', 'deadlock', 'kilitlen', 'memory leak', 'sizinti',
   'kok neden', 'root cause', 'bazen', 'rastgele', 'ara sira', 'arada bir', 'sometimes', 'randomly', 'intermittent',
   'flaky', 'donuyor', 'cokuyor', 'takiliyor', 'tutarsiz', 'inconsistent',
+  ...words.ELUSIVE_I18N,
 ]
 
 const ELUSIVE = cues(ELUSIVE_WORDS)
@@ -119,6 +139,9 @@ const HARD = cues([
   'eszamanli', 'ayni anda', 'concurren', 'thread.?safe',
   'performans', 'performance', 'yavas', 'slow', 'hizlandir', 'speed up', 'latency', 'optimiz', 'optimis', 'olcekle', 'scalab',
   'guvenli[kg]?', 'security', 'zafiyet', 'vulnerab', 'injection', 'xss', 'csrf',
+  ...words.HARD_I18N,
+  ...words.SLOW_I18N,
+  ...words.CAUSE_I18N,
   ...ELUSIVE_WORDS,
 ])
 
@@ -129,6 +152,7 @@ const MAYBE_HARD = cues([
   'pros and cons', 'trade.?off', 'arastir', 'investigat', 'incele', 'nasil calisiyor', 'how does', 'kapsamli',
   'derinlemesine', 'in depth', 'deep dive', 'yol haritasi', 'roadmap', 'yetkilendirme', 'authoriz', 'kimlik dogrula',
   'authenticat', 'should i', 'alternatif', 'alternative', 'baska (?:bir )?yol', 'another way',
+  ...words.MAYBE_HARD_I18N,
 ])
 
 // "yapmalıyız", "nasıl tasarlamalıyım": a suffix, so no cue (cues match at a
@@ -147,40 +171,53 @@ const AGENTIC = cues([
 // Asking for a plan: how to go about the work, before doing it. Carrying out a
 // plan ("planı uygula") is not this.
 const PLANNING = word(
-  'plan (?:yap|cikar|hazirla|olustur|kur)|planla(?!n)|yol haritasi|roadmap|nasil (?:yapalim|ilerleyelim|ilerlemeliyiz)|adim adim (?:plan|yol haritasi)|(?:make|write|draft|propose) (?:a |an )?(?:plan|implementation plan)|plan (?:out|for|the|how)(?![a-z])|how should we (?:approach|do|implement|build|structure|tackle)',
+  [...words.PLANNING_I18N, ...words.STRUCTURE_I18N].join('|') + '|plan (?:yap|cikar|hazirla|olustur|kur)|planla(?!n)|yol haritasi|roadmap|nasil (?:yapalim|ilerleyelim|ilerlemeliyiz)|adim adim (?:plan|yol haritasi)|(?:make|write|draft|propose) (?:a |an )?(?:plan|implementation plan)|plan (?:out|for|the|how)(?![a-z])|how should we (?:approach|do|implement|build|structure|tackle)',
 )
 
 // Asking for a look into something: work of its own, which Haiku may not call trivial.
 const INVESTIGATE = word('incele|arastir|investigat|look into')
 
 // A choice between options: "Redux mı Zustand mı", "geçmeli miyiz".
-const DECISION = word('[a-z]+ mi [a-z]+ mi(?![a-z])|should we|which (?:one )?(?:is|would be) better|hangisi daha|versus|vs\\.?(?![a-z])')
+const DECISION = word(
+  '[a-z]+ mi [a-z]+ mi(?![a-z])|should we|which (?:one )?(?:is|would be) better|hangisi daha|versus|vs\\.?(?![a-z])|' + words.DECISION_I18N.join('|'),
+)
 
-const WHY = word('neden|niye|nicin|sebep|sebeb|why')
-const HUNT = word('bul|find|figure out|arastir|investigat|incele|tespit|anla|understand|debug')
-const FAILURE = word('hata|error|fail|crash|cok|don|takil|bozul|broken|yanlis|wrong|duplicate|cift|iki kez|twice|kayb|lost|null|undefined|yavas|slow')
+const WHY = word('neden|niye|nicin|sebep|sebeb|why|' + words.WHY_I18N.join('|'))
+const HUNT = word('bul|find|figure out|arastir|investigat|incele|tespit|anla|understand|debug|' + words.HUNT_I18N.join('|'))
+const FAILURE = word(
+  'hata|error|fail|crash|cok|don|takil|bozul|broken|yanlis|wrong|duplicate|cift|iki kez|twice|kayb|lost|null|undefined|yavas|slow|' + words.FAILURE_I18N.join('|'),
+)
 
 // "X'ten Y'ye taşı/geçir", "migrate ... from X to Y".
 const MIGRATION = new RegExp(
   "'?(?:ten|tan|den|dan)\\s+[^,.;]{0,40}?'?(?:ye|ya|e|a)\\s+(?:gec|tasi|cevir|donustur|aktar)|(?:migrat|convert|rewrite)[^.]{0,60}from [^.]{1,40} to |(?:^|[^a-z])migrat",
 )
-const WHOLE = word('uygulama(?:yi|nin)?(?![a-z])|tum|butun|proje(?:yi|nin)?(?![a-z])|codebase|whole|entire|the app(?![a-z])|our app|her sey')
+const WHOLE = word(
+  'uygulama(?:yi|nin)?(?![a-z])|tum|butun|proje(?:yi|nin)?(?![a-z])|codebase|whole|entire|the app(?![a-z])|our app|her sey|all our|all the|' + words.WHOLE_I18N.join('|'),
+)
 
 const REPEATED_FAILURE = cues([
   '(?:gun|hafta|ay|saat)(?:ler|lar)?d[iu]r(?![a-z])', 'gundur', 'defalarca', 'kac (?:kere|defa|kez)', 'her denemede',
   'her seferinde', 'bir turlu', 'tekrar tekrar', 'hicbir sey ise yaramadi', 'her yer bozul', 'again and again',
   'for days', 'for hours', 'for (?:a |two |several )?weeks?(?![a-z])', 'keeps? (?:failing|breaking)', 'nothing works', 'tried everything',
+  'for [0-9]+ (?:days?|hours?|weeks?|months?)', 'every attempt', 'each attempt',
+  ...words.REPEATED_FAILURE_I18N,
 ])
 
 const SCOPE = cues([
   'complete', 'full(?:-| )?(?:stack|featured)', 'entire', 'whole', 'bastan sona', 'sifirdan', 'eksiksiz', 'komple',
   'from scratch', 'end.to.end', 'uctan uca',
+  ...words.SCOPE_I18N,
 ])
 
-const DESIGN = word('tasarla|design|architect|planla|kurgula')
-const SYSTEM = word('sistem|system|sema|schema|veritaban|database|mimari|architecture|api|yapi|altyapi|infrastructure|servis|service')
-const MONEY = word('odeme|payment|stripe|iyzico|paypal|fatura|billing')
-const INTEGRATION = word('entegr|integrat|webhook')
+const DESIGN = word('tasarla|design|architect|planla|kurgula|' + words.DESIGN_I18N.join('|'))
+const SYSTEM = word(
+  'sistem|system|sema|schema|veritaban|database|mimari|architecture|api|yapi|altyapi|infrastructure|servis|service|permission|role model|access model|data model|rbac|' +
+    words.SYSTEM_I18N.join('|'),
+)
+const MONEY = word('odeme|payment|stripe|iyzico|paypal|fatura|billing|' + words.MONEY_I18N.join('|'))
+const INTEGRATION = word('entegr|integrat|webhook|' + words.INTEGRATION_I18N.join('|'))
+const PREVENT = word(words.PREVENT_I18N.join('|'))
 
 // What a feature is made of; its verbs are the ADD ones.
 const FEATURE = cues([
@@ -195,11 +232,13 @@ const FEATURE = cues([
   'arayuz', 'debounce', 'throttle', 'retry', 'yeniden dene', 'cubu[kg]', 'bar(?![a-z])', 'spinner', 'modal', 'popup',
   'tooltip', 'dropdown', 'menu', 'sekme', 'progress', 'ilerleme', 'banner', 'toast', 'badge', 'grafik', 'chart',
   'animasyon', 'animation', 'yukle(?:me|rken|nen)',
+  ...words.FEATURE_I18N,
 ])
 
 const ADD = cues([
   'ekle', 'add(?:s|ed|ing)?(?![a-z])', 'olustur', 'create', 'implement', 'build', 'gelistir', 'develop', 'yaz(?![a-z])',
   'yaz[ai]', 'write', 'entegre', 'integrate', 'destekle', 'goster', 'display',
+  ...words.ADD_I18N,
 ])
 
 const CHANGE = cues([
@@ -220,6 +259,7 @@ const TRIVIAL = cues([
   'commit mesaji', 'commit message', 'commit', 'push', 'yazim hata', 'typo', 'formatla', 'prettier', 'girinti',
   'indent', 'yorum ekle', 'yorum satiri', 'add (?:a )?comments?', 'yeniden adlandir',
   'adini [^,.]{0,30}(?:yap|degistir|olarak)', 'rename',
+  ...words.TRIVIAL_I18N,
 ])
 
 // Questions about code already in view.
@@ -228,17 +268,19 @@ const QUESTION = cues([
   'anlat(?:ir mi|abilir|in)?(?![a-z])', 'ozetle', 'ozet(?![a-z])', 'ne degisti',
   'hangi dosya', 'nerede', 'kac tane', 'what does', 'what is', 'what.?s', 'explain', 'summari[sz]', 'how many',
   'where is', 'which file', 'what changed',
+  ...words.QUESTION_I18N,
 ])
 
-const LIST = word('listele|goster|show|list(?![a-z])|neler var|ne var')
+const LIST = word('listele|goster|show|list(?![a-z])|neler var|ne var|' + words.LIST_I18N.join('|'))
 const INFO = word(
-  'dosya|file|klasor|folder|dizin|director|script|todo|yorum|comment|log(?![a-z])|loglar|degisiklik|diff|commit|branch|bagimlilik|dependenc|paket|package|route|fonksiyon|function|sinif|class',
+  'dosya|file|klasor|folder|dizin|director|script|todo|yorum|comment|log(?![a-z])|loglar|degisiklik|diff|commit|branch|bagimlilik|dependenc|paket|package|route|fonksiyon|function|sinif|class|variable|' + words.INFO_I18N.join('|'),
 )
 
 const CONVERSION = /(?:typescript|javascript|python|kotlin|swift|go(?:lang)?|rust|java)(?:'?[a-z]{0,3})?\s+(?:cevir|donustur)|convert[^.]{0,40}to (?:typescript|javascript|python)/
 
 const TEST_WRITE = word(
-  '(?:test|birim test|unit test|entegrasyon test|integration test)[a-z]*[^.?!]{0,40}(?:yaz|write|ekle|add|olustur|create)|(?:write|add|create)[^.?!]{0,30}tests?(?![a-z])',
+  '(?:test|birim test|unit test|entegrasyon test|integration test)[a-z]*[^.?!]{0,40}(?:yaz|write|ekle|add|olustur|create)|(?:write|add|create)[^.?!]{0,30}tests?(?![a-z])|' +
+    words.TEST_WRITE_I18N.join('|'),
 )
 
 // Tests meant to catch what nobody knows is broken yet: edge cases, a module's
@@ -250,14 +292,17 @@ const TEST_HUNT = word(
 // What makes a bug report clear: the error itself, where it happens, a number
 // to go on, when it happens, what should happen instead. "bu çalışmıyor,
 // düzelt" has none; "tarayıcı açıldığında konsolda hata veriyor" says when.
-const EXPECTED = word('olmali|olmasi gerek|beklen|bekliyor|gerekiyor|yerine|expected|should|instead|supposed to')
-const WHEN = /[a-z]{2,}(?:[iu]nca|[iu]nce|d[iu]g[iu]nd[ae]|t[iu]g[iu]nd[ae]|ken)(?![a-z])|(?:^|[^a-z])(?:when|whenever|after|while|once)(?![a-z])/
+const EXPECTED = word('olmali|olmasi gerek|beklen|bekliyor|gerekiyor|yerine|expected|should|instead|supposed to|' + words.EXPECTED_I18N.join('|'))
+const WHEN = new RegExp(
+  '[a-z]{2,}(?:[iu]nca|[iu]nce|d[iu]g[iu]nd[ae]|t[iu]g[iu]nd[ae]|ken)(?![a-z])|(?:^|[^a-z])(?:when|whenever|after|while|once)(?![a-z])|' + words.WHEN_I18N,
+)
 
 // Past this length a report has room to say what is wrong, though it may not.
 const VAGUE_LENGTH = 120
 
 const DEBUG = word(
-  'hata(?:si|yi)? (?:veriyor|aliyorum|cikiyor|firlatiyor|donuyor)|kiriliyor|patliyor|calismiyor|calismadi|bozuk|fail(?:s|ed|ing)?(?![a-z])|broken|exception|crash|[45]\\d\\d hatasi|error',
+  'hata(?:si|yi)? (?:veriyor|aliyorum|cikiyor|firlatiyor|donuyor)|kiriliyor|patliyor|calismiyor|calismadi|bozuk|fail(?:s|ed|ing)?(?![a-z])|broken|exception|crash|[45]\\d\\d hatasi|error|' +
+    words.DEBUG_I18N.join('|'),
 )
 
 // Something that should be on screen, or should happen, is not: "düğme
@@ -272,13 +317,16 @@ const FRUSTRATION = cues([
   'istedigim (?:bu|gibi) degil', 'istedigim (?:sey(?:i)? )?(?:bu degil|olmamis|olmadi)', 'istedigim gibi (?:olmamis|olmadi)',
   'yapmamissin', 'yanlis anla', 'anlamamissin', 'still', 'same error', 'doesn.?t work', 'does not work', 'didn.?t work',
   'not working', 'wrong', 'broken', 'that.?s not', 'not what i',
+  ...words.FRUSTRATION_I18N,
 ])
 
 // "o tuş çıkmadı yine", "hâlâ görünmüyor": it did not happen, again.
 const AGAIN = /[a-z]{2,}(?:ma|me)(?:di|du) (?:yine|gene)(?![a-z])|(?:yine|gene|hala) [a-z]{2,}(?:ma|me)(?:di|du)(?![a-z])|hala [a-z]{2,}(?:mi|mu)yor/
 
-const ACK =
-  /^(?:evet|tamam|tamamdir|ok|okay|okey|olur|devam|peki|aynen|guzel|super|harika|tesekkur|sagol|eyvallah|uygula|yap|onayladim|onayliyorum|onaylandi|kabul|yes|yep|yeah|sure|go|continue|proceed|thanks|thank you|lgtm)(?![a-z])/
+const ACK = new RegExp(
+  '^(?:evet|tamam|tamamdir|ok|okay|okey|olur|devam|peki|aynen|guzel|super|harika|tesekkur|sagol|eyvallah|uygula|yap|onayladim|onayliyorum|onaylandi|kabul|yes|yep|yeah|sure|go|continue|proceed|thanks|thank you|lgtm|' +
+    `${words.ACK_LATIN})(?![a-z])|^(?:${words.ACK_CYRILLIC})(?![а-я])|^(?:${words.ACK_CJK})(?=\\s|$)`,
+)
 
 // "sonraki iki bölümü de yap", "onu da yap", "kalanları da hallet": more of the
 // work in hand, at its tier.
@@ -286,8 +334,10 @@ const MORE_OF_THE_SAME =
   /^(?:simdi |peki |tamam |o zaman )?(?:sonraki|kalan(?:lar)?(?:i|ini)?|geri kalan(?:lar)?(?:i|ini)?|diger(?:ler)?(?:i|ini)?|digerlerini|devami(?:ni)?|aynisini|bunu ?da|onu ?da|onlari ?da|hepsini)(?![a-z])[^.?!]{0,60}?(?:^|\s)(?:yap|et|hallet|bitir|tamamla|uygula|devam)(?:in|iver|ar misin|abilir misin)?(?![a-z])/
 
 // A greeting and nothing else: "merhaba", "merhba", "selam", "hi".
-const GREETING =
-  /^(?:mer?h?a?b+a+|mrb|slm|selam(?:lar)?|selamun aleykum|gunaydin|iyi (?:gunler|aksamlar|geceler)|hey|hi|hello|naber|nasilsin)(?:\s+(?:claude|dostum|abi|hocam))?[\s!.,?]*$/
+const GREETING = new RegExp(
+  '^(?:mer?h?a?b+a+|mrb|slm|selam(?:lar)?|selamun aleykum|gunaydin|iyi (?:gunler|aksamlar|geceler)|hey|hi|hello|naber|nasilsin|' +
+    `${words.GREETING_I18N})(?:\\s+(?:claude|dostum|abi|hocam))?[\\s!.,?]*$`,
+)
 
 const ERROR_OUTPUT =
   /traceback \(most recent call last\)|\b\w*(?:error|exception)\b:|\berr!|^\s+at \S.*:\d+(?::\d+)?\)?\s*$|segmentation fault|panic:|exit code [1-9]|failed to compile|stack ?trace|uncaught|unhandled|\bhata:/im
@@ -350,9 +400,17 @@ export function parseOverrides(text: string): ParsedPrompt {
   return rest.trim() === '' ? { text, tokens: [] } : { text: rest, override, tokens }
 }
 
+// The words of a prompt with the punctuation gone: Latin letters and digits,
+// and the letters of the scripts the cues read.
+const plainText = (text: string): string =>
+  text
+    .replace(/[^a-z0-9\sЀ-ӿ぀-ヿ㐀-鿿가-힯]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
 // "evet, devam" carries the last tier on; "tamam ama testleri de yaz" asks for new work.
 function isFollowup(text: string): boolean {
-  const plain = text.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  const plain = plainText(text)
   const asksMore = found(FEATURE, plain).length > 0 || found(HARD, plain).length > 0 || TEST_WRITE.test(plain)
 
   return plain.length <= 40 && ACK.test(plain) && !asksMore
@@ -422,7 +480,7 @@ const hunt = (result: RuleResult, kind: Hunt = 'located'): RuleResult => ({ ...r
 
 function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachments = false }: RuleContext): RuleResult {
   const text = normalize(prose(raw))
-  const length = raw.trim().length
+  const length = weight(raw.trim())
   const rule = (
     tier: number,
     confidence: RuleResult['confidence'],
@@ -440,7 +498,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   if (/(?:^|[^a-z])ultrathink/.test(normalize(raw))) {
     return rule(4, 'high', ['"ultrathink"'])
   }
-  const plain = text.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  const plain = plainText(text)
   if (GREETING.test(plain)) {
     return rule(0, 'high', ['selamlaşma'], 'greeting')
   }
@@ -472,10 +530,10 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   const hasError = ERROR_OUTPUT.test(raw)
   const files = countFiles(raw)
   const items = raw.match(LIST_ITEM)?.length ?? 0
-  const parts = (rest.match(/,/g)?.length ?? 0) + (rest.match(/\s(?:ve|and|ile)\s/g)?.length ?? 0)
+  const parts = (rest.match(/,/g)?.length ?? 0) + (rest.match(words.JOINERS)?.length ?? 0)
   const isLong = length > 1200
   const isShort = length <= 200
-  const isMigration = MIGRATION.test(rest)
+  const isMigration = MIGRATION.test(rest) || words.MIGRATION_I18N.test(rest) || words.MOVE_FROM_TO.test(rest)
   const isWide = isLong || files >= 3
 
   // T4: long, many-sided work, or work that has already failed again and again.
@@ -483,7 +541,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   if (again.length > 0) {
     return rule(4, 'high', [`tekrarlayan başarısızlık: ${quote(again)}`])
   }
-  if (isMigration && WHOLE.test(rest)) {
+  if ((isMigration && WHOLE.test(rest)) || words.MOVE_WHOLE.test(rest)) {
     return rule(4, 'high', ['bütün uygulamanın taşınması'])
   }
   const scope = found(SCOPE, rest)
@@ -509,6 +567,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   const agentic = found(AGENTIC, rest)
   if (agentic.length > 0) {
     return rule(3, 'high', [`uzun, çok adımlı iş: ${quote(agentic)}`])
+  }
+  if (PREVENT.test(rest)) {
+    return rule(3, 'high', ['bir sorunu önleme ya da ele alma sorusu'])
   }
   if (DECISION.test(rest) || SHOULD_WE.test(rest)) {
     return rule(3, 'high', ['seçenekler arasında karar'])
@@ -541,7 +602,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   if (hasError) {
     return rule(2, 'high', ['hata çıktısı'])
   }
-  if (DEBUG.test(rest)) {
+  if (DEBUG.test(rest.replace(words.ERROR_MESSAGE_PHRASE, ' '))) {
     // "bu çalışmıyor, düzelt": no error, no place, no number, nothing said of
     // what should happen. A screenshot may say it all, so one beside it is not this.
     const isVague =

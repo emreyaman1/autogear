@@ -8,6 +8,8 @@ import { JA } from '../eval/i18n/ja'
 import { RU } from '../eval/i18n/ru'
 import { TR } from '../eval/i18n/tr'
 import { ZH } from '../eval/i18n/zh'
+import { HELD, HELD_TEXTS } from '../eval/i18n/held'
+import { HELD2, HELD2_TEXTS } from '../eval/i18n/held2'
 import { DEV, FRESH, HOLDOUT, type Case } from '../eval/prompts'
 import { classify } from '../hooks/core/signals'
 
@@ -43,7 +45,7 @@ describe('the classifier in other languages (rules alone)', () => {
         severe += isSevere ? 1 : 0
         unsure += got.confidence === 'low' ? 1 : 0
         // One line per prompt for eval/haiku.mjs --languages, which asks Haiku where the rules are unsure.
-        console.log(`MLJSON ${JSON.stringify({ language, text, tier: source.tier, prevTier: source.prevTier, got: got.tier, confidence: got.confidence, kind: got.kind, floor: got.floor })}`)
+        console.log(`MLJSON ${JSON.stringify({ language, text, tier: source.tier, prevTier: source.prevTier, got: got.tier, confidence: got.confidence, kind: got.kind, floor: got.floor, forced: got.reasons.some(reason => reason.startsWith('Türkçe ya da İngilizce değil')) })}`)
         if (isSevere) {
           misses.push(`T${source.tier}→T${got.tier}${got.confidence === 'low' ? '?' : ''}  ${text.replace(/\n/g, ' ').slice(0, 70)}`)
         }
@@ -57,4 +59,90 @@ describe('the classifier in other languages (rules alone)', () => {
       }
     })
   }
+})
+
+// Two more sets, each in every language. HELD was written before the rules
+// were tuned for the languages and its misses were looked at once; HELD2 was
+// written after, with other wording, and is read once and never tuned on: it is
+// the score to trust (eval/i18n/held.ts, held2.ts).
+const HELD_SETS: readonly { name: string; cases: readonly Case[]; texts: Record<string, readonly string[]> }[] = [
+  { name: 'HELD', cases: HELD, texts: HELD_TEXTS },
+  { name: 'HELD2', cases: HELD2, texts: HELD2_TEXTS },
+]
+
+describe('the classifier on prompts it was not tuned on (rules alone)', () => {
+  for (const { name, cases, texts: byLanguage } of HELD_SETS) {
+    for (const [language, texts] of Object.entries(byLanguage)) {
+      test(`${name} ${language}: every prompt scored against its label`, () => {
+        expect(texts.length).toBe(cases.length)
+        let exact = 0
+        let within1 = 0
+        let severe = 0
+        const misses: string[] = []
+        texts.forEach((text, index) => {
+          const source = cases[index]
+          if (source === undefined) {
+            return
+          }
+          const got = classify(text, source.prevTier === undefined ? {} : { prevTier: source.prevTier })
+          const gap = got.tier - source.tier
+          exact += gap === 0 ? 1 : 0
+          within1 += Math.abs(gap) <= 1 ? 1 : 0
+          const isSevere = gap <= -2 || (source.tier >= 3 && got.tier <= 1)
+          severe += isSevere ? 1 : 0
+          // One line per prompt for eval/haiku.mjs --held.
+          console.log(`HELDJSON ${JSON.stringify({ set: name, language, text, tier: source.tier, prevTier: source.prevTier, got: got.tier, confidence: got.confidence, kind: got.kind, floor: got.floor, forced: got.reasons.some(reason => reason.startsWith('Türkçe ya da İngilizce değil')) })}`)
+          if (isSevere) {
+            misses.push(`T${source.tier}→T${got.tier}${got.confidence === 'low' ? '?' : ''}  ${text.replace(/\n/g, ' ').slice(0, 60)}`)
+          }
+        })
+        const n = texts.length
+        const pct = (value: number): string => `${Math.round((100 * value) / n)}%`
+        console.log(`${name} ${language}: n=${n} exact=${pct(exact)} within1=${pct(within1)} severe=${severe} (${pct(severe)})`)
+        for (const miss of misses) {
+          console.log(`  ${language} ${miss}`)
+        }
+      })
+    }
+  }
+})
+
+// Words that mean hard work in one sentence are harmless in another: none of
+// these small asks may reach T3, in any language.
+const SMALL_ASKS: readonly string[] = [
+  'replace all the tabs with spaces',
+  'make the animation faster',
+  'move the button from the left to the right',
+  'cut the video in half',
+  'tüm sekmeleri boşlukla değiştir',
+  'animasyonu daha hızlı yap',
+  'mueve el botón de la izquierda a la derecha',
+  'sustituye todos los tabs por espacios',
+  'pon el texto a la mitad de la pantalla',
+  'haz la animación más rápida',
+  'cambia el color del botón a azul',
+  'ersetze alle Tabs durch Leerzeichen',
+  'mach die Animation schneller',
+  'ändere die Schriftfarbe auf Grau',
+  'schreib den Titel in Großbuchstaben',
+  "remplace tous les onglets par des espaces",
+  "rends l'animation plus rapide",
+  'passe le titre en gras',
+  'замени все табы на пробелы',
+  'сделай анимацию быстрее',
+  'измени цвет кнопки на синий',
+  'переименуй переменную в total',
+  '把所有制表符替换成空格',
+  '让动画更快一点',
+  '把按钮的颜色改成蓝色',
+  'すべてのタブをスペースに置き換えて',
+  'アニメーションを速くして',
+  'ボタンの色を青に変えて',
+]
+
+describe('small asks stay small in every language', () => {
+  test('no small ask reaches T3', () => {
+    const risen = SMALL_ASKS.filter(text => classify(text).tier >= 3).map(text => `T${classify(text).tier}  ${text}`)
+    expect(risen).toEqual([])
+  })
 })

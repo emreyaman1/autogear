@@ -5,6 +5,8 @@
 //   node eval/haiku.mjs
 //   node eval/haiku.mjs --languages   the same prompts in eight languages (tests/multilingual.test.ts),
 //                                      gearbox as it runs: Haiku asked only where the rules are unsure
+//   node eval/haiku.mjs --held        the two sets kept apart (eval/i18n/held.ts, held2.ts), the same way,
+//                                      and a way that asks Haiku only where the rules are unsure of themselves
 //
 // The first run spends a little usage: one short Haiku call per prompt.
 
@@ -21,12 +23,19 @@ function rulePredictions() {
   }
   const sets = { dev: [], holdout: [], fresh: [] }
   const languages = {}
+  const held = {}
   let current = 'dev'
   for (const line of output.split('\n')) {
     const multilingual = line.indexOf('MLJSON ')
     if (multilingual >= 0) {
       const row = JSON.parse(line.slice(multilingual + 7))
       ;(languages[row.language] ??= []).push(row)
+      continue
+    }
+    const heldRow = line.indexOf('HELDJSON ')
+    if (heldRow >= 0) {
+      const row = JSON.parse(line.slice(heldRow + 9))
+      ;((held[row.set] ??= {})[row.language] ??= []).push(row)
       continue
     }
     const header = /EVAL (dev|holdout|fresh):/.exec(line)
@@ -38,7 +47,7 @@ function rulePredictions() {
     }
   }
 
-  return { sets, languages }
+  return { sets, languages, held }
 }
 
 // Haiku's answer as the router takes it (hooks/core/settle.ts withHaiku): where
@@ -60,6 +69,9 @@ const POLICIES = {
   'basitse teyit, yüksek olan': row =>
     row.confidence === 'low' || row.got <= 1 ? { tier: Math.max(row.got, row.haiku), asked: true } : { tier: row.got, asked: false },
   'her zaman, yüksek olan': row => ({ tier: Math.max(row.got, row.haiku), asked: true }),
+  // Haiku asked only where the rules are unsure of themselves, not where a foreign language alone made them so.
+  'kurallar emin, dil yabancı diye sorma': row =>
+    row.confidence === 'low' && !row.forced ? { tier: heldHaiku(row), asked: true } : { tier: row.got, asked: false },
 }
 
 function score(rows, policy) {
@@ -81,7 +93,33 @@ function score(rows, policy) {
 }
 
 const cache = readCache()
-const { sets, languages } = rulePredictions()
+const { sets, languages, held } = rulePredictions()
+
+if (process.argv.includes('--held')) {
+  const unsure = Object.values(held)
+    .flatMap(byLanguage => Object.values(byLanguage).flat())
+    .filter(row => row.confidence === 'low')
+  const unique = [...new Map(unsure.map(row => [cacheKey(row), row])).values()]
+  const { asked, spent, failed } = await askMissing(unique, cache).catch(error => {
+    console.error(error instanceof Error ? error.message : String(error))
+    process.exit(1)
+  })
+  for (const [name, byLanguage] of Object.entries(held)) {
+    console.log(`
+${name}`)
+    for (const [language, rows] of Object.entries(byLanguage)) {
+      for (const row of rows) {
+        row.haiku = cache[cacheKey(row)] ?? row.got
+      }
+      console.log(`${language.padEnd(3)} n=${rows.length}  kurallar ${score(rows, POLICIES['sadece kurallar'])}`)
+      console.log(`${''.padEnd(10)}gearbox  ${score(rows, POLICIES['emin değilse Haiku, sınırlı'])}`)
+      console.log(`${''.padEnd(10)}yalnız emin değilse  ${score(rows, POLICIES['kurallar emin, dil yabancı diye sorma'])}`)
+    }
+  }
+  console.log(`
+${asked} yeni Haiku çağrısı (${failed} başarısız), API liste fiyatıyla $${spent.toFixed(3)}`)
+  process.exit(0)
+}
 
 if (process.argv.includes('--languages')) {
   const unsure = Object.values(languages)
@@ -97,6 +135,7 @@ if (process.argv.includes('--languages')) {
     }
     console.log(`${language.padEnd(3)} n=${rows.length}  kurallar ${score(rows, POLICIES['sadece kurallar'])}`)
     console.log(`${''.padEnd(10)}gearbox  ${score(rows, POLICIES['emin değilse Haiku, sınırlı'])}`)
+    console.log(`${''.padEnd(10)}yalnız emin değilse  ${score(rows, POLICIES['kurallar emin, dil yabancı diye sorma'])}`)
   }
   console.log(`\n${asked} yeni Haiku çağrısı (${failed} başarısız), API liste fiyatıyla $${spent.toFixed(3)}`)
   process.exit(0)
