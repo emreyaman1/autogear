@@ -23,11 +23,14 @@ export type RuleResult = {
   override?: Override
   // The least Haiku may answer for it, where the rules saw a sure sign of work.
   floor?: Tier
-  // A hunt: a bug described without detail or whose cause hides (it comes and
-  // goes, it shows far from where it starts), or tests written to catch bugs
-  // nobody has found yet. Strong models need more effort on these, not less.
-  isHunt?: true
+  // A hunt, worked at more effort, not less: "vague", a bug told without
+  // detail ("bu çalışmıyor, düzelt"); "located", a bug whose cause hides (it
+  // comes and goes, it shows far from where it starts) but which is told
+  // plainly, or tests written to catch bugs nobody has found yet.
+  hunt?: Hunt
 }
+
+export type Hunt = 'vague' | 'located'
 
 export type RuleContext = {
   // The tier of the previous prompt in this session.
@@ -379,7 +382,7 @@ export function classify(raw: string, context: RuleContext = {}): RuleResult {
   return result
 }
 
-const hunt = (result: RuleResult): RuleResult => ({ ...result, isHunt: true })
+const hunt = (result: RuleResult, kind: Hunt = 'located'): RuleResult => ({ ...result, hunt: kind })
 
 function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachments = false }: RuleContext): RuleResult {
   const text = normalize(prose(raw))
@@ -508,7 +511,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
     const isVague =
       files === 0 && !hasCode(raw) && !/\d/.test(rest) && !EXPECTED.test(rest) && !WHEN.test(rest) && length <= VAGUE_LENGTH && !hasAttachments
 
-    return isVague ? hunt(rule(3, 'high', ['belirsiz anlatılmış hata'])) : rule(2, 'high', ['hata ayıklama'])
+    return isVague ? hunt(rule(3, 'high', ['belirsiz anlatılmış hata']), 'vague') : rule(2, 'high', ['hata ayıklama'])
   }
   if (SYMPTOM.test(rest)) {
     return rule(2, 'high', ['bir şey olması gerektiği gibi olmuyor'])

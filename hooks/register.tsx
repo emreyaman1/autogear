@@ -256,7 +256,7 @@ async function decideTurn(
     if (state.last === undefined) {
       return undefined
     }
-    const kept = decide({ ...common, tier: state.last.tier, source: 'inherit', reasons: ['kullanıcı mesajı yok: son seçim'], isHunt: state.last.isHunt === true })
+    const kept = decide({ ...common, tier: state.last.tier, source: 'inherit', reasons: ['kullanıcı mesajı yok: son seçim'], hunt: state.last.hunt })
     await showWarning($, state, kept, e)
 
     return remember($, state, e.turnId, { ...kept, ceilingModel: e.model })
@@ -275,8 +275,8 @@ async function decideTurn(
   state.carryFailure = false
   state.task = settled.task
   // A go-ahead in the middle of a hunt carries it on at its effort.
-  const isHunt = rule.isHunt === true || (rule.source === 'inherit' && state.last?.isHunt === true)
-  const decision = decide({ ...common, tier: settled.tier, source: settled.source, reasons: settled.reasons, override: rule.override, isHunt })
+  const hunt = rule.hunt ?? (rule.source === 'inherit' ? state.last?.hunt : undefined)
+  const decision = decide({ ...common, tier: settled.tier, source: settled.source, reasons: settled.reasons, override: rule.override, hunt })
   await showWarning($, state, decision, e)
 
   return remember($, state, e.turnId, { ...decision, ceilingModel: e.model, prompt: taken.text })

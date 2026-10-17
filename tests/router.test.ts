@@ -164,6 +164,15 @@ test('a bug told without detail goes to Opus at high, and a go-ahead in its midd
   expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
 })
 
+test('a bug whose cause hides but is told plainly goes to Sonnet at high', async ($, on) => {
+  const { sent } = world(on)
+  await say($, 'uygulama bazen donuyor, neden olduğunu bul')
+  await step($, 't1', 0, 'claude-opus-5-5', 'max')
+  expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
+  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-sonnet-5-5', ...ZERO } })
+  expect(done.text).toContain('yeri belli hata avı: Sonnet')
+})
+
 test('a nearly full window keeps hard work on Opus and warns under the answer and in the band', async ($, on) => {
   const resetsAt = new Date(NOW + 2 * 3_600_000).toISOString()
   const { sent } = world(on, { rateLimits: [{ kind: 'five_hour', percentUsed: 92, resetsAt }] })

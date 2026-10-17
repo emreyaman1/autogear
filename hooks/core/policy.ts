@@ -5,7 +5,7 @@
 
 import { effortRank, FAMILIES, FAMILY_NAMES, familyRank, shiftEffort, type Effort, type Family } from './models'
 import type { Pace } from './pacing'
-import type { Override } from './signals'
+import type { Hunt, Override } from './signals'
 import { tierSpec, type ProfileId, type Tier } from './tiers'
 
 // What the picker holds: the most the router may spend unasked.
@@ -26,8 +26,8 @@ export type Decision = {
   isShadow?: true
   // A rate-limit window under pressure when the choice was made: warned about, never acted on.
   limit?: Pace
-  // Made for a hunt (signals.ts): a go-ahead in its middle keeps the effort.
-  isHunt?: true
+  // Made for a hunt (signals.ts): a go-ahead in its middle keeps its route.
+  hunt?: Hunt
   // What the work asked for before the picker's ceiling; set only when the ceiling cut it.
   wanted?: { family: Family; effort: Effort }
   // Chosen in plan mode, by the plan-mode rule.
@@ -48,8 +48,8 @@ export type PolicyInput = {
   allowHaiku: boolean
   // Families a request has already failed on this session.
   unavailable?: readonly Family[]
-  // A bug described without detail or whose cause hides, or tests written to catch bugs.
-  isHunt?: boolean
+  // A bug described without detail, or one whose cause hides, or tests written to catch bugs.
+  hunt?: Hunt
   // The session is in plan mode, as the engine's plan-mode note says.
   isPlanning?: boolean
 }
@@ -63,9 +63,13 @@ export const STICKY_CONTEXT_TOKENS = 40_000
 const SURPLUS_TIER = 3
 const SURPLUS_TOP: Effort = 'xhigh'
 
-// A hunt runs at this effort at least: a misleading bug went 6 of 6 on Opus at
-// high against 4 of 6 on Sonnet at medium, and a vaguely described one 0 of 2 there.
+// A vague hunt runs on its tier's model (Opus at T3) at high at least: a bug
+// told without detail went 0 of 2 on Sonnet at medium in the public
+// measurement. A located one runs on Sonnet at high, xhigh at T4: in our own
+// comparison Sonnet at medium already passed every such task that Opus at high
+// did (the person's call, 17 October 2026, to be checked on harder tasks).
 const HUNT_EFFORT: Effort = 'high'
+const LOCATED_EFFORT = (tier: Tier): Effort => (tier >= 4 ? 'xhigh' : 'high')
 
 // In plan mode every request goes to Opus, at an effort by the plan's size as
 // the tier reads it: a small plan medium, a middling one high, a large
@@ -87,6 +91,12 @@ export function decide(input: PolicyInput): Decision {
   }
   if (isPlanning) {
     reasons.push('plan modu: Opus, efor planın büyüklüğüne göre')
+  }
+  // A model or tier the person named, or plan mode, outranks a hunt's route.
+  const isLocated = input.hunt === 'located' && !isPlanning && override?.family === undefined && override?.tier === undefined
+  if (isLocated && familyRank(family) > familyRank('sonnet')) {
+    family = 'sonnet'
+    reasons.push('yeri belli hata avı: Sonnet')
   }
   const isDeliberate = override !== undefined || input.source === 'escalate' || isPlanning
   const isLargeContext = (input.contextTokens ?? 0) >= STICKY_CONTEXT_TOKENS
@@ -110,9 +120,10 @@ export function decide(input: PolicyInput): Decision {
   // The effort a family gets for this work: the table's, at least high on a
   // hunt, one step more with room left before a reset.
   const effortFor = (target: Family): { effort: Effort; notes: string[] } => {
-    let effort = override?.effort ?? (isPlanning && target === 'opus' ? PLAN_EFFORT[tier] : spec.effort[target])
+    const base = isPlanning && target === 'opus' ? PLAN_EFFORT[tier] : isLocated && target === 'sonnet' ? LOCATED_EFFORT(tier) : spec.effort[target]
+    let effort = override?.effort ?? base
     const notes: string[] = []
-    if (input.isHunt === true && override?.effort === undefined && effortRank(effort) < effortRank(HUNT_EFFORT)) {
+    if (input.hunt !== undefined && override?.effort === undefined && effortRank(effort) < effortRank(HUNT_EFFORT)) {
       effort = HUNT_EFFORT
       notes.push(`hata avı: efor ${HUNT_EFFORT}`)
     }
@@ -158,7 +169,7 @@ export function decide(input: PolicyInput): Decision {
     isClamped,
     ...(wanted === undefined ? {} : { wanted }),
     ...(isPressed ? { limit: input.pace } : {}),
-    ...(input.isHunt === true ? { isHunt: true as const } : {}),
+    ...(input.hunt === undefined ? {} : { hunt: input.hunt }),
     ...(isPlanning ? { isPlanning: true as const } : {}),
   }
 }

@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer, zor işler yine güçlü modelle yapılır.
 
-> Durum: 0.8.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.8.2. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Ne sağlar
 
@@ -96,10 +96,11 @@ mesaj ─► sınıfla ─► yerleştir ─► karar  ─► uygula    ─► c
 | T1 rutin | net, tek yerlik değişiklik | Sonnet · medium |
 | T2 standart | özellik, onun testleri, hata çıktısı elde olan debug | Sonnet · medium |
 | T3 zor | mimari, performans, güvenlik, seçenekler arasında karar | Opus · medium |
-| T3 hata avı | ayrıntısız anlatılmış hata ("bu çalışmıyor, düzelt"), bazen olup bazen olmayan ya da sebebinden uzakta görünen hata, henüz kimsenin bulmadığı hataları yakalayacak test yazma | Opus · high |
+| T3 belirsiz hata avı | ayrıntısız anlatılmış hata ("bu çalışmıyor, düzelt"): hata çıktısı, dosya, sayı, ne zaman olduğu ve ekran görüntüsü yok | Opus · high |
+| T3 yeri belli hata avı | açık anlatılmış ama sebebi saklı hata (bazen olup bazen olmayan, sebebinden uzakta görünen), henüz kimsenin bulmadığı hataları yakalayacak test yazma | Sonnet · high (T4'te xhigh) |
 | T4 kritik | çok adımlı büyük iş, tekrarlayan başarısızlık | Opus · high |
 
-Profiller: `tasarruf` (Pro için), `dengeli` ve `kalite` daha cömert harcar, Max planları içindir. Her profilde net anlatılmış rutin ve standart iş Sonnet · medium ile, hata avı en az high eforla çalışır; hiçbir kademe sen istemedikçe (`+max`, "max ile") max ile çalışmaz. Dayanağı: gerçek Python projelerinde gizli testlerle yapılmış açık bir ölçümde (Forn AI, 4 Ekim 2026) Sonnet · medium yeri belli 13 hatanın 13'ünü Opus · high'ın üçte bir maliyetine çözdü, net işte Sonnet'in eforunu artırmak işe yaramadı; hata çıktısının yanlış dosyayı gösterdiği hatada Opus · high 6/6, Sonnet · medium 4/6, aynı hata belirsiz anlatılınca Sonnet 0/2; 22 gizli hatayı yakalaması gereken test yazımında Opus · high 22/22, Sonnet 16–19. Bunların bir kısmı 2–6 denemeye dayanıyor; tablo bir başlangıç, gearbox'ın kendi kıyas ölçümü doğrulayacak.
+Profiller: `tasarruf` (Pro için), `dengeli` ve `kalite` daha cömert harcar, Max planları içindir. Her profilde net anlatılmış rutin ve standart iş Sonnet · medium ile, belirsiz hata avı Opus · high ile, yeri belli olanı Sonnet · high ile çalışır; hiçbir kademe sen istemedikçe (`+max`, "max ile") max ile çalışmaz. Dayanağı: gerçek Python projelerinde gizli testlerle yapılmış açık bir ölçümde (Forn AI, 4 Ekim 2026) Sonnet · medium yeri belli 13 hatanın 13'ünü Opus · high'ın üçte bir maliyetine çözdü, net işte Sonnet'in eforunu artırmak işe yaramadı; hata çıktısının yanlış dosyayı gösterdiği hatada Opus · high 6/6, Sonnet · medium 4/6, aynı hata belirsiz anlatılınca Sonnet 0/2; 22 gizli hatayı yakalaması gereken test yazımında Opus · high 22/22, Sonnet 16–19. Bunların bir kısmı 2–6 denemeye dayanıyor; tablo bir başlangıç, gearbox'ın kendi kıyas ölçümü doğrulayacak. O kıyasta (Ölçümler) Sonnet · medium, Opus · high'ın geçtiği her hata avını geçti; bu yüzden yeri belli hata avı artık daha yüksek eforla Sonnet'e gidiyor. Belirsiz olanı, daha zor görevler aksini gösterene kadar Opus'ta kalıyor.
 
 Bir hata bildirimi şunlardan birini içeriyorsa net sayılır: hata çıktısı, dosya adı, kod, bir sayı, ne zaman olduğu ("tıklayınca ...") ya da ne olması gerektiği; yanındaki ekran görüntüsü de sayılır.
 
@@ -166,7 +167,7 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 | **Kurallar + emin değilse Haiku, kuralın işaretine bağlı (0.6)** | **%88** | **%100** | **0** | **%19** |
 | Her zaman Haiku, yüksek olan | %74 | %96 | 0 | %100 |
 
-143 etiketli mesajın, yalnızca kurallarla ve seçici Opus · high iken nereye gittiği (0.8, `tasarruf`; `claude plugin test .` bunu `EVAL route` satırında yazar): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Opus · medium 26, T3 hata avı Opus · high 10, T4 Opus · high 13. 0.7'ye kadar 33 standart mesaj Sonnet · high ile, 10 hata avı Opus · medium ile çalışıyordu; kademelerin kendisi değişmedi.
+143 etiketli mesajın, yalnızca kurallarla ve seçici Opus · high iken nereye gittiği (0.8, `tasarruf`; `claude plugin test .` bunu `EVAL route` satırında yazar): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Opus · medium 26, T3 yeri belli hata avı Sonnet · high 10, T4 Opus · high 13. 0.7'ye kadar 33 standart mesaj Sonnet · high ile, 10 hata avı Opus · medium ile çalışıyordu; kademelerin kendisi değişmedi.
 
 \* Zor bir işi (T3+) T0/T1'e ya da iki kademe aşağı koymak. Not: ayardan önce ayrılan kümenin hataları bir kez görüldü ve yeni kümedeki hatalar "emin değilse sor" eşiğini etkiledi; gerçek isabet bir miktar düşük olabilir. 0.6'nın sınırı burada bir mesaja mal oluyor ("bu import neden kullanılıyor?" artık T0 değil T1) ve aşağıdaki gerçek kullanım hatalarını önleyen de o.
 

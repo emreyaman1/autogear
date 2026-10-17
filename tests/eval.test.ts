@@ -71,7 +71,7 @@ describe('classifier quality', () => {
 // What each labelled prompt would run on, by the rules alone, under an Opus ·
 // high picker with calm windows: the effort table measured on the same sets.
 describe('routes of the labelled prompts', () => {
-  test('clear work runs on Sonnet at medium, hunts at high, and nothing at max', () => {
+  test('clear work runs on Sonnet at medium, vague hunts on Opus at high, located ones on Sonnet at high, nothing at max', () => {
     const all = [...DEV, ...HOLDOUT, ...FRESH]
     for (const profile of PROFILE_IDS) {
       const routes = new Map<string, number>()
@@ -87,16 +87,19 @@ describe('routes of the labelled prompts', () => {
           ceiling: { family: 'opus', effort: 'high' },
           pace: { level: 'normal' },
           allowHaiku: true,
-          isHunt: rule.isHunt === true,
+          hunt: rule.hunt,
         })
-        const route = `T${decision.tier} ${FAMILY_NAMES[decision.family]}·${decision.effort}${rule.isHunt === true ? ' (av)' : ''}`
+        const route = `T${decision.tier} ${FAMILY_NAMES[decision.family]}·${decision.effort}${rule.hunt === undefined ? '' : ` (av: ${rule.hunt === 'vague' ? 'belirsiz' : 'yeri belli'})`}`
         routes.set(route, (routes.get(route) ?? 0) + 1)
-        hunts += rule.isHunt === true ? 1 : 0
+        hunts += rule.hunt === undefined ? 0 : 1
         if (decision.tier >= 1 && decision.tier <= 2 && decision.family === 'sonnet') {
           expect(decision.effort).toBe('medium')
         }
-        if (rule.isHunt === true && decision.family === 'opus') {
+        if (rule.hunt === 'vague' && decision.family === 'opus') {
           expect(decision.effort).toBe('high')
+        }
+        if (rule.hunt === 'located') {
+          expect(decision).toMatchObject({ family: 'sonnet', effort: decision.tier >= 4 ? 'xhigh' : 'high' })
         }
       }
       const table = [...routes.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([route, count]) => `${route} ${count}`)
