@@ -15,7 +15,8 @@ import { familyOf, runClaude } from './claude.mjs'
 const CASES = [
   { prompt: 'bu fonksiyon ne yapıyor? function add(a, b) { return a + b }', expect: 'haiku' },
   { prompt: '+opus merhaba, tek kelimeyle selam ver', expect: 'opus' },
-  { prompt: 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır. Tek cümleyle cevap ver.', expect: 'opus' },
+  // Hard work runs on Sonnet in tasarruf (0.9.0); Opus only for critical work, plan mode and when asked.
+  { prompt: 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır. Tek cümleyle cevap ver.', expect: 'sonnet' },
 ]
 
 const plugin = process.argv[2]

@@ -5,6 +5,7 @@
 // blink when it stood down. Pressing is left to the buttons beside it.
 
 import type { GearboxMode } from '../../types'
+import { L } from './text'
 
 export const BADGE_HEIGHT = 22
 
@@ -12,7 +13,21 @@ export const BADGE_HEIGHT = 22
 // slate, stood down amber (its choices stopped taking effect).
 export const BADGE_COLORS: Record<GearboxMode, string> = { auto: '#16a34a', shadow: '#7c3aed', pin: '#64748b', down: '#d97706' }
 
-export const BADGE_NAMES: Record<GearboxMode, string> = { auto: 'AÇIK', shadow: 'GÖLGE', pin: 'KAPALI', down: 'DURDU' }
+// Getters, so a name is read in the language in use when it is drawn.
+export const BADGE_NAMES: Record<GearboxMode, string> = {
+  get auto() {
+    return L('ON', 'AÇIK')
+  },
+  get shadow() {
+    return L('SHADOW', 'GÖLGE')
+  },
+  get pin() {
+    return L('OFF', 'KAPALI')
+  },
+  get down() {
+    return L('STOPPED', 'DURDU')
+  },
+}
 
 const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
 

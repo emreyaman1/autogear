@@ -2,6 +2,7 @@
 
 import { FAMILIES } from './models'
 import { emptyTotals, type Bucket, type Totals } from './savings'
+import { asLangSetting, type LangSetting } from './text'
 import { PROFILE_IDS, type ProfileId } from './tiers'
 
 export type Settings = {
@@ -18,9 +19,11 @@ export type Settings = {
   footer: boolean
   // Show the on/off band above the prompt?
   band: boolean
+  // The language gearbox speaks: auto follows the system's.
+  lang: LangSetting
 }
 
-export const DEFAULTS: Settings = { mode: 'auto', profile: 'tasarruf', allowHaiku: true, askHaiku: true, footer: true, band: true }
+export const DEFAULTS: Settings = { mode: 'auto', profile: 'tasarruf', allowHaiku: true, askHaiku: true, footer: true, band: true, lang: 'auto' }
 
 // What is kept for good: the turn and dollar totals, how often the prompt
 // chose the model, and when counting began.
@@ -44,6 +47,7 @@ export function readSettings(stored: unknown): Settings {
     askHaiku: flag(value.askHaiku, DEFAULTS.askHaiku),
     footer: flag(value.footer, DEFAULTS.footer),
     band: flag(value.band, DEFAULTS.band),
+    lang: asLangSetting(value.lang),
   }
 }
 
@@ -84,8 +88,11 @@ export function readStats(stored: unknown): Stats {
 const ON = new Set(['ac', 'acik', 'on', 'evet', '1'])
 const OFF = new Set(['kapa', 'kapat', 'kapali', 'off', 'hayir', '0'])
 
+// The English names of the profiles; the stored ids stay the Turkish ones.
+const PROFILE_ALIASES: Record<string, ProfileId> = { saver: 'tasarruf', balanced: 'dengeli', quality: 'kalite' }
+
 // What `/gear <verb> <value>` asks for: new settings, the status, or the help.
-export function applyCommand(settings: Settings, verb: string, value: string): Settings | 'status' | 'savings' | 'journal' | 'mark' | 'reset' | 'help' {
+export function applyCommand(settings: Settings, verb: string, value: string): Settings | 'status' | 'savings' | 'journal' | 'mark' | 'reset' | 'doctor' | 'help' {
   const isOn = ON.has(value) ? true : OFF.has(value) ? false : undefined
   switch (verb) {
     case '':
@@ -106,9 +113,11 @@ export function applyCommand(settings: Settings, verb: string, value: string): S
     case 'sifirla':
     case 'reset':
       return 'reset'
+    case 'on':
     case 'oto':
     case 'auto':
       return { ...settings, mode: 'auto' }
+    case 'off':
     case 'sabitle':
     case 'sabit':
     case 'pin':
@@ -118,7 +127,7 @@ export function applyCommand(settings: Settings, verb: string, value: string): S
       return { ...settings, mode: 'shadow' }
     case 'profil':
     case 'profile': {
-      const profile = PROFILE_IDS.find(id => id === value)
+      const profile = PROFILE_IDS.find(id => id === value) ?? PROFILE_ALIASES[value]
 
       return profile === undefined ? 'help' : { ...settings, profile }
     }
@@ -127,12 +136,19 @@ export function applyCommand(settings: Settings, verb: string, value: string): S
     case 'sor':
     case 'ask':
       return isOn === undefined ? 'help' : { ...settings, askHaiku: isOn }
+    case 'note':
     case 'not':
     case 'footer':
       return isOn === undefined ? 'help' : { ...settings, footer: isOn }
     case 'bant':
     case 'band':
       return isOn === undefined ? 'help' : { ...settings, band: isOn }
+    case 'doctor':
+    case 'doktor':
+      return 'doctor'
+    case 'lang':
+    case 'dil':
+      return value === 'en' || value === 'tr' || value === 'auto' ? { ...settings, lang: value } : 'help'
     default:
       return 'help'
   }

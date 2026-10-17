@@ -16,7 +16,7 @@ Automatic gear shifting for Claude Code. For every message gearbox picks the mod
   ```
   ⚙ Haiku 5.5 · low · T0 önemsiz (kural: soru: "ne yapiyor") · önbellek 0 okundu / 100.0K yazıldı · $0,013 (seçici modeliyle $0,020)
   ```
-- **A savings counter.** The status text at the bottom right carries the session's saving, and `/gear tasarruf` draws a card with the details.
+- **A savings counter.** The status text at the bottom right carries the session's saving, and `/gear savings` draws a card with the details.
 
 ## Install
 
@@ -38,7 +38,7 @@ claude plugin marketplace add C:\gearbox
 claude plugin install gearbox@gearbox
 ```
 
-It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295 and 2.1.299). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build gearbox does not load at all and cannot say why; 2.1.278 refuses 0.7 as well as 0.8. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
+It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295 and 2.1.299; the live smoke test passed on 2.1.299). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build gearbox does not load at all and cannot say why; 2.1.278 refuses 0.7 as well as 0.8. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
 
 ## Using it
 
@@ -46,13 +46,13 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 
 **The state row.** A small row above the prompt shows what gearbox is doing: a badge reads **AÇIK** (on, green), **GÖLGE** (shadow, violet), **KAPALI** (off, gray) or **DURDU** (stood down, amber; see Safety nets). Its dot moves a little to say what gearbox is doing: a soft pulse while it routes, a slow breath in shadow mode, still when off, a slow blink when stood down; with "reduce motion" set in your system it stays still. Beside it stands the last choice ("Sonnet · medium · T1 rutin"; in shadow mode what gearbox would have picked), or before one, what the state means. Beside it are buttons for the other states, each named for what a press does: **aç** (turn on), **gölgeye al** (shadow mode), **kapat** (turn off); stood down, **yeniden dene** (try again). When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving. While a rate-limit window is nearly full or spent too fast, the row also shows a warning (see Pace below).
 
-**Shadow mode.** `/gear golge` lets gearbox choose without applying the choice: every request goes out as the picker says, and gearbox writes what it would have picked under each answer (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) and in its log. The picker is the ceiling here too; when it cut the choice, both are written: `⚙ gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium`, so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear yanlis` still marks its choices. `/gear oto` turns routing back on.
+**Shadow mode.** `/gear shadow` lets gearbox choose without applying the choice: every request goes out as the picker says, and gearbox writes what it would have picked in its log and on the state row (`Haiku · low · T0 would choose`). The line under the answer says only which model answered. The picker is the ceiling here too; when it cut the choice, both are written to the log (`Sonnet · high (without the ceiling Opus · high)`), so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear wrong` still marks its choices. `/gear on` turns routing back on.
 
-**Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. gearbox sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") counts as hard work (T3). The line under the answer and the log say `plan modu`.
+**Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. gearbox sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") counts as hard work (T3). The line under the answer says `plan mode` and the log says so too.
 
 **A clean conversation (0.10, first version).** Every step of a turn sends the whole conversation again, so a large one costs more on every message. When the conversation is past 150K tokens and a piece of work has just finished (a commit or push, or a passing test run), the row above the prompt offers a clean one: `Devir notu hazırlanıyor…` while the note is written, then `Devir notu hazır · sohbet 180 bin token` with **temiz sohbet**, **notu gör** and **×**. The offer stays while you write on, until you press one of them or a newer note replaces it. gearbox has the model write a short hand-over note (project, last commit, what was done, what is open, your rules, what to read); **notu gör** shows it, **temiz sohbet** runs `/clear` and sends the note, unseen, with your next message. Nothing is cleared unless you press it, and the old conversation stays on disk: the note ends with the `claude --resume` line that opens it again. Tried once in a real conversation: the offer and the note work; the **temiz sohbet** press has not been tried there yet.
 
-**Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). Writing `ultrathink` means T4.
+**Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap` (T0), `+deep` (T4). Writing `ultrathink` means T4.
 
 Or say it in words: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, sen de bak", "use opus" pick the model, and the effort when one is named, for that message. Talking about a model ("haiku ile yaptı", "opus pahalı mı?") picks nothing. A choice made in words, like a token, may go above the picker.
 
@@ -61,19 +61,25 @@ Or say it in words: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, se
 | Command | Does |
 |---|---|
 | `/gear` | status, last decision and reason, limits, statistics, this list |
-| `/gear tasarruf` | the savings card (see below) |
-| `/gear kayit` | the log of gearbox's latest decisions and the doubtful ones |
-| `/gear yanlis zayif\|fazla` | mark the latest decision: model too weak, or more than the work needed |
-| `/gear sifirla` | reset the savings counter and the log |
-| `/gear oto` / `/gear sabitle` | turn gearbox on / off (off: the picker's model is used) |
-| `/gear golge` | shadow mode: choose and write it down, apply nothing |
-| `/gear profil tasarruf\|dengeli\|kalite` | which tier table to use |
-| `/gear haiku aç\|kapa` | may trivial work go to Haiku |
-| `/gear sor aç\|kapa` | may the rules ask Haiku when unsure |
-| `/gear not aç\|kapa` | the line under each answer |
-| `/gear bant aç\|kapa` | the state row above the prompt |
+| `/gear savings` | the savings card (see below) |
+| `/gear log` | the log of gearbox's latest decisions and the doubtful ones |
+| `/gear wrong weak\|strong` | mark the latest decision: model too weak, or more than the work needed |
+| `/gear reset` | reset the savings counter and the log |
+| `/gear on` / `/gear off` | turn gearbox on / off (off: the picker's model is used) |
+| `/gear shadow` | shadow mode: choose and write it down, apply nothing |
+| `/gear profile saver\|balanced\|quality` | which tier table to use |
+| `/gear haiku on\|off` | may trivial work go to Haiku |
+| `/gear ask on\|off` | may the rules ask Haiku when unsure |
+| `/gear note on\|off` | the line under each answer |
+| `/gear band on\|off` | the state row above the prompt |
+| `/gear lang en\|tr\|auto` | the language gearbox speaks; auto follows the system's |
+| `/gear doctor` | checks the setup and says what to fix: state, picker, Claude Code version, whether choices are applied, the store, limits, language, and the environment settings that can pin effort or the helpers' model |
 
-(`aç` = on, `kapa` = off, `oto` = auto, `sabitle` = pin, `sifirla` = reset.)
+The commands are English whatever the language. The old Turkish names (`oto`, `sabitle`, `golge`, `tasarruf`, `kayit`, `yanlis zayif|fazla`, `sifirla`, `profil tasarruf|dengeli|kalite`, `sor`, `not`, `bant` with `aç`/`kapa`) go on working.
+
+**Language.** gearbox speaks English or Turkish. `auto` (the default) follows the system's language, Turkish on a Turkish system and English elsewhere; Claude Code's own `language` setting is not offered to a Mod, so it is not read. `/gear lang en` or `tr` sets it by hand. The commands, the tags and the model names stay as they are; the rules that read your messages understand eight languages whatever this is set to.
+
+**The line under every answer.** Every answer, with gearbox on, in shadow or off, ends with one italic line naming the model that answered, as the API reports it, and the effort it was asked at: *Opus 5.5 · effort medium*. When helpers (subagents) ran, their models follow: *Opus 5.5 · effort medium · helpers: Sonnet 5.5*. Plan mode and a limit warning are added beside it. `/gear note off` takes it away. What gearbox read in the message, why it chose, and the money are in `/gear`, `/gear log` and `/gear savings`.
 
 ## How it works
 
@@ -89,7 +95,7 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
 3. **Decide** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): the tier maps to a model and effort through a profile, then passes two limits and a look at the rate-limit windows:
    - **Ceiling:** never above the picker's model and effort.
    - **Cache:** a model switch makes the new model read the whole conversation once at its cache-write price (the old model's cache is not lost: on a subscription it lives an hour, renewed on each read). So with a large context (40K+ tokens) gearbox never steps down to a cheaper model, since that one write costs more than the saving (Sonnet writes at $2.50 a million tokens where Opus reads its cache at $0.20; Haiku past 100K tokens pays five times its price): a commit in a long Opus conversation stays on Opus at low effort. A step up of one tier keeps the model as well; two tiers or more, or off Haiku, switches. In a small conversation every message goes to its own model.
-   - **Pace:** a rate-limit window never lowers the model or the effort: finishing the work matters more than the window. When the 5-hour or weekly window is at 90% or more, or spent faster than an even pace (30%+ used and 20 points ahead), the line under the answer and the state row carry a warning instead (`⚠ 5 saatlik limit %92: bu iş Opus · high ile yapılıyor, limit dolabilir`). If a window is nearly over with at most half used, hard and critical work (T3 and up) gets one step more effort, never as far as max and never above the picker. Standard work is left as it is: on clearly described work more effort did not help in the measurements behind the tier table.
+   - **Pace:** a rate-limit window never lowers the model or the effort: finishing the work matters more than the window. When the 5-hour or weekly window is at 90% or more, or spent faster than an even pace (30%+ used and 20 points ahead), the line under the answer and the state row carry a warning instead (`⚠ 5-hour limit 92%: this work runs on Opus · high, the limit may run out`). If a window is nearly over with at most half used, hard and critical work (T3 and up) gets one step more effort, never as far as max and never above the picker. Standard work is left as it is: on clearly described work more effort did not help in the measurements behind the tier table.
 4. **Apply** (`hooks/register.tsx`, `turn.step`): right before each model request. All requests of a turn use the same model, so the turn keeps its cache. Subagents are left alone.
 5. **Verify** (`turn.complete`): the API names the model that really answered; it is compared with the choice (see Safety nets).
 6. **Count** (`hooks/core/savings.ts`): the turn's real tokens are priced twice, once on the model that answered and once on the picker's model, and added to the session's and the lifetime totals.
@@ -112,10 +118,10 @@ A bug report counts as clear when it holds the error, a file, code, a number, th
 
 The classifier numbers below were measured on labels we wrote. To see how gearbox does on your own work, it keeps a log of its decisions on your machine: the start of each message (100 characters), the tier, the model and effort that answered, what gearbox wanted when the picker cut it, the source of the choice, what the turn cost, and what happened next. The last 200 are kept.
 
-- `/gear kayit` shows the latest 25 as a table, the tiers used, and the **doubtful decisions**: those the work itself called into question (you complained and gearbox moved up a tier; the tests or build failed at the end of the turn) and those you marked.
-- When a decision was wrong, say so right after the answer: `/gear yanlis zayif` (the model was too weak) or `/gear yanlis fazla` (stronger than the work needed). The mark lands on the latest message.
+- `/gear log` shows the latest 25 as a table, the tiers used, and the **doubtful decisions**: those the work itself called into question (you complained and gearbox moved up a tier; the tests or build failed at the end of the turn) and those you marked.
+- When a decision was wrong, say so right after the answer: `/gear wrong weak` (the model was too weak) or `/gear wrong strong` (stronger than the work needed). The mark lands on the latest message.
 - The doubtful share is a floor: a wrong choice nobody noticed is not counted. With a few days of use it shows which kinds of message the rules get wrong, which is where to tune next.
-- `/gear sifirla` clears the log. It never leaves your machine.
+- `/gear reset` clears the log. It never leaves your machine.
 
 ## Savings
 
@@ -123,14 +129,14 @@ The classifier numbers below were measured on labels we wrote. To see how gearbo
 
 - The line under each answer: this turn's cost and what it would have cost on the picker's model.
 - The status text at the bottom right: the session's total saving.
-- `/gear tasarruf`: a card drawn in the transcript with
+- `/gear savings`: a card drawn in the transcript with
   - two bars, the saving this session and in total, each with its share of the picker's bill;
   - the share of each model, as a bar and a legend;
   - a table per model: turns, input, output, cache read, cache write, cache hit rate, spend, spend on the picker's model, saving;
   - the 5-hour and weekly rate-limit windows.
 
   On a narrow screen the table becomes one line per model. Where a surface cannot draw the card, the same figures come as a markdown table. Both read the same stored totals.
-- `/gear sifirla` starts the count again. The totals live in the plugin's store on your machine, and the date counting began is on the card.
+- `/gear reset` starts the count again. The totals live in the plugin's store on your machine, and the date counting began is on the card.
 
 **How it is computed.** Each turn's real token counts (input, output, cache read, cache write) times the list price of the model that answered, against the same tokens times the list price of the picker's model. The prices are in `hooks/core/prices.ts`:
 
@@ -152,7 +158,7 @@ Dollars per million tokens. A Haiku prompt over 100K tokens costs five times as 
 
 ## Safety nets
 
-- **Self-check:** after every turn it compares the model the API says answered with the one it chose. If 3 turns in a row differ (a Claude Code update changed the plugin API), it switches itself off and tells you; `/gear oto` tries again.
+- **Self-check:** after every turn it compares the model the API says answered with the one it chose. If 3 turns in a row differ (a Claude Code update changed the plugin API), it switches itself off and tells you; `/gear on` tries again.
 - **Fallback model:** if a chosen model gives no answer (retired id, not on your plan), the request is re-sent on the picker's model and the failed one is avoided for the session.
 - **Snowball brake:** if a turn done on a cheap model ends with failing tests or build, the next turn goes one tier up. Complaints ("still broken") also raise the tier, two tiers on the second in a row.
 - **Version notice:** one notice when Claude Code is newer than the version gearbox was tested on (`hooks/core/version.ts`).
@@ -284,6 +290,8 @@ What it shows, the unflattering part first:
 | `hooks/core/settle.ts` | how the rules, Haiku's answer and the work in hand settle a tier |
 | `hooks/core/savings.ts` | per-model totals, the saving, the markdown report |
 | `hooks/core/settings.ts` | stored settings and statistics, `/gear` parsing |
+| `hooks/core/text.ts` | the words gearbox says, in English and Turkish, and the language choice |
+| `hooks/core/doctor.ts` | `/gear doctor`: the checks and their advice |
 | `hooks/core/switch.ts` | the drawing of the state badge |
 | `hooks/core/version.ts` | the newest Claude Code version it was tested on |
 | `tests/` | rules, policy, prices and savings; the router against a mock engine; the classifier eval |
@@ -315,9 +323,9 @@ The last two call real models and spend usage; Haiku answers are cached under `e
 **Developing without making yourself the test.** A new version goes through four steps, each before the next, and only the last touches real work:
 
 1. Offline: `claude plugin test .` (rules, policy, router, the eval sets) and `node eval/external.mjs` (the external benchmarks, free; `--haiku` adds Haiku's answers for a little usage).
-2. In shadow mode (`/gear golge`) on real work: gearbox chooses and writes down, the picker's model answers.
+2. In shadow mode (`/gear shadow`) on real work: gearbox chooses and writes down, the picker's model answers.
 3. `node scripts/harvest.mjs` gathers those choices from the transcripts into `eval/.work/harvest.json`; labelled, they become a real-use set to replay the next version over.
-4. Only then `/gear oto`.
+4. Only then `/gear on`.
 
 **Trying a change in your own Claude Code.** Claude Code runs an installed copy of the plugin, not the folder. After editing, raise `version` in `.claude-plugin/plugin.json`, then:
 
@@ -346,6 +354,7 @@ Restart the app and open a new chat.
 - [x] Shadow mode, external benchmarks and a harvest of real decisions, so a new version is judged before it routes anyone's work (0.7)
 - [x] Rate-limit windows warn instead of lowering the choice; the effort table retuned from measurements (Sonnet · medium for clear work, hunts at high, no max unasked); a state row that shows on, shadow and off apart; the shadow log keeps what the picker cut; plan mode goes to Opus (0.8)
 - [x] Measured against five setups on twenty tasks, ten of them real sqlglot bugs; in `tasarruf` hard work moves to Sonnet · high, Opus kept for critical work, plan mode and when asked (0.9)
+- [x] English commands, English or Turkish speech, one italic line under every answer naming the model that answered, and `/gear doctor` (0.12)
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
 - [x] Decision log with your marks, to see where the rules go wrong
 - [x] Review of real use: system notes, the bound on Haiku, the hold on work in hand, models named in words (0.6)

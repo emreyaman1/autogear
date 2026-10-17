@@ -2,6 +2,8 @@
 // than the windows allow, or leaving room unused just before a reset? A window
 // under pressure is only reported: the choice stays what the work needs.
 
+import { L, pct } from './text'
+
 export type RateWindow = { kind: string; percentUsed: number; resetsAt?: string }
 
 export type PaceLevel = 'surplus' | 'normal' | 'tight' | 'critical'
@@ -12,7 +14,8 @@ const HOUR = 3_600_000
 
 const WINDOW_MS: Record<string, number> = { five_hour: 5 * HOUR, seven_day: 7 * 24 * HOUR }
 
-const WINDOW_NAMES: Record<string, string> = { five_hour: '5 saatlik', seven_day: 'haftalık' }
+const windowName = (kind: string): string =>
+  kind === 'five_hour' ? L('5-hour', '5 saatlik') : kind === 'seven_day' ? L('weekly', 'haftalık') : kind
 
 const SEVERITY: readonly PaceLevel[] = ['surplus', 'normal', 'tight', 'critical']
 
@@ -36,8 +39,8 @@ export function pace(windows: readonly RateWindow[], nowMs: number): Pace {
       : elapsed >= 0.85 && used <= 50 ? 'surplus'
       : 'normal'
     // Nearly full, the share is all that matters; otherwise the pace beside it.
-    const name = `${WINDOW_NAMES[window.kind] ?? window.kind} limit %${Math.round(used)}`
-    const reason = level === 'critical' ? name : `${name} (beklenen %${Math.round(expected)})`
+    const name = `${windowName(window.kind)} limit ${pct(Math.round(used))}`
+    const reason = level === 'critical' ? name : `${name} ${L('(expected', '(beklenen')} ${pct(Math.round(expected))})`
     if (level === 'surplus') {
       surplus ??= { level, reason }
     } else if (SEVERITY.indexOf(level) > SEVERITY.indexOf(worst.level)) {
@@ -59,6 +62,6 @@ export function paceWarning(current: Pace | undefined, running: string): string 
   const reason = current.reason ?? 'limit'
 
   return current.level === 'critical'
-    ? `${reason}: bu iş ${running} ile yapılıyor, limit dolabilir`
-    : `${reason}: hızlı harcanıyor; bu iş ${running} ile yapılıyor, limit erken dolabilir`
+    ? `${reason}: ${L(`this work runs on ${running}, the limit may run out`, `bu iş ${running} ile yapılıyor, limit dolabilir`)}`
+    : `${reason}: ${L(`spending fast; this work runs on ${running}, the limit may run out early`, `hızlı harcanıyor; bu iş ${running} ile yapılıyor, limit erken dolabilir`)}`
 }

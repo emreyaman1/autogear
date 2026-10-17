@@ -4,6 +4,7 @@
 
 import { FAMILIES, FAMILY_NAMES, type Family } from './models'
 import { usd, type Tokens } from './prices'
+import { L, pct } from './text'
 
 // What the turns of one family came to.
 export type Bucket = {
@@ -64,7 +65,7 @@ export const rateOf = (saved: number, baseline: number): number => (baseline > 0
 export function percent(part: number, whole: number): string {
   const value = whole > 0 ? Math.round((100 * part) / whole) : 0
 
-  return value < 0 ? `-%${-value}` : `%${value}`
+  return value < 0 ? `-${pct(-value)}` : pct(value)
 }
 
 export const promptOf = (bucket: Bucket): number => bucket.input + bucket.cacheRead + bucket.cacheWrite
@@ -130,14 +131,20 @@ export function splitCells(weights: readonly number[], width: number): number[] 
 }
 
 const tokenLine = (bucket: Bucket): string =>
-  `girdi ${kilo(bucket.input)} · çıktı ${kilo(bucket.output)} · önbellek okuma ${kilo(bucket.cacheRead)} · yazma ${kilo(bucket.cacheWrite)}`
+  L(
+    `input ${kilo(bucket.input)} · output ${kilo(bucket.output)} · cache read ${kilo(bucket.cacheRead)} · write ${kilo(bucket.cacheWrite)}`,
+    `girdi ${kilo(bucket.input)} · çıktı ${kilo(bucket.output)} · önbellek okuma ${kilo(bucket.cacheRead)} · yazma ${kilo(bucket.cacheWrite)}`,
+  )
 
 // The report as markdown: what the model reads, and what is drawn where the
 // card cannot be.
 export function savingsText(session: Totals, all: Totals, since: number | undefined): string {
   const [now, ever] = [sumOf(session), sumOf(all)]
   if (ever.turns === 0) {
-    return '**Tasarruf**\n\nHenüz kayıtlı tur yok: rakamlar gearbox bir cevap bitirdikçe birikir.'
+    return L(
+      '**Savings**\n\nNo turns recorded yet: the figures build up as gearbox finishes answers.',
+      '**Tasarruf**\n\nHenüz kayıtlı tur yok: rakamlar gearbox bir cevap bitirdikçe birikir.',
+    )
   }
   const gain = (totals: Totals, bucket: Bucket): string => {
     const saved = savedOf(totals)
@@ -152,22 +159,32 @@ export function savingsText(session: Totals, all: Totals, since: number | undefi
   })
 
   return [
-    '**Tasarruf** · tahmin, API liste fiyatıyla',
+    L('**Savings** · estimate, at API list prices', '**Tasarruf** · tahmin, API liste fiyatıyla'),
     '',
-    '| | Bu oturum | Toplam |',
+    L('| | This session | Total |', '| | Bu oturum | Toplam |'),
     '|:--|--:|--:|',
-    `| Harcama | ${dash(usd(now.spent + session.overhead), now.turns === 0)} | ${usd(ever.spent + all.overhead)} |`,
-    `| Seçici modeliyle | ${dash(usd(now.baseline), now.turns === 0)} | ${usd(ever.baseline)} |`,
-    `| Tasarruf | ${gain(session, now)} | ${gain(all, ever)} |`,
-    `| Tur | ${now.turns} | ${ever.turns} |`,
+    `| ${L('Spent', 'Harcama')} | ${dash(usd(now.spent + session.overhead), now.turns === 0)} | ${usd(ever.spent + all.overhead)} |`,
+    `| ${L("On the picker's model", 'Seçici modeliyle')} | ${dash(usd(now.baseline), now.turns === 0)} | ${usd(ever.baseline)} |`,
+    `| ${L('Saved', 'Tasarruf')} | ${gain(session, now)} | ${gain(all, ever)} |`,
+    `| ${L('Turns', 'Tur')} | ${now.turns} | ${ever.turns} |`,
     '',
-    '| Model | Tur | Harcama | Seçici modeliyle | Tasarruf |',
+    L("| Model | Turns | Spent | On the picker's model | Saved |", '| Model | Tur | Harcama | Seçici modeliyle | Tasarruf |'),
     '|:--|--:|--:|--:|--:|',
     ...rows,
     '',
-    `Önbellek isabeti ${percent(cacheHit(ever), 1)} · ${tokenLine(ever)}`,
-    all.overhead === 0 ? undefined : `gearbox'ın kendi maliyeti (Haiku'ya sorular): ${usd(all.overhead)}, tasarruftan düşüldü.`,
-    since === undefined || since === 0 ? undefined : `Sayım ${new Date(since).toLocaleDateString('tr-TR')} tarihinden beri; /gear sifirla ile sıfırlanır.`,
+    `${L('Cache hit', 'Önbellek isabeti')} ${percent(cacheHit(ever), 1)} · ${tokenLine(ever)}`,
+    all.overhead === 0
+      ? undefined
+      : L(
+          `gearbox's own cost (questions to Haiku): ${usd(all.overhead)}, taken off the saving.`,
+          `gearbox'ın kendi maliyeti (Haiku'ya sorular): ${usd(all.overhead)}, tasarruftan düşüldü.`,
+        ),
+    since === undefined || since === 0
+      ? undefined
+      : L(
+          `Counting since ${new Date(since).toLocaleDateString('en-US')}; /gear reset clears it.`,
+          `Sayım ${new Date(since).toLocaleDateString('tr-TR')} tarihinden beri; /gear sifirla ile sıfırlanır.`,
+        ),
   ]
     .filter(line => line !== undefined)
     .join('\n')

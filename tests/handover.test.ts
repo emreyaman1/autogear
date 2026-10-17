@@ -2,6 +2,11 @@ import type { On } from 'claude-code'
 import { describe, expect, mock, test, type Engine } from 'claude-code/testing'
 
 import { cleanNote, handoverContext, isWorkDone } from '../hooks/core/handover'
+import { setLang } from '../hooks/core/text'
+
+// The tests read gearbox's Turkish; the English is tested by switching to it.
+Object.assign(globalThis, { GEARBOX_LANG: 'tr' })
+setLang('tr')
 
 const NOW = Date.parse('2026-10-17T12:00:00Z')
 

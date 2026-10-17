@@ -16,7 +16,7 @@ Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) 
   ```
   ⚙ Haiku 5.5 · low · T0 önemsiz (kural: soru: "ne yapiyor") · önbellek 0 okundu / 100.0K yazıldı · $0,013 (seçici modeliyle $0,020)
   ```
-- **Tasarruf sayacı.** Sağ alttaki durum yazısında oturumun tasarrufu görünür, ayrıntı için `/gear tasarruf` bir kart çizer.
+- **Tasarruf sayacı.** Sağ alttaki durum yazısında oturumun tasarrufu görünür, ayrıntı için `/gear savings` bir kart çizer.
 
 ## Kurulum
 
@@ -38,7 +38,7 @@ claude plugin marketplace add C:\gearbox
 claude plugin install gearbox@gearbox
 ```
 
-Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295 ve 2.1.299'da denendi). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde gearbox hiç yüklenmez ve nedenini söyleyemez; 2.1.278 hem 0.7'yi hem 0.8'i reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
+Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295 ve 2.1.299'da denendi; canlı duman testi 2.1.299'da geçti). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde gearbox hiç yüklenmez ve nedenini söyleyemez; 2.1.278 hem 0.7'yi hem 0.8'i reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
 
 ## Kullanım
 
@@ -46,13 +46,13 @@ Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması 
 
 **Durum satırı.** İstem kutusunun üstündeki küçük satır gearbox'ın ne yaptığını gösterir: bir etikette **AÇIK** (yeşil), **GÖLGE** (mor), **KAPALI** (gri) ya da **DURDU** (turuncu; bkz. Güvenlik ağları) yazar. Etiketteki nokta gearbox'ın ne yaptığını hafifçe hareket ederek söyler: seçerken yumuşak bir nabız, gölgede yavaş bir nefes, kapalıyken durgun, durmuşken yavaş yanıp sönme; sisteminde "hareketi azalt" açıksa kıpırdamaz. Yanında son seçim durur ("Sonnet · medium · T1 rutin"; gölgede gearbox'ın önerisi), henüz seçim yoksa durumun ne demek olduğu. Yanındaki düğmeler öteki durumlar içindir ve her birinin üstünde basınca ne olacağı yazar: **aç**, **gölgeye al**, **kapat**; durmuşsa **yeniden dene**. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir. Bir limit penceresi dolmak üzereyken ya da çok hızlı harcanırken satırda bir de uyarı görünür (aşağıda Tempo).
 
-**Gölge mod.** `/gear golge` ile gearbox seçer ama seçimini uygulamaz: her istek seçici ne diyorsa onunla gider, gearbox da ne seçeceğini her cevabın altına (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) ve günlüğüne yazar. Seçici burada da tavandır; seçimi kırptıysa ikisi de yazılır: `⚙ gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium`. Böylece seçici Sonnet'teyken de Opus ihtiyacı görünür. Yeni bir sürüm böylece gerçek iş üzerinde, o işe dokunmadan denenir; `/gear yanlis` seçimlerini yine işaretler. `/gear oto` yönlendirmeyi geri açar.
+**Gölge mod.** `/gear shadow` ile gearbox seçer ama seçimini uygulamaz: her istek seçici ne diyorsa onunla gider, gearbox da ne seçeceğini günlüğüne ve durum satırına (`Haiku · low · T0 önerirdi`) yazar. Cevabın altındaki satır yalnızca hangi modelin cevapladığını söyler. Seçici burada da tavandır; seçimi kırptıysa ikisi de günlüğe yazılır (`Sonnet · high (tavansız Opus · high)`). Böylece seçici Sonnet'teyken de Opus ihtiyacı görünür. Yeni bir sürüm böylece gerçek iş üzerinde, o işe dokunmadan denenir; `/gear wrong` seçimlerini yine işaretler. `/gear on` yönlendirmeyi geri açar.
 
 **Plan modu.** Claude Code'un plan modunda her istek Opus'a gider; efor, kuralların okuduğu plan büyüklüğüne göre seçilir: küçük planda medium, ortada high, çok parçalı büyük planda xhigh. Seçicinin üstüne asla çıkmaz; senin adını verdiğin model (`+sonnet`) yine önde gelir. gearbox plan modunu Claude Code'un model için eklediği nottan anlar; bu yüzden bir cevabın ortasında açılan plan modu bir sonraki mesajdan itibaren sayılır. Plan modu dışında da plan isteyen bir mesaj ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") zor iş (T3) sayılır. Cevabın altındaki satırda ve günlükte `plan modu` yazar.
 
 **Temiz sohbet (0.10, ilk sürüm).** Bir turun her adımı konuşmanın tamamını yeniden gönderir; büyük bir sohbet her mesajda daha pahalıdır. Sohbet 150 bin tokenı geçmişse ve bir iş yeni bittiyse (commit ya da push, ya da geçen bir test çalıştırması), istem üstündeki satır temiz bir sohbet önerir: not yazılırken `Devir notu hazırlanıyor…`, sonra `Devir notu hazır · sohbet 180 bin token`, yanında **temiz sohbet**, **notu gör** ve **×**. Sen yazmaya devam etsen de öneri durur; birine basana ya da daha yeni bir not gelene kadar. gearbox modele kısa bir devir notu yazdırır (proje, son commit, yapılan, açık işler, kuralların, okunacak dosyalar); **notu gör** onu gösterir, **temiz sohbet** `/clear` çalıştırır ve notu bir sonraki mesajınla, görünmeden, gönderir. Sen basmadan hiçbir şey temizlenmez; eski sohbet diskte kalır, notun son satırı onu açan `claude --resume` komutudur. Gerçek bir sohbette bir kez denendi: öneri ve not çalışıyor; **temiz sohbet** düğmesi orada henüz denenmedi.
 
-**Etiketler.** Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
+**Etiketler.** Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap` (T0), `+deep` (T4). `ultrathink` T4 demektir.
 
 Ya da düz yazıyla söyle: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, sen de bak", "use opus" o mesaj için modeli, adı geçiyorsa eforu da seçer. Bir model hakkında konuşmak ("haiku ile yaptı", "opus pahalı mı?") bir şey seçmez. Yazıyla yapılan seçim de, etiket gibi, seçicinin üstüne çıkabilir.
 
@@ -61,17 +61,25 @@ Ya da düz yazıyla söyle: "bu görevi sonnet'e max ile ver", "opus ile yap", "
 | Komut | İş |
 |---|---|
 | `/gear` | durum, son karar ve gerekçesi, limitler, istatistik, bu liste |
-| `/gear tasarruf` | tasarruf kartı (aşağıda) |
-| `/gear kayit` | gearbox'ın son kararlarının günlüğü ve şüpheli olanlar |
-| `/gear yanlis zayif\|fazla` | son kararı işaretle: model çok zayıftı, ya da işin gerektirdiğinden güçlüydü |
-| `/gear sifirla` | tasarruf sayacını ve günlüğü sıfırla |
-| `/gear oto` / `/gear sabitle` | gearbox'ı aç / kapat (kapalıyken seçicideki model kullanılır) |
-| `/gear golge` | gölge mod: seç ve yaz, hiçbirini uygulama |
-| `/gear profil tasarruf\|dengeli\|kalite` | hangi kademe tablosu kullanılsın |
-| `/gear haiku aç\|kapa` | önemsiz işler Haiku'ya gitsin mi |
-| `/gear sor aç\|kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |
-| `/gear not aç\|kapa` | cevabın altındaki satır |
-| `/gear bant aç\|kapa` | istem kutusunun üstündeki durum satırı |
+| `/gear savings` | tasarruf kartı (aşağıda) |
+| `/gear log` | gearbox'ın son kararlarının günlüğü ve şüpheli olanlar |
+| `/gear wrong weak\|strong` | son kararı işaretle: model çok zayıftı, ya da işin gerektirdiğinden güçlüydü |
+| `/gear reset` | tasarruf sayacını ve günlüğü sıfırla |
+| `/gear on` / `/gear off` | gearbox'ı aç / kapat (kapalıyken seçicideki model kullanılır) |
+| `/gear shadow` | gölge mod: seç ve yaz, hiçbirini uygulama |
+| `/gear profile saver\|balanced\|quality` | hangi kademe tablosu kullanılsın (tasarruf, dengeli, kalite) |
+| `/gear haiku on\|off` | önemsiz işler Haiku'ya gitsin mi |
+| `/gear ask on\|off` | kurallar emin olamazsa Haiku'ya sorulsun mu |
+| `/gear note on\|off` | cevabın altındaki satır |
+| `/gear band on\|off` | istem kutusunun üstündeki durum satırı |
+| `/gear lang en\|tr\|auto` | gearbox'ın konuştuğu dil; auto sistemin dilini izler |
+| `/gear doctor` | kurulumu kontrol eder, düzeltilecek şeyi söyler: durum, seçici, Claude Code sürümü, seçimlerin uygulanıp uygulanmadığı, depo, limitler, dil, eforu ya da yardımcıların modelini sabitleyebilen ortam ayarları |
+
+Komutlar hangi dilde olursa olsun İngilizcedir. Eski Türkçe adlar (`oto`, `sabitle`, `golge`, `tasarruf`, `kayit`, `yanlis zayif|fazla`, `sifirla`, `profil tasarruf|dengeli|kalite`, `sor`, `not`, `bant` ve `aç`/`kapa`) çalışmaya devam eder.
+
+**Dil.** gearbox İngilizce ya da Türkçe konuşur. `auto` (varsayılan) sistemin dilini izler: Türkçe sistemde Türkçe, başka yerde İngilizce. Claude Code'un kendi `language` ayarı bir Mod'a açık değil, bu yüzden okunmaz. `/gear lang en` ya da `tr` elle seçer. Komutlar, etiketler ve model adları değişmez; mesajlarını okuyan kurallar bu ayardan bağımsız olarak sekiz dili anlar.
+
+**Her cevabın altındaki satır.** gearbox açıkken, gölgedeyken ve kapalıyken de her cevabın altında, italik tek bir satır cevabı hangi modelin verdiğini (API'nin bildirdiği) ve hangi eforla istendiğini söyler: *Opus 5.5 · efor medium*. Yardımcılar (alt ajanlar) çalıştıysa modelleri de yazılır: *Opus 5.5 · efor medium · yardımcılar: Sonnet 5.5*. Plan modu ve limit uyarısı yanına eklenir. `/gear note off` satırı kaldırır. gearbox'ın mesajda ne okuduğu, neden öyle seçtiği ve para `/gear`, `/gear log` ve `/gear savings` içinde.
 
 ## Nasıl çalışır
 
@@ -110,10 +118,10 @@ Bir hata bildirimi şunlardan birini içeriyorsa net sayılır: hata çıktısı
 
 Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölçüldü. Kendi işlerinde gearbox'ın nasıl yaptığını görmek için kararlarının günlüğünü makinende tutar: her mesajın başı (100 karakter), kademe, cevap veren model ve efor, seçici kırptıysa gearbox'ın istediği, seçimin kaynağı, turun maliyeti ve sonrasında ne olduğu. Son 200 karar saklanır.
 
-- `/gear kayit` son 25 kararı tablo olarak, kullanılan kademeleri ve **şüpheli kararları** gösterir: işin kendisinin sorguladığı kararlar (şikâyet ettin ve gearbox bir kademe yükseltti; turun sonunda testler ya da derleme kırıktı) ve senin işaretlediklerin.
-- Bir karar yanlışsa cevaptan hemen sonra söyle: `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (işin gerektirdiğinden güçlüydü). İşaret son mesaja düşer.
+- `/gear log` son 25 kararı tablo olarak, kullanılan kademeleri ve **şüpheli kararları** gösterir: işin kendisinin sorguladığı kararlar (şikâyet ettin ve gearbox bir kademe yükseltti; turun sonunda testler ya da derleme kırıktı) ve senin işaretlediklerin.
+- Bir karar yanlışsa cevaptan hemen sonra söyle: `/gear wrong weak` (model çok zayıftı) ya da `/gear wrong strong` (işin gerektirdiğinden güçlüydü). İşaret son mesaja düşer.
 - Şüpheli oranı bir tabandır: kimsenin fark etmediği yanlış seçimler sayılmaz. Birkaç günlük kullanımla kuralların hangi tür mesajlarda yanıldığını gösterir, bir sonraki ayar da orada.
-- `/gear sifirla` günlüğü siler. Makinenden hiç çıkmaz.
+- `/gear reset` günlüğü siler. Makinenden hiç çıkmaz.
 
 ## Tasarruf
 
@@ -121,14 +129,14 @@ Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölç�
 
 - Her cevabın altındaki satır: bu turun tutarı ve seçici modeliyle ne tutacağı.
 - Sağ alttaki durum yazısı: oturumun toplam tasarrufu.
-- `/gear tasarruf`: konuşmanın içine çizilen bir kart:
+- `/gear savings`: konuşmanın içine çizilen bir kart:
   - iki çubuk, bu oturumun ve toplamın tasarrufu, her biri seçicinin faturasındaki payıyla;
   - her modelin payı, çubuk ve açıklamayla;
   - modele göre tablo: tur, girdi, çıktı, önbellek okuma, önbelleğe yazma, önbellek isabeti, harcama, seçici modeliyle harcama, tasarruf;
   - 5 saatlik ve haftalık limit pencereleri.
 
   Dar ekranda tablo, model başına tek satıra döner. Bir yüzey kartı çizemiyorsa aynı rakamlar markdown tablo olarak gelir. İkisi de aynı kayıtlı toplamları okur.
-- `/gear sifirla` sayımı baştan başlatır. Toplamlar makinendeki eklenti deposunda durur; sayımın başladığı tarih kartta yazar.
+- `/gear reset` sayımı baştan başlatır. Toplamlar makinendeki eklenti deposunda durur; sayımın başladığı tarih kartta yazar.
 
 **Nasıl hesaplanır.** Her turun gerçek token sayıları (girdi, çıktı, önbellek okuma, önbellek yazma) cevap veren modelin liste fiyatıyla çarpılır; aynı tokenlar bir de seçicideki modelin liste fiyatıyla çarpılır. Fiyatlar `hooks/core/prices.ts` içindedir:
 
@@ -150,7 +158,7 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 
 ## Güvenlik ağları
 
-- **Kendini denetleme:** Her turdan sonra API'nin bildirdiği gerçek modele bakar. Seçtiği model üst üste 3 tur uygulanmazsa (bir Claude Code güncellemesi eklenti API'sini değiştirmişse) kendini kapatır ve haber verir; `/gear oto` yeniden dener.
+- **Kendini denetleme:** Her turdan sonra API'nin bildirdiği gerçek modele bakar. Seçtiği model üst üste 3 tur uygulanmazsa (bir Claude Code güncellemesi eklenti API'sini değiştirmişse) kendini kapatır ve haber verir; `/gear on` yeniden dener.
 - **Yedek model:** Seçilen model yanıt vermezse (kimliği eskimiş, planında yok) istek seçicideki modelle yeniden gönderilir, o model o oturumda bir daha seçilmez.
 - **Kartopu freni:** Ucuz bir modelle yapılan tur, testleri ya da derlemesi kırık bitmişse bir sonraki tur bir kademe güçlü modelle yapılır. "Olmadı", "hâlâ aynı hata" gibi şikâyetler de kademeyi yükseltir; üst üste ikinci şikâyette iki kademe.
 - **Sürüm uyarısı:** Claude Code, gearbox'ın denendiği sürümden (`hooks/core/version.ts`) yeniyse bir kez haber verir.
@@ -282,6 +290,8 @@ Gösterdiği, önce gearbox'ın aleyhine olan:
 | `hooks/core/settle.ts` | kuralların, Haiku'nun cevabının ve süren işin bir kademeyi nasıl belirlediği |
 | `hooks/core/savings.ts` | modele göre toplamlar, tasarruf, markdown rapor |
 | `hooks/core/settings.ts` | kayıtlı ayarlar ve istatistik, `/gear` ayrıştırma |
+| `hooks/core/text.ts` | gearbox'ın söylediği sözler (İngilizce ve Türkçe) ve dil seçimi |
+| `hooks/core/doctor.ts` | `/gear doctor`: kontroller ve önerileri |
 | `hooks/core/switch.ts` | durum etiketinin çizimi |
 | `hooks/core/version.ts` | denendiği en yeni Claude Code sürümü |
 | `tests/` | kurallar, politika, fiyat ve tasarruf; sahte motora karşı yönlendirici; sınıflandırıcı ölçümü |
@@ -313,9 +323,9 @@ Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `
 **Kendini test konusu yapmadan geliştirmek.** Yeni bir sürüm dört adımdan geçer, her biri bir sonrakinden önce, ve yalnızca sonuncusu gerçek işe dokunur:
 
 1. Çevrimdışı: `claude plugin test .` (kurallar, politika, yönlendirici, eval kümeleri) ve `node eval/external.mjs` (dış ölçütler, ücretsiz; `--haiku` biraz kota harcayarak Haiku'nun cevaplarını ekler).
-2. Gerçek işte gölge modda (`/gear golge`): gearbox seçer ve yazar, cevabı seçicideki model verir.
+2. Gerçek işte gölge modda (`/gear shadow`): gearbox seçer ve yazar, cevabı seçicideki model verir.
 3. `node scripts/harvest.mjs` bu seçimleri oturum kayıtlarından `eval/.work/harvest.json` dosyasına toplar; etiketlenince bir sonraki sürümün üzerinden yeniden oynatılacağı bir gerçek kullanım kümesi olurlar.
-4. Ancak ondan sonra `/gear oto`.
+4. Ancak ondan sonra `/gear on`.
 
 **Bir değişikliği kendi Claude Code'unda denemek.** Claude Code klasörü değil, eklentinin kurulu bir kopyasını çalıştırır. Düzenledikten sonra `.claude-plugin/plugin.json` içindeki `version` değerini yükselt, sonra:
 
@@ -344,6 +354,7 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] Gölge mod, dış ölçütler ve gerçek kararların toplanması: yeni bir sürüm, kimsenin işini yönlendirmeden önce sınanır (0.7)
 - [x] Limit pencereleri seçimi düşürmek yerine uyarıyor; efor tablosu ölçümlere göre yeniden ayarlandı (net işte Sonnet · medium, hata avında high, istenmedikçe max yok); açık, gölge ve kapalıyı ayrı gösteren durum satırı; gölge kaydı seçicinin kırptığını da tutuyor; plan modu Opus'a gidiyor (0.8)
 - [x] Yirmi görevde beş düzenle kıyas, onu sqlglot'un gerçek hataları; `tasarruf`ta zor iş Sonnet · high'a geçti, Opus kritik işe, plan moduna ve istenince kullanılır (0.9)
+- [x] İngilizce komutlar, İngilizce ya da Türkçe konuşma, her cevabın altında cevabı veren modeli söyleyen tek italik satır ve `/gear doctor` (0.12)
 - [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
 - [x] Senin işaretlerinle karar günlüğü, kuralların nerede yanıldığını görmek için
 - [x] Gerçek kullanımın incelenmesi: sistem notları, Haiku'ya sınır, süren işin tutulması, yazıyla istenen model (0.6)

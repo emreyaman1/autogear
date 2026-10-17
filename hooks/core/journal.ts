@@ -4,6 +4,7 @@
 
 import { EFFORTS, FAMILIES, FAMILY_NAMES, familyRank, type Effort, type Family } from './models'
 import { usd } from './prices'
+import { flagText, L, sourceText } from './text'
 
 export type Mark = 'zayif' | 'fazla'
 
@@ -40,7 +41,15 @@ export const MAX_ENTRIES = 200
 const SNIPPET = 100
 const SHOWN = 25
 
-const MARK_NAMES: Record<Mark, string> = { zayif: 'çok zayıftı', fazla: 'gereğinden güçlüydü' }
+// Getters, so a name is read in the language in use when it is shown.
+const MARK_NAMES: Record<Mark, string> = {
+  get zayif() {
+    return L('was too weak', 'çok zayıftı')
+  },
+  get fazla() {
+    return L('was stronger than needed', 'gereğinden güçlüydü')
+  },
+}
 
 const record = (value: unknown): Record<string, unknown> => (typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {})
 
@@ -124,7 +133,12 @@ const two = (value: number): string => String(value).padStart(2, '0')
 function when(at: number): string {
   const date = new Date(at)
 
-  return Number.isNaN(date.getTime()) ? '' : `${two(date.getDate())}.${two(date.getMonth() + 1)} ${two(date.getHours())}:${two(date.getMinutes())}`
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  const day = L(`${two(date.getMonth() + 1)}-${two(date.getDate())}`, `${two(date.getDate())}.${two(date.getMonth() + 1)}`)
+
+  return `${day} ${two(date.getHours())}:${two(date.getMinutes())}`
 }
 
 const cell = (text: string): string => text.replace(/\|/g, '/')
@@ -133,7 +147,10 @@ const isDoubtful = (entry: Entry): boolean => entry.flags.length > 0 || entry.ma
 
 export function journalText(entries: readonly Entry[]): string {
   if (entries.length === 0) {
-    return '**Günlük**\n\nHenüz kayıtlı karar yok: her mesajın kararı bir tur bitince buraya yazılır.'
+    return L(
+      "**Log**\n\nNo decisions recorded yet: each message's decision is written here when its turn ends.",
+      '**Günlük**\n\nHenüz kayıtlı karar yok: her mesajın kararı bir tur bitince buraya yazılır.',
+    )
   }
   const doubtful = entries.filter(isDoubtful)
   const marked = entries.filter(entry => entry.mark !== undefined)
@@ -148,33 +165,55 @@ export function journalText(entries: readonly Entry[]): string {
   const cut = entries.filter(entry => entry.wanted !== undefined)
   const cutModel = cut.filter(entry => entry.wanted !== undefined && familyRank(entry.wanted.family) > familyRank(entry.family)).length
   const rows = entries.slice(-SHOWN).map(entry => {
-    const shadow = entry.isShadow === true ? [`gölge, cevap: ${entry.answered === undefined ? 'seçici' : FAMILY_NAMES[entry.answered]}`] : []
-    const planning = entry.isPlanning === true ? ['plan modu'] : []
-    const notes = [...planning, ...shadow, ...entry.flags, ...(entry.mark === undefined ? [] : [`siz: ${MARK_NAMES[entry.mark]}`])].join('; ')
+    const shadow =
+      entry.isShadow === true
+        ? [
+            L(
+              `shadow, answered by: ${entry.answered === undefined ? 'the picker' : FAMILY_NAMES[entry.answered]}`,
+              `gölge, cevap: ${entry.answered === undefined ? 'seçici' : FAMILY_NAMES[entry.answered]}`,
+            ),
+          ]
+        : []
+    const planning = entry.isPlanning === true ? [L('plan mode', 'plan modu')] : []
+    const notes = [...planning, ...shadow, ...entry.flags.map(flagText), ...(entry.mark === undefined ? [] : [`${L('you', 'siz')}: ${MARK_NAMES[entry.mark]}`])].join('; ')
 
-    const wanted = entry.wanted === undefined ? '' : ` (tavansız ${FAMILY_NAMES[entry.wanted.family]} · ${entry.wanted.effort})`
+    const wanted = entry.wanted === undefined ? '' : ` (${L('without the ceiling', 'tavansız')} ${FAMILY_NAMES[entry.wanted.family]} · ${entry.wanted.effort})`
 
-    return `| ${when(entry.at)} | ${cell(entry.text)} | T${entry.tier} | ${FAMILY_NAMES[entry.family]} · ${entry.effort}${wanted} | ${cell(entry.source)} | ${notes} |`
+    return `| ${when(entry.at)} | ${cell(entry.text)} | T${entry.tier} | ${FAMILY_NAMES[entry.family]} · ${entry.effort}${wanted} | ${cell(sourceText(entry.source))} | ${notes} |`
   })
   const spent = entries.reduce((sum, entry) => sum + entry.spent, 0)
   const baseline = entries.reduce((sum, entry) => sum + entry.baseline, 0)
 
   return [
-    `**Günlük** · son ${entries.length} karar (en çok ${MAX_ENTRIES}), bu makinede saklanır`,
+    L(`**Log** · last ${entries.length} decisions (at most ${MAX_ENTRIES}), kept on this machine`, `**Günlük** · son ${entries.length} karar (en çok ${MAX_ENTRIES}), bu makinede saklanır`),
     '',
-    '| Zaman | Mesaj | Kademe | Model · efor | Kaynak | Not |',
+    L('| Time | Message | Tier | Model · effort | Source | Note |', '| Zaman | Mesaj | Kademe | Model · efor | Kaynak | Not |'),
     '|:--|:--|:--|:--|:--|:--|',
     ...rows,
     '',
-    `Kademeler: ${byTier}`,
-    shadows === 0 ? undefined : `Gölgede seçilip uygulanmayan: ${shadows}. Onlarda cevabı seçicideki model verdi; "Model · efor" gearbox'ın önerisi.`,
+    `${L('Tiers', 'Kademeler')}: ${byTier}`,
+    shadows === 0
+      ? undefined
+      : L(
+          `Chosen in shadow and not applied: ${shadows}. The picker's model answered those; "Model · effort" is gearbox's suggestion.`,
+          `Gölgede seçilip uygulanmayan: ${shadows}. Onlarda cevabı seçicideki model verdi; "Model · efor" gearbox'ın önerisi.`,
+        ),
     cut.length === 0
       ? undefined
-      : `Seçici tavanı yüzünden kırpılan: ${cut.length}, bunların ${cutModel} tanesinde daha güçlü bir model istenmişti. "Model · efor" uygulanabilecek olan, "tavansız" gearbox'ın istediği.`,
-    `Şüpheli kararlar: ${doubtful.length} / ${entries.length} (${Math.round((100 * doubtful.length) / entries.length)}%): şikâyetle yükseltilen ${complaints}, testi ya da derlemesi kırık biten ${broken}, sizin işaretlediğiniz ${marked.length}.`,
-    `Harcama ${usd(spent)}, seçici modeliyle ${usd(baseline)}.`,
-    'Bir karar yanlışsa `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (gereğinden güçlüydü) yazın; son mesajın kararını işaretler.',
-    'Şüpheli oranı alt sınırdır: yanlış olup kimsenin fark etmediği kararlar sayılmaz.',
+      : L(
+          `Cut by the picker's ceiling: ${cut.length}, of which ${cutModel} wanted a stronger model. "Model · effort" is what could be applied, "without the ceiling" what gearbox wanted.`,
+          `Seçici tavanı yüzünden kırpılan: ${cut.length}, bunların ${cutModel} tanesinde daha güçlü bir model istenmişti. "Model · efor" uygulanabilecek olan, "tavansız" gearbox'ın istediği.`,
+        ),
+    L(
+      `Doubtful decisions: ${doubtful.length} / ${entries.length} (${Math.round((100 * doubtful.length) / entries.length)}%): raised after a complaint ${complaints}, ended with broken tests or build ${broken}, marked by you ${marked.length}.`,
+      `Şüpheli kararlar: ${doubtful.length} / ${entries.length} (${Math.round((100 * doubtful.length) / entries.length)}%): şikâyetle yükseltilen ${complaints}, testi ya da derlemesi kırık biten ${broken}, sizin işaretlediğiniz ${marked.length}.`,
+    ),
+    L(`Spent ${usd(spent)}, ${usd(baseline)} on the picker's model.`, `Harcama ${usd(spent)}, seçici modeliyle ${usd(baseline)}.`),
+    L(
+      "If a decision was wrong, type `/gear wrong weak` (the model was too weak) or `/gear wrong strong` (stronger than needed); it marks the last message's decision.",
+      'Bir karar yanlışsa `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (gereğinden güçlüydü) yazın; son mesajın kararını işaretler.',
+    ),
+    L('The doubtful share is a floor: decisions that were wrong and that nobody noticed are not counted.', 'Şüpheli oranı alt sınırdır: yanlış olup kimsenin fark etmediği kararlar sayılmaz.'),
   ]
     .filter(line => line !== undefined)
     .join('\n')

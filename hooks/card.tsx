@@ -6,6 +6,7 @@ import type { BoxProps, ElementConstructor, RenderElement, TextProps } from 'cla
 
 import { FAMILIES, FAMILY_NAMES, type Family } from './core/models'
 import { usd } from './core/prices'
+import { L } from './core/text'
 import { cacheHit, dash, kilo, percent, promptOf, rateOf, savedBy, savedOf, sharesOf, splitCells, sumOf, type Bucket, type Totals } from './core/savings'
 
 type Elements = { Box: ElementConstructor<BoxProps>; Text: ElementConstructor<TextProps> }
@@ -60,13 +61,16 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
       <Box flexDirection="column" width={inner}>
         <Box justifyContent="space-between" width={inner}>
           <Text>{title}</Text>
-          <Text bold color={color}>{`${usd(saved)} tasarruf · ${percent(saved, bucket.baseline)}`}</Text>
+          <Text bold color={color}>{`${usd(saved)} ${L('saved', 'tasarruf')} · ${percent(saved, bucket.baseline)}`}</Text>
         </Box>
         {line(rateOf(saved, bucket.baseline), color)}
         <Text dimColor wrap="truncate">
           {bucket.turns === 0
-            ? 'henüz tur yok'
-            : `harcama ${usd(bucket.spent + totals.overhead)} · seçici modeliyle ${usd(bucket.baseline)} · ${bucket.turns} tur`}
+            ? L('no turns yet', 'henüz tur yok')
+            : L(
+                `spent ${usd(bucket.spent + totals.overhead)} · on the picker's model ${usd(bucket.baseline)} · ${bucket.turns} turns`,
+                `harcama ${usd(bucket.spent + totals.overhead)} · seçici modeliyle ${usd(bucket.baseline)} · ${bucket.turns} tur`,
+              )}
         </Text>
       </Box>
     )
@@ -76,7 +80,7 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
   const cells = splitCells(shares.map(share => share.fraction), inner)
   const model = (): RenderElement => (
     <Box flexDirection="column" width={inner}>
-      <Text>Model payı</Text>
+      <Text>{L('Model share', 'Model payı')}</Text>
       <Box width={inner} overflow="hidden">
         {shares.map((share, index) => (
           <Text color={FAMILY_COLORS[share.family]} wrap="truncate">{LINE.repeat(cells[index] ?? 0)}</Text>
@@ -87,7 +91,7 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
           <Box columnGap={1}>
             <Text color={FAMILY_COLORS[share.family]}>●</Text>
             <Text>{`${FAMILY_NAMES[share.family]} ${percent(share.fraction, 1)}`}</Text>
-            <Text dimColor>{`${share.turns} tur`}</Text>
+            <Text dimColor>{`${share.turns} ${L('turns', 'tur')}`}</Text>
           </Box>
         ))}
       </Box>
@@ -119,37 +123,37 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
     <Box flexDirection="column" width={inner}>
       <Box width={inner}>
         <Box width={labelWidth}>
-          <Text bold>Döküm</Text>
+          <Text bold>{L('Breakdown', 'Döküm')}</Text>
         </Box>
         {used.map(family => cell(FAMILY_NAMES[family], FAMILY_COLORS[family], true))}
-        {cell('Toplam', undefined, true)}
+        {cell(L('Total', 'Toplam'), undefined, true)}
       </Box>
       <Text color="inactive">{RULE.repeat(inner)}</Text>
-      {row('Tur', bucket => String(bucket.turns))}
-      {row('Girdi', bucket => kilo(bucket.input))}
-      {row('Çıktı', bucket => kilo(bucket.output))}
-      {row('Önbellek okuma', bucket => kilo(bucket.cacheRead))}
-      {row('Önbelleğe yazma', bucket => kilo(bucket.cacheWrite))}
-      {row('Önbellek isabeti', bucket => dash(percent(cacheHit(bucket), 1), promptOf(bucket) === 0))}
+      {row(L('Turns', 'Tur'), bucket => String(bucket.turns))}
+      {row(L('Input', 'Girdi'), bucket => kilo(bucket.input))}
+      {row(L('Output', 'Çıktı'), bucket => kilo(bucket.output))}
+      {row(L('Cache read', 'Önbellek okuma'), bucket => kilo(bucket.cacheRead))}
+      {row(L('Cache write', 'Önbelleğe yazma'), bucket => kilo(bucket.cacheWrite))}
+      {row(L('Cache hit', 'Önbellek isabeti'), bucket => dash(percent(cacheHit(bucket), 1), promptOf(bucket) === 0))}
       <Text color="inactive">{RULE.repeat(inner)}</Text>
-      {row('Harcama', bucket => money(bucket.spent, bucket))}
-      {row('Seçici modeliyle', bucket => money(bucket.baseline, bucket))}
-      {row('Tasarruf', bucket => money(savedBy(bucket), bucket), gain, true)}
+      {row(L('Spent', 'Harcama'), bucket => money(bucket.spent, bucket))}
+      {row(L("On picker's model", 'Seçici modeliyle'), bucket => money(bucket.baseline, bucket))}
+      {row(L('Saved', 'Tasarruf'), bucket => money(savedBy(bucket), bucket), gain, true)}
     </Box>
   )
 
   // Where the table does not fit: a line for each family.
   const list = (): RenderElement => (
     <Box flexDirection="column" width={inner}>
-      <Text bold>Döküm</Text>
-      <Text dimColor>{`Önbellek isabeti ${percent(cacheHit(ever), 1)}`}</Text>
+      <Text bold>{L('Breakdown', 'Döküm')}</Text>
+      <Text dimColor>{`${L('Cache hit', 'Önbellek isabeti')} ${percent(cacheHit(ever), 1)}`}</Text>
       {used.map(family => {
         const bucket = input.all.families[family]
 
         return (
           <Box justifyContent="space-between" width={inner}>
             <Text color={FAMILY_COLORS[family]}>{FAMILY_NAMES[family]}</Text>
-            <Text dimColor>{`${bucket.turns} tur · ${usd(bucket.spent)} · tasarruf ${usd(savedBy(bucket))}`}</Text>
+            <Text dimColor>{`${bucket.turns} ${L('turns', 'tur')} · ${usd(bucket.spent)} · ${L('saved', 'tasarruf')} ${usd(savedBy(bucket))}`}</Text>
           </Box>
         )
       })}
@@ -158,7 +162,7 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
 
   const limits = (): RenderElement => (
     <Box flexDirection="column" width={inner}>
-      <Text bold>Limitler</Text>
+      <Text bold>{L('Limits', 'Limitler')}</Text>
       <Box flexDirection="column" width={inner} gap={1}>
         {input.limits.map(limit => (
           <Box flexDirection="column" width={inner}>
@@ -176,29 +180,40 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
   if (ever.turns === 0) {
     return (
       <Box flexDirection="column" borderStyle="round" borderColor="promptBorder" paddingX={2} paddingY={1} gap={1} width={inner + FRAME}>
-        <Text bold>Tasarruf</Text>
-        <Text dimColor>Henüz kayıtlı tur yok: rakamlar gearbox bir cevap bitirdikçe birikir.</Text>
+        <Text bold>{L('Savings', 'Tasarruf')}</Text>
+        <Text dimColor>{L('No turns recorded yet: the figures build up as gearbox finishes answers.', 'Henüz kayıtlı tur yok: rakamlar gearbox bir cevap bitirdikçe birikir.')}</Text>
       </Box>
     )
   }
 
-  const overhead = input.all.overhead === 0 ? '' : `gearbox'ın kendi Haiku soruları ${usd(input.all.overhead)}, tasarruftan düşüldü. `
-  const since = input.since === 0 ? '' : `Sayım ${new Date(input.since).toLocaleDateString('tr-TR')} tarihinden beri. `
+  const overhead =
+    input.all.overhead === 0
+      ? ''
+      : L(`gearbox's own Haiku questions ${usd(input.all.overhead)}, taken off the saving. `, `gearbox'ın kendi Haiku soruları ${usd(input.all.overhead)}, tasarruftan düşüldü. `)
+  const since =
+    input.since === 0
+      ? ''
+      : L(`Counting since ${new Date(input.since).toLocaleDateString('en-US')}. `, `Sayım ${new Date(input.since).toLocaleDateString('tr-TR')} tarihinden beri. `)
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="promptBorder" paddingX={2} paddingY={1} gap={1} width={inner + FRAME}>
       <Box justifyContent="space-between" width={inner}>
-        <Text bold>Tasarruf</Text>
-        <Text dimColor>tahmin · API liste fiyatıyla</Text>
+        <Text bold>{L('Savings', 'Tasarruf')}</Text>
+        <Text dimColor>{L('estimate · at API list prices', 'tahmin · API liste fiyatıyla')}</Text>
       </Box>
-      {period('Bu oturum', input.session, now)}
-      {period('Toplam', input.all, ever)}
+      {period(L('This session', 'Bu oturum'), input.session, now)}
+      {period(L('Total', 'Toplam'), input.all, ever)}
       {model()}
       {columnWidth >= MIN_COLUMN ? table() : list()}
       {input.limits.length > 0 && limits()}
       <Box flexDirection="column" width={inner}>
-        <Text dimColor>Aynı tokenların seçicideki modelde ne tutacağıyla karşılaştırılır; abonelikte kota bu oranda tükenir.</Text>
-        <Text dimColor>{`${overhead}${since}/gear sifirla ile sıfırlanır.`}</Text>
+        <Text dimColor>
+          {L(
+            "Compared with what the same tokens would cost on the picker's model; on a subscription the quota runs down at this rate.",
+            'Aynı tokenların seçicideki modelde ne tutacağıyla karşılaştırılır; abonelikte kota bu oranda tükenir.',
+          )}
+        </Text>
+        <Text dimColor>{`${overhead}${since}${L('/gear reset clears it.', '/gear sifirla ile sıfırlanır.')}`}</Text>
       </Box>
     </Box>
   )

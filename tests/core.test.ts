@@ -9,7 +9,10 @@ import { applyCommand, DEFAULTS, readSettings, readStats } from '../hooks/core/s
 import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
 import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
 import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, badgeSvg, badgeWidth } from '../hooks/core/switch'
+import { setLang } from '../hooks/core/text'
 import { isNewerThan } from '../hooks/core/version'
+
+setLang('tr')
 
 describe('classify', () => {
   const cases: ReadonlyArray<readonly [string, number]> = [

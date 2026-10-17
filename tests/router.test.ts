@@ -2,6 +2,11 @@ import type { On } from 'claude-code'
 import { expect, mock, test, type Engine } from 'claude-code/testing'
 
 import { BADGE_COLORS, BADGE_HEIGHT, badgeWidth } from '../hooks/core/switch'
+import { setLang } from '../hooks/core/text'
+
+// The tests read gearbox's Turkish; the English is tested by switching to it.
+Object.assign(globalThis, { GEARBOX_LANG: 'tr' })
+setLang('tr')
 
 type Sent = { model: string; effort: unknown }
 
@@ -157,7 +162,9 @@ test('a bug told without detail goes to Sonnet at high in tasarruf, and a go-ahe
   await step($, 't1', 0, 'claude-opus-5-5', 'max')
   expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
   const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-sonnet-5-5', ...ZERO } })
-  expect(done.text).toContain('belirsiz anlatılmış hata')
+  expect(done.text).toBe('*Sonnet 5.5 · efor high*')
+  // The reading behind the choice is in the status, not under the answer.
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: '' }))).toContain('belirsiz anlatılmış hata')
   await say($, 'evet, devam et')
   await step($, 't2', 0, 'claude-opus-5-5', 'max')
   expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
@@ -169,7 +176,7 @@ test('a bug whose cause hides but is told plainly goes to Sonnet at high', async
   await step($, 't1', 0, 'claude-opus-5-5', 'max')
   expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
   const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-sonnet-5-5', ...ZERO } })
-  expect(done.text).toContain('yeri belli hata avı: Sonnet')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: '' }))).toContain('yeri belli hata avı: Sonnet')
 })
 
 test('a nearly full window keeps critical work on Opus and warns under the answer and in the band', async ($, on) => {
@@ -299,9 +306,10 @@ test('a turn answered by Haiku shows its cost and the saving against the picker,
   const usage = { model: 'claude-haiku-5-5', input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 40_000, cache_creation_input_tokens: 2000 }
   const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage })
   // Haiku: $0.0001 + $0.00025 + $0.0004 + $0.00025; Opus: $0.004 + $0.01 + $0.008 + $0.01.
-  expect(done.text).toContain('$0,0010')
-  expect(done.text).toContain('seçici modeliyle $0,032')
+  expect(done.text).toBe('*Haiku 5.5 · efor low*')
   const report = await $.command.run({ command: 'gear', args: 'tasarruf' })
+  expect(JSON.stringify(report)).toContain('| Harcama | $0,0010 | $0,0010 |')
+  expect(JSON.stringify(report)).toContain('| Seçici modeliyle | $0,032 | $0,032 |')
   expect(JSON.stringify(report)).toContain('| Tasarruf | **$0,031** (%97) |')
   await $.command.run({ command: 'gear', args: 'sifirla' })
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'tasarruf' }))).toContain('Henüz kayıtlı tur yok')
@@ -319,9 +327,9 @@ test('a turn that switched model counts its rewritten cache against gearbox', as
   await turn('t1', 'claude-opus-5-5', 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
   // Opus took the first turn; the second goes to Haiku, which writes the cache afresh.
   const second = await turn('t2', 'claude-haiku-5-5', 'bu fonksiyon ne yapıyor?')
+  expect(second.text).toContain('*Haiku 5.5 · efor')
   // Haiku writes 100K at $0.125/M = $0.0125; the picker's Opus would have read 100K at $0.20/M = $0.02.
-  expect(second.text).toContain('$0,013')
-  expect(second.text).toContain('seçici modeliyle $0,020')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'tasarruf' }))).toContain('| Haiku | 1 (%50) | $0,013 | $0,020 |')
 })
 
 const CARD = { plugin: 'gearbox', component: 'CommandOutput', props: { command: 'gear', args: 'tasarruf', text: '', isErrored: false } } as const
@@ -483,8 +491,8 @@ test('in shadow mode gearbox chooses and writes it down, and every request goes 
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, turnId, 0, 'claude-opus-5-5', 'high')
     const done = await $.turn.complete({ turnId, answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
-    expect(done.text).toContain('gölge: Haiku · low')
-    expect(done.text).toContain('cevap: Opus 5.5')
+    // Under the answer only the model that answered; what gearbox would have chosen is in the log.
+    expect(done.text).toBe('*Opus 5.5 · efor high*')
   }
   // Not one request was changed.
   expect(sent.every(one => one.model === 'claude-opus-5-5' && one.effort === 'high')).toBe(true)
@@ -506,7 +514,7 @@ test('in shadow mode under a Sonnet picker the log keeps both what gearbox wante
   await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
   await step($, 't1', 0, 'claude-sonnet-5-5', 'high')
   const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-sonnet-5-5', ...ZERO } })
-  expect(done.text).toContain('gölge: Sonnet · high · T4 kritik önerirdi, tavan olmasa Opus · high')
+  expect(done.text).toBe('*Sonnet 5.5 · efor high*')
   const log = JSON.stringify(await $.command.run({ command: 'gear', args: 'kayit' }))
   expect(log).toContain('Sonnet · high (tavansız Opus · high)')
   expect(log).toContain('Seçici tavanı yüzünden kırpılan: 1, bunların 1 tanesinde daha güçlü bir model istenmişti')
@@ -547,4 +555,90 @@ test('before a choice the band says what the state means; in shadow mode it show
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
   expect(await ui.find({ type: 'Text', text: /Haiku · low · T0 önemsiz önerirdi/ })).toBeDefined()
   await ui.unmount()
+})
+
+test('under every answer, even with gearbox off, the model that answered and its effort; the helpers beside it', async ($, on) => {
+  world(on)
+  await $.command.run({ command: 'gear', args: 'off' })
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't1', 0, 'claude-opus-5-5', 'max')
+  const stream = $.turn.step({ turnId: 'h1', index: 0, model: 'claude-sonnet-5-5', effort: 'medium', messageCount: 1, agentId: 'helper-1' })
+  for await (const _chunk of stream) {
+    // Drained only to reach the result.
+  }
+  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
+  expect(done.text).toBe('*Opus 5.5 · efor max · yardımcılar: Sonnet 5.5*')
+  // The helpers are told once: the next answer has none.
+  await say($, 'bu sınıf ne yapıyor?')
+  await step($, 't2', 0, 'claude-opus-5-5', 'max')
+  const next = await $.turn.complete({ turnId: 't2', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
+  expect(next.text).toBe('*Opus 5.5 · efor max*')
+  // /gear note off takes the line away.
+  await $.command.run({ command: 'gear', args: 'note off' })
+  await say($, 'bu sınıf ne yapıyor?')
+  await step($, 't3', 0, 'claude-opus-5-5', 'max')
+  const quiet = await $.turn.complete({ turnId: 't3', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
+  expect(quiet.text).toBe('tamam')
+})
+
+test('the commands are English: on, off, shadow, savings, log, wrong, reset, profile saver', async ($, on) => {
+  const { sent } = world(on)
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'profile balanced' }))).toContain('profil dengeli')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'profile saver' }))).toContain('profil tasarruf')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'shadow' }))).toContain('gölgede')
+  await $.command.run({ command: 'gear', args: 'off' })
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't1', 0, 'claude-opus-5-5', 'max')
+  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })
+  await $.command.run({ command: 'gear', args: 'on' })
+  await say($, 'bu sınıf ne yapıyor?')
+  await step($, 't2', 0, 'claude-opus-5-5', 'high')
+  expect(sent[1]?.model).toBe('claude-haiku-5-5')
+  await $.turn.complete({ turnId: 't2', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-haiku-5-5', ...ZERO } })
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'wrong weak' }))).toContain('İşaretlendi')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'log' }))).toContain('siz: çok zayıftı')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'savings' }))).toContain('Tasarruf')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'reset' }))).toContain('sıfırlandı')
+  // The old Turkish names go on working.
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'sabitle' }))).toContain('kapalı')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: '' }))).toContain('/gear doctor')
+})
+
+test('/gear lang en speaks English everywhere, /gear lang tr goes back', async ($, on) => {
+  world(on)
+  try {
+    expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'lang en' }))).toContain('on')
+    await say($, 'bu fonksiyon ne yapıyor?')
+    await step($, 't1', 0, 'claude-opus-5-5', 'high')
+    const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-haiku-5-5', ...ZERO } })
+    expect(done.text).toBe('*Haiku 5.5 · effort low*')
+    const status = JSON.stringify(await $.command.run({ command: 'gear', args: '' }))
+    expect(status).toContain('Last decision')
+    expect(status).toContain('(rules: question:')
+    expect(status).not.toContain('Son karar')
+    expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'log' }))).toContain('Doubtful decisions')
+    expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'savings' }))).toContain('This session')
+    expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))).toContain('Nothing to fix')
+    await $.command.run({ command: 'gear', args: 'lang tr' })
+    expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'log' }))).toContain('Şüpheli kararlar')
+  } finally {
+    setLang('tr')
+  }
+})
+
+test('/gear doctor says what to fix and how', async ($, on) => {
+  world(on)
+  const before = JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))
+  expect(before).toContain('gearbox doctor')
+  expect(before).toContain('gearbox açık')
+  expect(before).toContain('seçici bilinmiyor')
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't1', 0, 'claude-sonnet-5-5', 'medium')
+  const held = JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))
+  expect(held).toContain('Seçici Sonnet 5.5 · medium tutuyor')
+  expect(held).toContain('Opus · high seç')
+  await $.command.run({ command: 'gear', args: 'shadow' })
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))).toContain('`/gear on`')
+  await $.command.run({ command: 'gear', args: 'off' })
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))).toContain('gearbox kapalı')
 })

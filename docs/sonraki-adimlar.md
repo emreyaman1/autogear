@@ -1,6 +1,6 @@
 # gearbox — sonraki adımlar
 
-Bu dosya gearbox için yapılacak işlerin ve verilmiş kararların listesi. **Adım 1, 2, 3 ve 6 yapıldı (0.8.0, 16 Ekim 2026; henüz commit edilmedi ve kullanıcının kurulu kopyasına geçmedi). Kalanlar yapılmadı.** Liste 16 Ekim 2026'daki araştırma oturumundan çıktı: GitHub'daki benzer projeler, Claude Code belgeleri, gearbox'ın kendi kayıtları ve bir ölçüm videosu incelendi. Kullanıcı "önerilerdeki her şeyi yapacağız" dedi. Bir adım yapılınca burada işaretlenir; bir karar değişirse gerekçesiyle yazılır.
+Bu dosya gearbox için yapılacak işlerin ve verilmiş kararların listesi. **Adım 1, 2, 3 ve 6 yapıldı (0.8.0), 9, 10 ve 16 yapıldı (0.12.0, 18 Ekim 2026). Adım 4, 5, 12 ve 17 kısmen yapıldı (altlarındaki notlara bak); kalanlar yapılmadı.** Liste 16 Ekim 2026'daki araştırma oturumundan çıktı: GitHub'daki benzer projeler, Claude Code belgeleri, gearbox'ın kendi kayıtları ve bir ölçüm videosu incelendi. Kullanıcı "önerilerdeki her şeyi yapacağız" dedi. Bir adım yapılınca burada işaretlenir; bir karar değişirse gerekçesiyle yazılır.
 
 Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 
@@ -11,7 +11,7 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 - **Yardımcıların (alt ajanların) Sonnet'e sabitlenmesi de kaldırıldı** (kullanıcı kararı, 16 Ekim 2026). Artık kullanıcının seçtiği ana modeli kullanıyorlar; kendi modeli tanımlı yardımcılar hariç.
 - **gearbox:** kullanıcı kapalı tutmak istiyor. Kayıtta mod "gölge": seçmiyor ama her mesajda karar verip deftere yazıyor, emin olmayınca Haiku'ya soruyor. Tamamen kapatmak için `/gear sabitle`. Üstteki banttaki düğme gölge modda KAPALI gibi görünüyor; tıklayınca gearbox kapanmıyor, açılıyor (bkz. adım 2; 0.8.0'da düzeldi, kullanıcının kurulu kopyası güncellenince geçerli olur).
 - **Testleri çalıştırmak:** bilgisayardaki komut satırı `claude` 2.1.278 ve gearbox'ın kullandığı Mod API'sinden eski; onunla `claude plugin test .` 25 testte düşüyor. Masaüstü uygulamasının içindeki 2.1.295 ve 2.1.299 bütün testleri geçiriyor (0.7.1 de 2.1.278'de yüklenmiyordu; bkz. adım 1, "Uyumluluk"): 17 Ekim'den beri uygulama bunları `%LOCALAPPDATA%\Claude-Data\claude_pzs8sxrjxfjjc\claude-code\2.1.299\f0584be0fbaf\claude.exe` altında tutuyor (eskiden `%APPDATA%\Claude\claude-code\`; klasör adları güncellemeyle değişir). Ölçüm betikleri (`scripts/claude.mjs`) en yeni sürümü kendileri buluyor ve 2.1.295'ten eskisinde hiçbir şey harcamadan duruyor.
-- **17 Ekim'deki çökme:** hata yakalayan test görevinin gizli testi, hiç test dosyası bulamayınca kendini yeniden çalıştırıyordu; yüzlerce Node.js kopyası RAM'i doldurdu, bilgisayar yeniden başlatıldı. Düzeltildi: iç çalıştırma bir işaret taşıyor ve o işaretle hiçbir şey başlatmıyor, dosya yoksa iç çalıştırma hiç başlamıyor, gizli testler kopyadan siliniyor, her çalıştırmanın 30 saniye sınırı var. Kalan 2.245 geçici klasör silindi. `TESTED_THROUGH` hâlâ 2.1.295; yükseltmek için ücretli duman testi gerekiyor.
+- **17 Ekim'deki çökme:** hata yakalayan test görevinin gizli testi, hiç test dosyası bulamayınca kendini yeniden çalıştırıyordu; yüzlerce Node.js kopyası RAM'i doldurdu, bilgisayar yeniden başlatıldı. Düzeltildi: iç çalıştırma bir işaret taşıyor ve o işaretle hiçbir şey başlatmıyor, dosya yoksa iç çalıştırma hiç başlamıyor, gizli testler kopyadan siliniyor, her çalıştırmanın 30 saniye sınırı var. Kalan 2.245 geçici klasör silindi. `TESTED_THROUGH` 18 Ekim'de 2.1.299'a çıkarıldı: canlı duman testi (`node scripts/smoke.mjs`, $0,11) 2.1.299'da Haiku, Opus ve Sonnet seçimlerini gördü. Duman testinin üçüncü beklentisi eskiydi (zor iş Opus sanılıyordu; 0.9.0'dan beri tasarruf profilinde Sonnet), düzeltildi.
 - **Kayıtlardan:** plan modu neredeyse hiç kullanılmamış (2.306 mesaj kaydı, 0 plan modu; plan onayı 1 kez). Adım 1'e bakarken 17 Ağustos 2026'daki bir oturumda bir plan modu satırı bulundu; o sayımın dışında kalmış. Bütün sohbetlerde yaklaşık 200 kez yardımcı (alt ajan) açılmış.
 
 ## gearbox ve önbellek: kesin kural
@@ -55,14 +55,14 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 | 6 | Efor tablosunu ölçüme göre yeniden ayarlamak (yapıldı, 0.8.0) | Claude (video) |
 | 7 | Alt ajan yönlendirme | Claude |
 | 8 | advisor (danışman) ile birleştirme | Claude |
-| 9 | Dil ayarı ve İngilizce komutlar | Kullanıcı kararı |
-| 10 | Her cevabın altında italik model satırı | Kullanıcı |
+| 9 | Dil ayarı ve İngilizce komutlar (yapıldı, 0.12.0, 18 Ekim) | Kullanıcı kararı |
+| 10 | Her cevabın altında italik model satırı (yapıldı, 0.12.0, 18 Ekim) | Kullanıcı |
 | 11 | Görünürlük ve resmî dizine başvuru | Kullanıcı + Claude |
 | 12 | Ölçümleri genişletmek (sqlglot ile bir tur yapıldı, 18 Ekim) | Kullanıcı + Claude |
 | 13 | Sonuçlardan öğrenmek | Claude |
 | 14 | context-mode ile birlikte denemek | Claude |
 | 15 | Model kimliklerini kendiliğinden güncellemek | Claude |
-| 16 | `/gear doctor` komutu | Claude |
+| 16 | `/gear doctor` komutu (yapıldı, 0.12.0, 18 Ekim) | Claude |
 | 17 | Büyük sohbetten temiz sohbete geçmek (0.10.1, 17 Ekim; öneri gerçek sohbette çalıştı, "temiz sohbet" düğmesi denenmedi) | Kullanıcı |
 
 ## Adımlar
@@ -319,6 +319,12 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 
 - Eski Türkçe komutların bir süre sessizce çalışmaya devam edip etmeyeceğine uygularken karar verilir.
 
+**Yapıldı (18 Ekim 2026, 0.12.0):**
+
+- **Komutlar İngilizce:** `/gear on`, `off`, `shadow`, `savings`, `log`, `wrong weak|strong`, `reset`, `profile saver|balanced|quality`, `haiku`, `ask`, `note`, `band` (`on|off`), `lang en|tr|auto`, `doctor`. **Eski Türkçe adlar çalışmaya devam ediyor** (karar: sessizce; kimsenin alışkanlığı bozulmasın), yardım metni yalnızca İngilizce adları gösteriyor ve eski adların çalıştığını söylüyor. Etiketler `+cheap` ve `+deep` zaten vardı. Profillerin kayıtlı adları Türkçe kaldı (`tasarruf`, `dengeli`, `kalite`; kayıtlı ayarlar bozulmasın), İngilizce adları takma ad.
+- **Dil:** `hooks/core/text.ts`. Claude Code'un `language` ayarını bir Mod okuyamıyor (Mod API'sinde yok, eklentinin çalışma ortamında dosya okuma da yok), bu yüzden `auto` sistemin dilini izliyor: Türkçe sistemde Türkçe, başka yerde İngilizce. `/gear lang en|tr` elle seçer. Canlı denendi: bu bilgisayarda `auto` Türkçe seçti. gearbox'ın söylediği her şey iki dilde: komut çıktıları, yardım, durum, günlük, tasarruf metni ve kartı, bant ve düğmeler, uyarılar, bildirimler, devir notu isteği ve devir notunun başlığı. Kuralların yazdığı gerekçeler (`zor iş: "..."` gibi) Türkçe saklanıyor ve İngilizce gösterilirken `reasonText` ile çevriliyor (listede olmayan gerekçe Türkçe kalır).
+- **Doğrulanmadı:** İngilizce metinleri bir anadil konuşmacısı okumadı; masaüstü uygulamasında İngilizce bandın görünüşü (düğme boyları) denenmedi; Türkçe ve İngilizce dışında dil yok (Claude Code'un dili İspanyolca ise gearbox İngilizce konuşur).
+
 ### 10. Her cevabın altında italik model satırı (kullanıcı isteği)
 
 - **Ne:** Her cevabın altında, italik ve sade: *Opus 5.5 · efor medium*. API'nin bildirdiği, gerçekten cevap veren model yazılır.
@@ -326,6 +332,13 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 - **Bir cevapta birden çok model çalıştıysa** hepsi yazılır. Örnek: *Opus 5.5 · yardımcılar: Sonnet 5.5*.
 - **Neden:** opusplan gibi modlarda hangi mesajı hangi modelin yazdığı karışıyor. Bugünkü gölge satırında hem "önerirdi" hem "cevap" yazdığı için kafa karıştırıyor.
 - `/gear note off` ile kapatılabilir.
+
+**Yapıldı (18 Ekim 2026, 0.12.0):**
+
+- Her cevabın altında, gearbox açıkken, gölgedeyken ve kapalıyken de, tek italik satır: `*Opus 5.5 · efor medium*`. Model, API'nin cevap veren diye bildirdiği; efor, isteğin gittiği efor (API cevabın eforunu bildirmiyor). Yardımcılar (alt ajanlar) çalıştıysa: `*Opus 5.5 · efor medium · yardımcılar: Sonnet 5.5*`; modeller turun içinde toplanıyor, sonraki cevapta yazılmıyor. Yanına düz yazıyla plan modu ve limit uyarısı ekleniyor.
+- **Satırdan çıkarılanlar (kullanıcı "sade" dedi):** kademe ve gerekçe, önbellek rakamları, tur maliyeti ve "seçici modeliyle" karşılaştırması. Bunlar `/gear` (son karar ve gerekçesi), `/gear log` ve `/gear savings` içinde duruyor. Gölge modda "önerirdi" ve "cevap" karışıklığı kalktı: satır yalnızca cevap veren modeli yazıyor, gearbox'ın önerisi bantta ve günlükte.
+- **Canlı denendi (Haiku, 2.1.299):** satır cevabın altında bilgi satırı olarak çıktı (`*Haiku 5.5 · efor low*`).
+- **Doğrulanmadı:** gerçek bir alt ajanla yardımcı satırı (testte sahte yardımcı kullanıldı); masaüstü uygulamasında italiğin görünüşü.
 
 ### 11. Görünürlük ve resmî dizine başvuru
 
@@ -406,6 +419,8 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
   - efor ayarı ne, yardımcılar neye sabit;
   - sürüm uyumlu mu;
   - son kararlar gerçekten uygulanmış mı.
+- **Yapıldı (18 Ekim 2026, 0.12.0):** `/gear doctor`, `hooks/core/doctor.ts`. Her kontrol ✓ (iyi), ⚠ (bakılacak, yanında ne yapılacağı), ℹ (bilgi). Kontroller: açık / gölge / kapalı / durdu (kapalıysa `/gear on` önerir); seçici (Sonnet ya da düşük efor tutuyorsa "gearbox seçicinin üstüne çıkmaz, Opus · high seç"); Claude Code sürümü gearbox'ın denendiği en yeni sürümden yeni mi; son seçimler uygulandı mı (üst üste kaç tur başka model cevapladı); cevap vermeyen modeller; depo yazıp geri okuyabiliyor mu; limit pencereleri okunabiliyor mu; cevap altı satırı ve bant açık mı; plan modu; dil. Ortamdaki `CLAUDE_CODE_EFFORT_LEVEL` ve `CLAUDE_CODE_SUBAGENT_MODEL` için de kontrol yazıldı.
+  - **Sınır (dürüst):** eklentinin çalışma ortamında `process` yok (testte "process is not defined"); bu yüzden ortam değişkeni kontrolü büyük olasılıkla hiç çalışmıyor ve sessiz kalıyor. `settings.json`daki `model: opusplan` gibi ayarlar da okunamıyor. 16 Ekim'deki karışıklığın (opusplan, max efor) doğrudan yakalanmış hâli bu yüzden eksik; seçici doktorda Sonnet/düşük efor olarak görünür, ama nedeni (opusplan) söylenemez. Canlı denendi: `/gear doctor` gerçek Claude Code'da çalıştı; ortam kontrolleri denenemedi.
 - **Örnek:** Adityaraj0421/gearbox'un doktor komutu 11 yaygın sorunu kontrol ediyor. 16 Ekim'deki karışıklık (opusplan + gölge mod + max efor + kapalı sanılan düğme) tam bu komutun yakalayacağı türden.
 
 ### 17. Büyük sohbetten temiz sohbete geçmek (kullanıcı isteği, 17 Ekim 2026)

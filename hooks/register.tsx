@@ -12,6 +12,7 @@ import type {
 } from 'claude-code'
 
 import { savingsCard, type LimitRow } from './card'
+import { doctorText, type Facts } from './core/doctor'
 import { cleanNote, dayOf, handoverContext, HANDOVER_TOKENS, isWorkDone, notePrompt, resumeLine } from './core/handover'
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
 import { addEntry, flagLast, journalText, markLast, MARK_NAMES, readJournal, snippet, type Mark } from './core/journal'
@@ -24,6 +25,7 @@ import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from '
 import { normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
 import { readRule, settle, type Task } from './core/settle'
 import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, badgeSvg, badgeWidth } from './core/switch'
+import { asLangSetting, getLang, L, pct, profileName, reasonText, resolveLang, setLang, sourceText, systemLocale, tierName } from './core/text'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { isNewerThan, TESTED_THROUGH } from './core/version'
 import type { GearboxMode } from '../types'
@@ -48,46 +50,58 @@ const SOURCE_NAMES: Record<string, string> = {
   escalate: 'yükseltme',
 }
 
-const WINDOW_NAMES: Record<string, string> = { five_hour: '5 saatlik', seven_day: 'haftalık' }
+const windowName = (kind: string): string =>
+  kind === 'five_hour' ? L('5-hour', '5 saatlik') : kind === 'seven_day' ? L('weekly', 'haftalık') : kind
 
-const LIMIT_TITLES: Record<string, string> = { five_hour: 'Oturum sınırı · 5 saat', seven_day: 'Haftalık sınır' }
+const limitTitle = (kind: string): string =>
+  kind === 'five_hour' ? L('Session limit · 5 hours', 'Oturum sınırı · 5 saat') : kind === 'seven_day' ? L('Weekly limit', 'Haftalık sınır') : kind
 
-const MODE_NAMES: Record<GearboxMode, string> = { auto: 'açık', shadow: 'gölge', pin: 'kapalı', down: 'durdu' }
+const modeName = (mode: GearboxMode): string =>
+  mode === 'auto' ? L('on', 'açık') : mode === 'shadow' ? L('shadow', 'gölge') : mode === 'pin' ? L('off', 'kapalı') : L('stopped', 'durdu')
 
 // What each state of the band means, beside its badge.
-const MODE_NOTES: Record<GearboxMode, string> = {
-  auto: 'işe göre model ve efor seçiyor',
-  shadow: 'seçip yazıyor, uygulamıyor; cevabı seçici veriyor',
-  pin: 'seçicideki model kullanılıyor',
-  down: 'seçimleri uygulanmıyordu; seçicideki model kullanılıyor',
-}
+const modeNote = (mode: GearboxMode): string =>
+  mode === 'auto' ? L('picks the model and effort for the work', 'işe göre model ve efor seçiyor')
+  : mode === 'shadow' ? L("chooses and writes it down, applies nothing; the picker's model answers", 'seçip yazıyor, uygulamıyor; cevabı seçici veriyor')
+  : mode === 'pin' ? L("the picker's model is used", 'seçicideki model kullanılıyor')
+  : L("its choices were not applied; the picker's model is used", 'seçimleri uygulanmıyordu; seçicideki model kullanılıyor')
 
 // The band's buttons, each named for what a press does.
 const MODE_ACTIONS = [
-  { mode: 'auto', key: 'to-auto', label: 'aç' },
-  { mode: 'shadow', key: 'to-shadow', label: 'gölgeye al' },
-  { mode: 'pin', key: 'to-pin', label: 'kapat' },
+  { mode: 'auto', key: 'to-auto' },
+  { mode: 'shadow', key: 'to-shadow' },
+  { mode: 'pin', key: 'to-pin' },
 ] as const
 
-const HELP = [
-  '| Komut | İş |',
-  '|:--|:--|',
-  '| `/gear` | durum, son karar, limitler |',
-  '| `/gear tasarruf` | harcama, seçici modeliyle olacak harcama, tasarruf |',
-  '| `/gear kayit` | gearbox\'ın son kararları ve şüpheli olanlar |',
-  '| `/gear yanlis zayif` · `fazla` | son mesajın kararını işaretle: model çok zayıftı · gereğinden güçlüydü |',
-  '| `/gear sifirla` | tasarruf sayacını ve günlüğü sıfırla |',
-  "| `/gear oto` · `/gear sabitle` | gearbox'ı aç · kapat (kapalıyken seçici model kullanılır) |",
-  '| `/gear golge` | gölge: seçer ve yazar ama uygulamaz, cevabı seçicideki model verir; yeni bir sürümü işini etkilemeden denemek için |',
-  '| `/gear profil <ad>` | tasarruf, dengeli ya da kalite |',
-  "| `/gear haiku aç` · `kapa` | önemsiz işler Haiku'ya gitsin mi |",
-  "| `/gear sor aç` · `kapa` | kurallar emin olamazsa Haiku'ya sorulsun mu |",
-  '| `/gear not aç` · `kapa` | cevabın altındaki satır |',
-  '| `/gear bant aç` · `kapa` | istem kutusunun üstündeki aç/kapa düğmesi |',
-  '',
-  'Mesajın başına yazılan etiketler: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz`, `+derin`.',
-  "Ya da yazıyla: \"bu görevi sonnet'e max ile ver\", \"opus ile yap\", \"use opus\".",
-].join('\n')
+const actionLabel = (target: GearboxMode, from: GearboxMode): string =>
+  target === 'auto' ? (from === 'down' ? L('try again', 'yeniden dene') : L('turn on', 'aç'))
+  : target === 'shadow' ? L('to shadow', 'gölgeye al')
+  : L('turn off', 'kapat')
+
+// The commands are English in both languages; the old Turkish names keep working.
+const help = (): string =>
+  [
+    L('| Command | What it does |', '| Komut | İş |'),
+    '|:--|:--|',
+    `| \`/gear\` | ${L('status, last decision, limits', 'durum, son karar, limitler')} |`,
+    `| \`/gear savings\` | ${L("spent, what it would have cost on the picker's model, saved", 'harcama, seçici modeliyle olacak harcama, tasarruf')} |`,
+    `| \`/gear log\` | ${L("gearbox's last decisions and the doubtful ones", "gearbox'ın son kararları ve şüpheli olanlar")} |`,
+    `| \`/gear wrong weak\` · \`strong\` | ${L("mark the last message's decision: the model was too weak · stronger than needed", 'son mesajın kararını işaretle: model çok zayıftı · gereğinden güçlüydü')} |`,
+    `| \`/gear reset\` | ${L('reset the savings counter and the log', 'tasarruf sayacını ve günlüğü sıfırla')} |`,
+    `| \`/gear on\` · \`/gear off\` | ${L("turn gearbox on · off (off, the picker's model is used)", "gearbox'ı aç · kapat (kapalıyken seçici model kullanılır)")} |`,
+    `| \`/gear shadow\` | ${L("shadow: chooses and writes it down but applies nothing, the picker's model answers; to try a new version without touching your work", 'gölge: seçer ve yazar ama uygulamaz, cevabı seçicideki model verir; yeni bir sürümü işini etkilemeden denemek için')} |`,
+    `| \`/gear profile <name>\` | ${L('saver, balanced or quality', 'saver (tasarruf), balanced (dengeli) ya da quality (kalite)')} |`,
+    `| \`/gear haiku on\` · \`off\` | ${L('may trivial work go to Haiku', 'önemsiz işler Haiku\'ya gitsin mi')} |`,
+    `| \`/gear ask on\` · \`off\` | ${L('ask Haiku when the rules cannot tell', "kurallar emin olamazsa Haiku'ya sorulsun mu")} |`,
+    `| \`/gear note on\` · \`off\` | ${L('the line under each answer', 'cevabın altındaki satır')} |`,
+    `| \`/gear band on\` · \`off\` | ${L('the on/off band above the prompt', 'istem kutusunun üstündeki aç/kapa düğmesi')} |`,
+    `| \`/gear lang en\` · \`tr\` · \`auto\` | ${L("the language gearbox speaks (auto follows the system's)", "gearbox'ın konuştuğu dil (auto sistemin dilini izler)")} |`,
+    `| \`/gear doctor\` | ${L('check the setup and say what to fix', 'kurulumu kontrol et, düzeltilecek şeyi söyle')} |`,
+    '',
+    L('Tags at the start of a message: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap`, `+deep`.', 'Mesajın başına yazılan etiketler: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap`, `+deep`.'),
+    L('Or in words: "give this task to sonnet with max", "use opus".', 'Ya da yazıyla: "bu görevi sonnet\'e max ile ver", "opus ile yap", "use opus".'),
+    L('The old Turkish names (oto, sabitle, golge, tasarruf, kayit, yanlis, sifirla, profil, sor, not, bant) still work.', 'Eski Türkçe adlar (oto, sabitle, golge, tasarruf, kayit, yanlis, sifirla, profil, sor, not, bant) hâlâ çalışır.'),
+  ].join('\n')
 
 // What the router remembers within one load of the module.
 type State = {
@@ -126,6 +140,12 @@ type State = {
   // sohbet" until the first prompt after the /clear carries it. Kept in the
   // module, which a /clear does not reload.
   handover: { note: string; oldSessionId: string; isCleared: boolean } | undefined
+  // The picker's model and effort as the last request saw them.
+  ceiling: { model: string; effort: Effort | undefined } | undefined
+  // What each main-thread turn was sent as, for the line under its answer.
+  sent: Map<string, { model: string; effort: string | undefined }>
+  // The models the turn's helpers (subagents) ran on.
+  helpers: Set<string>
 }
 
 const modeAtom = atom({ plugin: 'gearbox', key: 'mode' } as const, 'auto')
@@ -154,9 +174,7 @@ const handoverPendingAtom = atom({ plugin: 'gearbox', key: 'handoverPending' } a
 
 const HANDOVER_PANE = 'gearbox-handover'
 
-const kilo = (tokens: number): string => (tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}K` : String(tokens))
-
-const onOff = (value: boolean): string => (value ? 'açık' : 'kapalı')
+const onOff = (value: boolean): string => (value ? L('on', 'açık') : L('off', 'kapalı'))
 
 const clock = (iso: string): string => {
   const date = new Date(iso)
@@ -165,7 +183,7 @@ const clock = (iso: string): string => {
 }
 
 function tierLabel(state: State, decision: Decision): string {
-  return tierSpec(state.settings.profile, decision.tier).label
+  return tierName(tierSpec(state.settings.profile, decision.tier).label)
 }
 
 function isRouting(state: State): boolean {
@@ -180,7 +198,7 @@ function modeOf(state: State): GearboxMode {
 function savedNote(state: State): string {
   const saved = savedOf(state.session)
 
-  return saved >= 0.01 ? ` · ${usd(saved)} tasarruf` : ''
+  return saved >= 0.01 ? ` · ${usd(saved)} ${L('saved', 'tasarruf')}` : ''
 }
 
 function showStatus($: EngineInterface, state: State): void {
@@ -189,18 +207,29 @@ function showStatus($: EngineInterface, state: State): void {
   void update($, modeAtom, () => mode)
   // The band says what the last choice was beside the badge, or what the state means before one.
   const choice = last === undefined ? undefined : `${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)}`
-  const note = choice === undefined ? '' : mode === 'shadow' ? `${choice} önerirdi` : choice
+  const note = choice === undefined ? '' : mode === 'shadow' ? `${choice} ${L('would choose', 'önerirdi')}` : choice
   void update($, noteAtom, () => note)
   $.ui.status(
-    mode === 'down' ? '⚙ gearbox: devre dışı (seçici), /gear'
-    : mode === 'pin' ? '⚙ gearbox: kapalı (seçici model)'
+    mode === 'down' ? L("⚙ gearbox: stopped (the picker's model), /gear", '⚙ gearbox: devre dışı (seçici), /gear')
+    : mode === 'pin' ? L("⚙ gearbox: off (the picker's model)", '⚙ gearbox: kapalı (seçici model)')
     : mode === 'shadow'
       ? last === undefined
-        ? '⚙ gearbox: gölgede, seçimleri yazıyor'
-        : `⚙ gölge: ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} önerirdi`
-    : last === undefined ? `⚙ gearbox: otomatik · ${settings.profile}`
+        ? L('⚙ gearbox: in shadow, writing its choices down', '⚙ gearbox: gölgede, seçimleri yazıyor')
+        : L(`⚙ shadow: ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} would choose`, `⚙ gölge: ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} önerirdi`)
+    : last === undefined ? L(`⚙ gearbox: automatic · ${profileName(settings.profile)}`, `⚙ gearbox: otomatik · ${settings.profile}`)
     : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} ${tierLabel(state, last)}${savedNote(state)}`,
   )
+}
+
+// What a main-thread turn was sent as: the model and effort its answer is told by.
+function markSent(state: State, turnId: string, model: string, effort: string | undefined): void {
+  state.sent.set(turnId, { model, effort })
+  if (state.sent.size > 50) {
+    const oldest = state.sent.keys().next().value
+    if (oldest !== undefined) {
+      state.sent.delete(oldest)
+    }
+  }
 }
 
 function remember($: EngineInterface, state: State, turnId: string, decision: Decision): Decision {
@@ -218,11 +247,12 @@ function remember($: EngineInterface, state: State, turnId: string, decision: De
 }
 
 function noticeCeiling($: EngineInterface, state: State, model: string, effort: Effort | undefined): void {
-  const seen = `${displayModel(model)} · ${effort ?? 'varsayılan efor'}`
+  const seen = `${displayModel(model)} · ${effort ?? L('default effort', 'varsayılan efor')}`
   if (state.ceilingSeen !== undefined && seen !== state.ceilingSeen) {
-    $.ui.toast(`gearbox tavanı: ${seen}`)
+    $.ui.toast(L(`gearbox ceiling: ${seen}`, `gearbox tavanı: ${seen}`))
   }
   state.ceilingSeen = seen
+  state.ceiling = { model, effort }
 }
 
 async function readUsage($: EngineInterface) {
@@ -311,7 +341,7 @@ async function decideTurn(
 async function showWarning($: EngineInterface, state: State, decision: Decision, e: Pick<TurnStepInput, 'model' | 'effort'>): Promise<void> {
   const running =
     state.settings.mode === 'shadow'
-      ? `${displayModel(e.model)} · ${asEffort(e.effort) ?? 'varsayılan efor'}`
+      ? `${displayModel(e.model)} · ${asEffort(e.effort) ?? L('default effort', 'varsayılan efor')}`
       : `${FAMILY_NAMES[decision.family]} · ${decision.effort}`
   await update($, warningAtom, () => paceWarning(decision.limit, running) ?? '')
 }
@@ -351,44 +381,42 @@ function noteUnavailable($: EngineInterface, state: State, e: Pick<TurnStepInput
     effort: asEffort(e.effort) ?? decision.effort,
     reasons: [...decision.reasons, `${MODEL_IDS[decision.family]} yanıt vermedi`],
   })
-  $.ui.toast(`gearbox: ${MODEL_IDS[decision.family]} yanıt vermedi; bu oturumda kullanmıyorum, seçicideki model devam ediyor.`, { timeoutMs: 10000 })
+  $.ui.toast(
+    L(
+      `gearbox: ${MODEL_IDS[decision.family]} gave no answer; I will not use it this session, the picker's model carries on.`,
+      `gearbox: ${MODEL_IDS[decision.family]} yanıt vermedi; bu oturumda kullanmıyorum, seçicideki model devam ediyor.`,
+    ),
+    { timeoutMs: 10000 },
+  )
 }
 
 type TurnMoney = { spent: number; baseline: number }
 
-function footer(state: State, decision: Decision, usage: TurnUsage | undefined, money: TurnMoney | undefined): string {
-  const model = usage === undefined ? FAMILY_NAMES[decision.family] : displayModel(usage.model)
-  // The reading and the last thing that moved it: what the choice rests on.
-  const why = (decision.reasons.length > 2 ? [decision.reasons[0], decision.reasons.at(-1)] : decision.reasons).join('; ')
-  const cache =
-    usage === undefined
-      ? ''
-      : ` · önbellek ${kilo(usage.cache_read_input_tokens)} okundu / ${kilo(usage.cache_creation_input_tokens)} yazıldı`
-  const source = SOURCE_NAMES[decision.source] ?? decision.source
-  const cost = money === undefined ? '' : ` · ${usd(money.spent)} (seçici modeliyle ${usd(money.baseline)})`
+// The line under an answer, in italics: the model that answered and its
+// effort, as the API and the request say, and the models of the helpers that
+// ran. Beside it, plain: plan mode, and a limit under pressure.
+function answerLine(state: State, turnId: string, usage: TurnUsage | undefined, decision: Decision | undefined): string | undefined {
+  const sent = state.sent.get(turnId)
+  const model = usage === undefined ? sent?.model : usage.model
+  if (model === undefined) {
+    return undefined
+  }
+  const name = displayModel(model)
+  const effort = sent?.effort ?? decision?.effort
+  const parts = [name, ...(effort === undefined ? [] : [`${L('effort', 'efor')} ${effort}`])]
+  if (state.helpers.size > 0) {
+    parts.push(`${L('helpers', 'yardımcılar')}: ${[...state.helpers].join(', ')}`)
+  }
+  const extras = [...(decision?.isPlanning === true ? [L('plan mode', 'plan modu')] : []), ...warnings(decision, `${name}${effort === undefined ? '' : ` · ${effort}`}`)]
 
-  return `⚙ ${model} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} (${source}: ${why})${cache}${cost}${planned(decision)}${warned(decision, `${model} · ${decision.effort}`)}`
+  return `*${parts.join(' · ')}*${extras.map(extra => ` · ${extra}`).join('')}`
 }
 
-// " · plan modu" for a choice made in plan mode.
-const planned = (decision: Decision): string => (decision.isPlanning === true ? ' · plan modu' : '')
+// "⚠ 5-hour limit 92%: ..." while a window is under pressure.
+function warnings(decision: Decision | undefined, running: string): string[] {
+  const warning = paceWarning(decision?.limit, running)
 
-// " · ⚠ 5 saatlik limit %92: ..." while a window is under pressure.
-function warned(decision: Decision, running: string): string {
-  const warning = paceWarning(decision.limit, running)
-
-  return warning === undefined ? '' : ` · ⚠ ${warning}`
-}
-
-// A turn in shadow mode: what gearbox would have chosen, beside what answered.
-function shadowFooter(state: State, decision: Decision, usage: TurnUsage | undefined): string {
-  const why = (decision.reasons.length > 2 ? [decision.reasons[0], decision.reasons.at(-1)] : decision.reasons).join('; ')
-  const source = SOURCE_NAMES[decision.source] ?? decision.source
-  const answered = usage === undefined ? 'seçicideki model' : displayModel(usage.model)
-  // The picker is the ceiling in shadow mode too: what it cut is said, so a need for Opus shows.
-  const wanted = decision.wanted === undefined ? '' : `, tavan olmasa ${FAMILY_NAMES[decision.wanted.family]} · ${decision.wanted.effort}`
-
-  return `⚙ gölge: ${FAMILY_NAMES[decision.family]} · ${decision.effort} · T${decision.tier} ${tierLabel(state, decision)} önerirdi${wanted} (${source}: ${why}) · cevap: ${answered}${planned(decision)}${warned(decision, answered)}`
+  return warning === undefined ? [] : [`⚠ ${warning}`]
 }
 
 // The end of a turn chosen in shadow mode: nothing was applied, so nothing is
@@ -420,7 +448,10 @@ async function afterTurn($: EngineInterface, state: State, decision: Decision, u
     if (state.mismatches >= MISMATCH_LIMIT && !state.isStoodDown) {
       state.isStoodDown = true
       $.ui.toast(
-        `gearbox: seçtiğim model ${MISMATCH_LIMIT} turdur uygulanmıyor, kendimi kapattım; istekler seçicideki modelle gidiyor. /gear oto ile yeniden dener.`,
+        L(
+          `gearbox: the model I chose has not been applied for ${MISMATCH_LIMIT} turns, so I switched myself off; requests go with the picker's model. /gear on tries again.`,
+          `gearbox: seçtiğim model ${MISMATCH_LIMIT} turdur uygulanmıyor, kendimi kapattım; istekler seçicideki modelle gidiyor. /gear on ile yeniden dener.`,
+        ),
         { timeoutMs: 15000 },
       )
       showStatus($, state)
@@ -512,31 +543,90 @@ async function describe($: EngineInterface, state: State): Promise<string> {
   const stats = readStats(await $.store.get('stats'))
   const perFamily = FAMILIES.map(family => `${FAMILY_NAMES[family]} ${stats.families[family].turns}`).join(', ')
   const limits = state.limits
-    .map(limit => `${WINDOW_NAMES[limit.kind] ?? limit.kind} %${Math.round(limit.percentUsed)}${limit.resetsAt === undefined ? '' : ` (sıfırlanma ${clock(limit.resetsAt)})`}`)
+    .map(
+      limit =>
+        `${windowName(limit.kind)} ${pct(Math.round(limit.percentUsed))}${limit.resetsAt === undefined ? '' : ` (${L('resets', 'sıfırlanma')} ${clock(limit.resetsAt)})`}`,
+    )
     .join(' · ')
-  const mode = state.isStoodDown && settings.mode === 'auto'
-    ? 'devre dışı (seçimler uygulanmıyordu)'
-    : settings.mode === 'auto' ? 'açık' : settings.mode === 'shadow' ? 'gölgede (seçer ve yazar, uygulamaz)' : 'kapalı (seçici model)'
+  const mode =
+    state.isStoodDown && settings.mode === 'auto' ? L('stopped (its choices were not applied)', 'devre dışı (seçimler uygulanmıyordu)')
+    : settings.mode === 'auto' ? L('on', 'açık')
+    : settings.mode === 'shadow' ? L('in shadow (chooses and writes it down, applies nothing)', 'gölgede (seçer ve yazar, uygulamaz)')
+    : L("off (the picker's model)", 'kapalı (seçici model)')
   const total = sumOf(stats)
 
   return [
-    `**${mode}** · profil ${settings.profile}`,
+    `**${mode}** · ${L('profile', 'profil')} ${profileName(settings.profile)}`,
     '',
-    `- **Tavan (seçici):** ${state.ceilingSeen ?? 'henüz istek yok'}`,
-    `- **Limitler:** ${limits === '' ? 'henüz bilinmiyor' : limits}`,
-    (await read($, planningAtom)) ? "- **Plan modu:** açık; istekler Opus'a, efor planın büyüklüğüne göre (seçicinin altında)" : undefined,
+    `- **${L('Ceiling (picker)', 'Tavan (seçici)')}:** ${state.ceilingSeen ?? L('no request yet', 'henüz istek yok')}`,
+    `- **${L('Limits', 'Limitler')}:** ${limits === '' ? L('not known yet', 'henüz bilinmiyor') : limits}`,
+    (await read($, planningAtom))
+      ? L("- **Plan mode:** on; requests go to Opus, effort by the plan's size (under the picker)", "- **Plan modu:** açık; istekler Opus'a, efor planın büyüklüğüne göre (seçicinin altında)")
+      : undefined,
     last === undefined
-      ? '- **Son karar:** yok'
-      : `- **Son karar:** ${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)} (${SOURCE_NAMES[last.source] ?? last.source}: ${last.reasons.join('; ')})`,
-    state.unavailable.size === 0 ? undefined : `- **Bu oturumda yanıt vermeyen:** ${[...state.unavailable].map(family => MODEL_IDS[family]).join(', ')}`,
-    `- **Toplam:** ${total.turns} tur (${perFamily}) · elle ${stats.overrides} · yükseltme ${stats.escalations}`,
-    total.baseline === 0 ? undefined : `- **Tasarruf (tahmin):** ${usd(savedOf(stats))} · ayrıntı için \`/gear tasarruf\``,
-    `- **Ayarlar:** Haiku ${onOff(settings.allowHaiku)} · Haiku'ya sor ${onOff(settings.askHaiku)} · not ${onOff(settings.footer)} · bant ${onOff(settings.band)}`,
+      ? `- **${L('Last decision', 'Son karar')}:** ${L('none', 'yok')}`
+      : `- **${L('Last decision', 'Son karar')}:** ${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)} (${sourceText(SOURCE_NAMES[last.source] ?? last.source)}: ${last.reasons.map(reasonText).join('; ')})`,
+    state.unavailable.size === 0
+      ? undefined
+      : `- **${L('Gave no answer this session', 'Bu oturumda yanıt vermeyen')}:** ${[...state.unavailable].map(family => MODEL_IDS[family]).join(', ')}`,
+    L(
+      `- **Total:** ${total.turns} turns (${perFamily}) · by hand ${stats.overrides} · escalations ${stats.escalations}`,
+      `- **Toplam:** ${total.turns} tur (${perFamily}) · elle ${stats.overrides} · yükseltme ${stats.escalations}`,
+    ),
+    total.baseline === 0
+      ? undefined
+      : L(`- **Savings (estimate):** ${usd(savedOf(stats))} · see \`/gear savings\``, `- **Tasarruf (tahmin):** ${usd(savedOf(stats))} · ayrıntı için \`/gear savings\``),
+    L(
+      `- **Settings:** Haiku ${onOff(settings.allowHaiku)} · ask Haiku ${onOff(settings.askHaiku)} · note ${onOff(settings.footer)} · band ${onOff(settings.band)}`,
+      `- **Ayarlar:** Haiku ${onOff(settings.allowHaiku)} · Haiku'ya sor ${onOff(settings.askHaiku)} · not ${onOff(settings.footer)} · bant ${onOff(settings.band)}`,
+    ),
     '',
-    HELP,
+    help(),
   ]
     .filter(line => line !== undefined)
     .join('\n')
+}
+
+// What /gear doctor looks at.
+async function gatherFacts($: EngineInterface, state: State): Promise<Facts> {
+  let version: string | undefined
+  try {
+    const seen = await $.session.version()
+    version = seen.base ?? seen.version
+  } catch {
+    version = undefined
+  }
+  let isStoreWorking = true
+  try {
+    const stamp = await $.clock.now()
+    await $.store.set('doctor', stamp)
+    isStoreWorking = (await $.store.get('doctor')) === stamp
+  } catch {
+    isStoreWorking = false
+  }
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
+  const given = (value: string | undefined): string | undefined => (value === undefined || value === '' ? undefined : value)
+
+  return {
+    mode: modeOf(state),
+    profile: state.settings.profile,
+    ceiling: state.ceiling === undefined ? undefined : { model: state.ceiling.model, display: displayModel(state.ceiling.model), effort: state.ceiling.effort },
+    version,
+    testedThrough: TESTED_THROUGH,
+    isNewer: version !== undefined && isNewerThan(version, TESTED_THROUGH),
+    isStoreWorking,
+    mismatches: state.mismatches,
+    mismatchLimit: MISMATCH_LIMIT,
+    unavailable: [...state.unavailable].map(family => MODEL_IDS[family]),
+    hasDecided: state.last !== undefined,
+    hasLimits: state.limits.length > 0,
+    isPlanning: await read($, planningAtom),
+    isFooterOn: state.settings.footer,
+    isBandOn: state.settings.band,
+    lang: getLang(),
+    langSetting: state.settings.lang,
+    env: { effortLevel: given(env.CLAUDE_CODE_EFFORT_LEVEL), subagentModel: given(env.CLAUDE_CODE_SUBAGENT_MODEL) },
+  }
 }
 
 async function noticeVersion($: EngineInterface): Promise<void> {
@@ -544,7 +634,10 @@ async function noticeVersion($: EngineInterface): Promise<void> {
     const { version, base } = await $.session.version()
     if (isNewerThan(base ?? version, TESTED_THROUGH) && (await $.store.get('versionNotice')) !== version) {
       $.ui.toast(
-        `gearbox, Claude Code ${version} ile henüz denenmedi. Seçimleri uygulanmazsa kendini kapatır; istersen /gear sabitle.`,
+        L(
+          `gearbox has not been tried on Claude Code ${version} yet. If its choices are not applied it switches itself off; or use /gear off.`,
+          `gearbox, Claude Code ${version} ile henüz denenmedi. Seçimleri uygulanmazsa kendini kapatır; istersen /gear off.`,
+        ),
         { timeoutMs: 12000 },
       )
       await $.store.set('versionNotice', version)
@@ -556,16 +649,20 @@ async function noticeVersion($: EngineInterface): Promise<void> {
 
 async function loadSettings($: EngineInterface, state: State): Promise<void> {
   state.settings = readSettings(await $.store.get('settings'))
+  setLang(resolveLang(state.settings.lang, systemLocale()))
   showStatus($, state)
   await $.command.register({
     name: 'gear',
-    description: 'gearbox: otomatik model ve efor seçimi',
-    argumentHint: '[oto | sabitle | golge | profil <ad> | haiku | sor | not | bant | tasarruf | kayit | yanlis | sifirla]',
+    description: L('gearbox: automatic model and effort choice', 'gearbox: otomatik model ve efor seçimi'),
+    argumentHint: '[on | off | shadow | profile <name> | haiku | ask | note | band | lang | savings | log | wrong | reset | doctor]',
   })
   await noticeVersion($)
   if ((await $.store.get('tipShown')) !== true) {
     $.ui.toast(
-      'gearbox açık: seçicideki model ve efor tavan sayılır, gearbox bunun altında seçer. Tam otomatik için seçiciyi Opus · high yap.',
+      L(
+        "gearbox is on: the picker's model and effort count as the ceiling, and gearbox chooses under it. For full automation set the picker to Opus · high.",
+        'gearbox açık: seçicideki model ve efor tavan sayılır, gearbox bunun altında seçer. Tam otomatik için seçiciyi Opus · high yap.',
+      ),
       { timeoutMs: 12000 },
     )
     await $.store.set('tipShown', true)
@@ -598,7 +695,10 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
     return { text: await describe($, state) }
   }
   if (changed === 'help') {
-    return { text: HELP }
+    return { text: help() }
+  }
+  if (changed === 'doctor') {
+    return { text: doctorText(await gatherFacts($, state)) }
   }
   if (changed === 'savings') {
     const stats = readStats(await $.store.get('stats'))
@@ -609,18 +709,29 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
     return { text: journalText(readJournal(await $.store.get('journal'))) }
   }
   if (changed === 'mark') {
-    const mark: Mark | undefined = ['zayif', 'az', 'dusuk'].includes(value) ? 'zayif' : ['fazla', 'guclu', 'cok'].includes(value) ? 'fazla' : undefined
+    const mark: Mark | undefined =
+      ['zayif', 'az', 'dusuk', 'weak', 'low'].includes(value) ? 'zayif' : ['fazla', 'guclu', 'cok', 'strong', 'over', 'too'].includes(value) ? 'fazla' : undefined
     const journal = readJournal(await $.store.get('journal'))
     if (mark === undefined) {
-      return { text: 'Kullanım: `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (gereğinden güçlüydü).' }
+      return {
+        text: L(
+          'Usage: `/gear wrong weak` (the model was too weak) or `/gear wrong strong` (stronger than needed).',
+          'Kullanım: `/gear wrong weak` (model çok zayıftı) ya da `/gear wrong strong` (gereğinden güçlüydü).',
+        ),
+      }
     }
     const entry = markLast(journal, mark)
     if (entry === undefined) {
-      return { text: 'Henüz işaretlenecek bir karar yok.' }
+      return { text: L('No decision to mark yet.', 'Henüz işaretlenecek bir karar yok.') }
     }
     await $.store.set('journal', journal)
 
-    return { text: `İşaretlendi: "${entry.text}" için ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${MARK_NAMES[mark]}.` }
+    return {
+      text: L(
+        `Marked: for "${entry.text}", ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${MARK_NAMES[mark]}.`,
+        `İşaretlendi: "${entry.text}" için ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${MARK_NAMES[mark]}.`,
+      ),
+    }
   }
   if (changed === 'reset') {
     await $.store.set('journal', [])
@@ -628,7 +739,7 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
     state.session = emptyTotals()
     showStatus($, state)
 
-    return { text: 'tasarruf sayacı ve günlük sıfırlandı.' }
+    return { text: L('The savings counter and the log were reset.', 'tasarruf sayacı ve günlük sıfırlandı.') }
   }
   // `/gear oto` also tries again after standing down, though the mode was already auto.
   if (changed.mode === 'auto' || changed.mode !== state.settings.mode) {
@@ -636,14 +747,15 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
   }
   state.settings = changed
   await $.store.set('settings', changed)
+  setLang(resolveLang(changed.lang, systemLocale()))
   showStatus($, state)
 
   const name =
-    changed.mode === 'auto' ? 'açık'
-    : changed.mode === 'shadow' ? 'gölgede: seçimlerini yazıyor, uygulamıyor; cevabı seçicideki model veriyor'
-    : 'kapalı (seçici model)'
+    changed.mode === 'auto' ? L('on', 'açık')
+    : changed.mode === 'shadow' ? L("in shadow: writes its choices down, applies nothing; the picker's model answers", 'gölgede: seçimlerini yazıyor, uygulamıyor; cevabı seçicideki model veriyor')
+    : L("off (the picker's model)", 'kapalı (seçici model)')
 
-  return { text: `${name} · profil ${changed.profile}` }
+  return { text: `${name} · ${L('profile', 'profil')} ${profileName(changed.profile)}` }
 }
 
 // A turn of the main thread ended. If it finished a piece of work and the
@@ -710,14 +822,14 @@ async function startCleanConversation($: EngineInterface, state: State): Promise
   }
   if (state.handover?.isCleared !== true) {
     state.handover = undefined
-    $.ui.toast('gearbox: sohbet temizlenemedi; her şey olduğu gibi duruyor.', { timeoutMs: 10000 })
+    $.ui.toast(L('gearbox: the conversation could not be cleared; everything stays as it was.', 'gearbox: sohbet temizlenemedi; her şey olduğu gibi duruyor.'), { timeoutMs: 10000 })
 
     return
   }
   // A clean conversation may start with a fresh state: the band is told again.
   await update($, handoverAtom, () => note)
   await update($, handoverArmedAtom, () => true)
-  $.ui.toast('Temiz sohbet: devir notu ilk mesajınla birlikte gidecek.', { timeoutMs: 10000 })
+  $.ui.toast(L('Clean conversation: the hand-over note will go with your first message.', 'Temiz sohbet: devir notu ilk mesajınla birlikte gidecek.'), { timeoutMs: 10000 })
 }
 
 // The note for the first prompt of the clean conversation, once.
@@ -756,6 +868,9 @@ export const register: Register = on => {
     isForking: false,
     noteSession: undefined,
     handover: undefined,
+    ceiling: undefined,
+    sent: new Map(),
+    helpers: new Set(),
   }
 
   on('session.start', async ($, e, next) => {
@@ -804,8 +919,14 @@ export const register: Register = on => {
   // Every request of a turn goes out on the turn's one model: a switch inside
   // a turn would drop the cache and the thinking the turn has built up.
   on('turn.step', async function* ($, e, next) {
+    // A helper's model is told beside the answer; its requests go as they are.
     if (e.agentId !== undefined) {
+      state.helpers.add(displayModel(e.model))
+
       return yield* next(e)
+    }
+    if (e.index === 0) {
+      state.helpers.clear()
     }
     // In shadow mode the choice is made and kept for the log; the request goes as the picker says.
     if (state.settings.mode === 'shadow') {
@@ -815,20 +936,29 @@ export const register: Register = on => {
           state.decisions.set(e.turnId, { ...decision, isShadow: true })
         }
       }
+      markSent(state, e.turnId, e.model, e.effort)
 
       return yield* next(e)
     }
     if (!isRouting(state)) {
+      noticeCeiling($, state, e.model, asEffort(e.effort))
+      markSent(state, e.turnId, e.model, e.effort)
+
       return yield* next(e)
     }
     const decision = state.decisions.get(e.turnId) ?? (e.index === 0 ? await decideTurn($, state, e) : undefined)
     if (decision === undefined) {
+      markSent(state, e.turnId, e.model, e.effort)
+
       return yield* next(e)
     }
     const model = familyOf(e.model) === decision.family ? e.model : MODEL_IDS[decision.family]
     if (model === e.model && decision.effort === e.effort) {
+      markSent(state, e.turnId, e.model, e.effort)
+
       return yield* next(e)
     }
+    markSent(state, e.turnId, model, decision.effort)
 
     // Engine chunks are held back until the answer starts, so a request that
     // gets no answer at all can be sent again on the picker's model cleanly.
@@ -861,6 +991,7 @@ export const register: Register = on => {
       }
     }
     noteUnavailable($, state, e, decision)
+    markSent(state, e.turnId, e.model, e.effort)
 
     return yield* next(e)
   })
@@ -894,18 +1025,20 @@ export const register: Register = on => {
     if (e.agentId === undefined) {
       noticeFinishedWork($, state, familyOf(e.usage?.model))
     }
-    const decision = e.agentId === undefined ? state.decisions.get(e.turnId) : undefined
-    if (decision === undefined) {
+    if (e.agentId !== undefined) {
       return result
     }
-    if (decision.isShadow === true) {
+    const decision = state.decisions.get(e.turnId)
+    if (decision?.isShadow === true) {
       await afterShadowTurn($, state, decision, e.usage)
-
-      return state.settings.footer ? { ...result, text: shadowFooter(state, decision, e.usage) } : result
+    } else if (decision !== undefined) {
+      await afterTurn($, state, decision, e.usage)
     }
-    const money = await afterTurn($, state, decision, e.usage)
+    // Under every answer, gearbox on, in shadow or off: which model answered.
+    const line = state.settings.footer ? answerLine(state, e.turnId, e.usage, decision) : undefined
+    state.helpers.clear()
 
-    return state.settings.footer ? { ...result, text: footer(state, decision, e.usage, money) } : result
+    return line === undefined ? result : { ...result, text: line }
   })
 
   // A small row above the prompt: a badge in the state's color whose dot
@@ -924,21 +1057,24 @@ export const register: Register = on => {
     // the answer and /gear say the rest.
     const warning = isWorking ? (await read($, warningAtom)).split(':')[0] : ''
     const last = isWorking ? await read($, noteAtom) : ''
-    const note = last === '' ? MODE_NOTES[mode] : last
+    const note = last === '' ? modeNote(mode) : last
     const actions = MODE_ACTIONS.filter(action => action.mode !== mode)
-    // Stood down, "aç" tries again.
-    const label = (action: (typeof MODE_ACTIONS)[number]): string => (mode === 'down' && action.mode === 'auto' ? 'yeniden dene' : action.label)
+    // Stood down, "turn on" tries again.
+    const label = (action: (typeof MODE_ACTIONS)[number]): string => actionLabel(action.mode, mode)
     // A second line while a hand-over note is offered or on its way.
     const handover = await read($, handoverAtom)
     const isArmed = await read($, handoverArmedAtom)
     const isPending = await read($, handoverPendingAtom)
     const offer =
-      isPending && !isArmed ? 'Devir notu hazırlanıyor…'
+      isPending && !isArmed ? L('Preparing the hand-over note…', 'Devir notu hazırlanıyor…')
       : handover === '' ? undefined
-      : isArmed ? 'Temiz sohbet: devir notu ilk mesajınla gidecek'
-      : `Devir notu hazır · sohbet ${Math.round((await read($, handoverSizeAtom)) / 1000)} bin token`
+      : isArmed ? L('Clean conversation: the hand-over note will go with your first message', 'Temiz sohbet: devir notu ilk mesajınla gidecek')
+      : L(
+          `Hand-over note ready · conversation ${Math.round((await read($, handoverSizeAtom)) / 1000)}K tokens`,
+          `Devir notu hazır · sohbet ${Math.round((await read($, handoverSizeAtom)) / 1000)} bin token`,
+        )
     const hasNote = handover !== '' && !(isPending && !isArmed)
-    const showNote = () => $.ui.open({ id: HANDOVER_PANE, title: 'Devir notu' })
+    const showNote = () => $.ui.open({ id: HANDOVER_PANE, title: L('Hand-over note', 'Devir notu') })
 
     if (e.surface === 'terminal') {
       const { Box, Button, Text } = $.ui.resolve(e)
@@ -964,8 +1100,8 @@ export const register: Register = on => {
           {row}
           <Box>
             <Text dimColor>{offer} </Text>
-            {hasNote && !isArmed && <Button key="handover-clear" label="temiz sohbet" onPress={() => startCleanConversation($, state)} />}
-            {hasNote && <Button key="handover-show" dimColor label="notu gör" onPress={showNote} />}
+            {hasNote && !isArmed && <Button key="handover-clear" label={L('clean conversation', 'temiz sohbet')} onPress={() => startCleanConversation($, state)} />}
+            {hasNote && <Button key="handover-show" dimColor label={L('see note', 'notu gör')} onPress={showNote} />}
             {hasNote && !isArmed && <Button key="handover-dismiss" dimColor label="×" onPress={() => dropHandoverOffer($)} />}
           </Box>
         </Box>
@@ -976,7 +1112,7 @@ export const register: Register = on => {
       <Box alignItems="center" columnGap={1}>
         <Text dimColor>⚙ gearbox</Text>
         <Box flexShrink={0}>
-          <Svg source={badgeSvg(mode)} alt={`gearbox: ${MODE_NAMES[mode]}`} width={badgeWidth(mode)} height={BADGE_HEIGHT} isInteractive />
+          <Svg source={badgeSvg(mode)} alt={`gearbox: ${modeName(mode)}`} width={badgeWidth(mode)} height={BADGE_HEIGHT} isInteractive />
         </Box>
         <Text dimColor>{note}</Text>
         {warning !== '' && <Text color="warning">⚠ {warning}</Text>}
@@ -994,8 +1130,8 @@ export const register: Register = on => {
         {row}
         <Box alignItems="center" columnGap={1}>
           <Text dimColor>{offer}</Text>
-          {hasNote && !isArmed && <Button key="handover-clear" label="temiz sohbet" onPress={() => startCleanConversation($, state)} />}
-          {hasNote && <Button key="handover-show" dimColor label="notu gör" onPress={showNote} />}
+          {hasNote && !isArmed && <Button key="handover-clear" label={L('clean conversation', 'temiz sohbet')} onPress={() => startCleanConversation($, state)} />}
+          {hasNote && <Button key="handover-show" dimColor label={L('see note', 'notu gör')} onPress={showNote} />}
           {hasNote && !isArmed && <Button key="handover-dismiss" dimColor label="×" onPress={() => dropHandoverOffer($)} />}
         </Box>
       </Box>
@@ -1007,19 +1143,19 @@ export const register: Register = on => {
     const { Box, Button, Text } = $.ui.resolve(e)
     const note = await read($, handoverAtom)
     const from = state.handover?.oldSessionId ?? state.noteSession
-    const lines = note === '' ? ['Şu an devir notu yok.'] : [...note.split('\n'),...(from === undefined ? [] : [resumeLine(from)])]
+    const lines = note === '' ? [L('There is no hand-over note right now.', 'Şu an devir notu yok.')] : [...note.split('\n'),...(from === undefined ? [] : [resumeLine(from)])]
 
     return (
       <Box flexDirection="column">
         {lines.map((line, index) => (
           <Text key={`line-${index}`}>{line}</Text>
         ))}
-        <Button key="handover-close" dimColor label="kapat" onPress={() => $.ui.close({ id: HANDOVER_PANE })} />
+        <Button key="handover-close" dimColor label={L('close', 'kapat')} onPress={() => $.ui.close({ id: HANDOVER_PANE })} />
       </Box>
     )
   })
 
-  // `/gear tasarruf` is drawn as a card; its text stays what the model reads.
+  // `/gear savings` is drawn as a card; its text stays what the model reads.
   on('ui.render', { component: 'CommandOutput', props: { command: 'gear' } }, async ($, e, next) => {
     const [verb = '', value = ''] = normalize(e.props.args).trim().split(/\s+/)
     if (e.props.isErrored || applyCommand(state.settings, verb, value) !== 'savings') {
@@ -1028,9 +1164,9 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     const stats = readStats(await $.store.get('stats'))
     const limits: LimitRow[] = state.limits.map(limit => ({
-      name: LIMIT_TITLES[limit.kind] ?? limit.kind,
+      name: limitTitle(limit.kind),
       percentUsed: limit.percentUsed,
-      resetsAt: limit.resetsAt === undefined ? '' : `sıfırlanma ${clock(limit.resetsAt)}`,
+      resetsAt: limit.resetsAt === undefined ? '' : `${L('resets', 'sıfırlanma')} ${clock(limit.resetsAt)}`,
     }))
 
     return savingsCard({ Box, Text }, { session: state.session, all: stats, since: stats.since, limits, columns: e.viewport?.columns ?? 80 })
