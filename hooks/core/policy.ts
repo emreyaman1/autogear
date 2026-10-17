@@ -54,8 +54,14 @@ export type PolicyInput = {
   isPlanning?: boolean
 }
 
-// A model switch sends the whole conversation again without the prompt cache.
-// Past this size a one-tier step changes the effort and keeps the model.
+// A model switch sends the whole conversation again without the prompt cache:
+// the new model writes all of it once (the old model's cache is not lost; it
+// lives an hour on a subscription, renewed on each read). Past this size a
+// conversation never steps down to a cheaper model, since that one full write
+// costs more than the saving: Sonnet writes at $2.50 a million tokens where
+// Opus reads its cache at $0.20, and Haiku past 100K tokens at five times its
+// price. Effort steps down instead. A step up of one tier keeps the model too;
+// a bigger one, or leaving Haiku, is worth the write.
 export const STICKY_CONTEXT_TOKENS = 40_000
 
 // Room left just before a window resets lifts the effort of hard work one
@@ -104,9 +110,11 @@ export function decide(input: PolicyInput): Decision {
   const isLargeContext = (input.contextTokens ?? 0) >= STICKY_CONTEXT_TOKENS
   // Haiku is for trivial work alone: a warm cache never keeps harder work on it.
   const isLeavingHaiku = previous?.family === 'haiku' && family !== 'haiku'
-  if (previous !== undefined && previous.family !== family && !isDeliberate && !isLeavingHaiku && isLargeContext && Math.abs(tier - previous.tier) < 2) {
+  const isStepDown = previous !== undefined && familyRank(family) < familyRank(previous.family)
+  const isSmallStepUp = previous !== undefined && !isLeavingHaiku && Math.abs(tier - previous.tier) < 2
+  if (previous !== undefined && previous.family !== family && !isDeliberate && isLargeContext && (isStepDown || isSmallStepUp)) {
     family = previous.family
-    reasons.push('bağlam büyük: model aynı kaldı (önbellek)')
+    reasons.push(isStepDown ? 'bağlam büyük: daha ucuz modele inilmedi (önbellek)' : 'bağlam büyük: model aynı kaldı (önbellek)')
   }
   if (override?.family !== undefined) {
     family = override.family

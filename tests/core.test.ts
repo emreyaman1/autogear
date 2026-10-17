@@ -145,6 +145,26 @@ describe('decide', () => {
     expect(decision.effort).toBe('xhigh')
   })
 
+  test('a large conversation never steps down to a cheaper model: the effort steps down instead', () => {
+    const ceiling = { family: 'opus', effort: 'high' } as const
+    const onOpus = { previous: { family: 'opus', tier: 4 }, contextTokens: 150_000 } as const
+    const chore = decide({ ...base, tier: 0, ceiling, ...onOpus })
+    expect(chore).toMatchObject({ family: 'opus', effort: 'low' })
+    expect(chore.reasons).toContain('bağlam büyük: daha ucuz modele inilmedi (önbellek)')
+    expect(decide({ ...base, tier: 2, ceiling, ...onOpus })).toMatchObject({ family: 'opus', effort: 'medium' })
+    // A small conversation switches: the full write is cheap there.
+    expect(decide({ ...base, tier: 0, ceiling, previous: { family: 'opus', tier: 4 }, contextTokens: 20_000 }).family).toBe('haiku')
+    // The person's own choice still wins.
+    expect(decide({ ...base, tier: 0, ceiling, ...onOpus, override: { family: 'haiku' } }).family).toBe('haiku')
+  })
+
+  test('a large conversation still steps up for harder work, two tiers or more, or off Haiku', () => {
+    const ceiling = { family: 'opus', effort: 'high' } as const
+    expect(decide({ ...base, tier: 4, ceiling, previous: { family: 'sonnet', tier: 2 }, contextTokens: 150_000 }).family).toBe('opus')
+    expect(decide({ ...base, tier: 4, ceiling, previous: { family: 'sonnet', tier: 3 }, contextTokens: 150_000 }).family).toBe('sonnet')
+    expect(decide({ ...base, tier: 1, ceiling, previous: { family: 'haiku', tier: 0 }, contextTokens: 150_000 }).family).toBe('sonnet')
+  })
+
   test("a prompt's own +opus outranks the picker", () => {
     const decision = decide({ ...base, tier: 1, ceiling: { family: 'sonnet', effort: 'medium' }, override: { family: 'opus' } })
     expect(decision.family).toBe('opus')

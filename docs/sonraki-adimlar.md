@@ -22,10 +22,15 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 |---|---|---|
 | Bir cevabın içindeki adımlar | Hayır, hiçbir zaman | Korunur |
 | Yeni mesaj öncekiyle aynı modele düşüyor | Hayır | Korunur |
-| Konuşma 40 bin tokenı geçmiş ve fark yalnızca bir kademe | Hayır; sadece efor değişir | Korunur |
-| Yeni mesaj başka modele düşüyor (konuşma küçük, fark iki kademe ya da fazla, Haiku'dan daha zor işe geçiliyor ya da kullanıcı `+opus` gibi zorladı) | Evet | O mesajın başında bir kez bozulur |
+| Konuşma 40 bin tokenı geçmiş ve yeni iş daha ucuz bir modele düşüyor (ör. Opus'la büyük işten sonra commit) | Hayır; sadece efor düşer (0.9.1'den beri, her kademe farkında) | Korunur |
+| Konuşma 40 bin tokenı geçmiş ve yeni iş bir kademe daha zor | Hayır; sadece efor değişir | Korunur |
+| Yeni mesaj başka modele düşüyor (konuşma küçük; ya da büyük konuşmada iki kademe ya da daha fazla zor iş, Haiku'dan çıkış, plan modu, kullanıcının `+haiku`/`+opus` gibi seçimi) | Evet | Yeni model konuşmayı bir kez baştan yazar; eski modelin önbelleği durur |
 
-**Karar (16 Ekim 2026):** Bu tasarım şimdilik kalıyor. Model değiştirmenin bedeli tasarruf hesabında gearbox'ın aleyhine sayılıyor. Kıyas ölçümünde (adım 4) "sadece efor" seçeneği daha iyi çıkarsa ona geçilir. Ek iş (adım 10): model değişip konuşma baştan okunduğunda italik satır bunu da yazsın.
+**Araştırma (18 Ekim 2026, Claude Code 2.1.299'un kendi kodundan):** abonelikte ana konuşmanın önbelleği 1 saat yaşıyor, her okumada yenileniyor; bazı durumlarda (limit aşımı, bazı sunucu ayarları) 5 dakika. Önbellek model başına tutuluyor: Haiku'ya geçmek Opus'un önbelleğini silmez, 1 saat içinde Opus'a dönünce eski kısım hazır; yalnızca aradaki yeni mesajlar yazılır. Asıl maliyet, daha ucuz modelin bütün konuşmayı bir kez yazması.
+
+**Karar (kullanıcı, 18 Ekim 2026; 0.9.1):** küçük konuşmada model serbestçe değişir (kalite önce). Büyük konuşmada daha ucuz modele hiç inilmez, sadece efor düşer. Kullanıcının sözü: "opus ile büyük bir sohbette isek commit etmek için haikuya dönmesin". Kullanıcının açık seçimi (`+haiku`, "haiku ile yap") yine geçerli.
+
+**Önceki karar (16 Ekim 2026):** Bu tasarım şimdilik kalıyor. Model değiştirmenin bedeli tasarruf hesabında gearbox'ın aleyhine sayılıyor. Kıyas ölçümünde (adım 4) "sadece efor" seçeneği daha iyi çıkarsa ona geçilir. Ek iş (adım 10): model değişip konuşma baştan okunduğunda italik satır bunu da yazsın.
 
 ## Kullanıcının kararları
 

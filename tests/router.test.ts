@@ -443,6 +443,17 @@ test('a warm cache never keeps harder work on Haiku', async ($, on) => {
   expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'medium' })
 })
 
+test('a commit in a large conversation on Opus stays on Opus at low effort, the cache kept', async ($, on) => {
+  const { sent } = world(on, { contextTokens: 150_000 })
+  await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
+  await step($, 't1', 0, 'claude-opus-5-5', 'high')
+  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
+  await finish($, 't1', 'claude-opus-5-5')
+  await say($, 'commit et')
+  await step($, 't2', 0, 'claude-opus-5-5', 'high')
+  expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'low' })
+})
+
 test('a message with nothing written (a bare image) carries on with the last choice', async ($, on) => {
   const { sent } = world(on, { classifierReply: 'T0' })
   await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')

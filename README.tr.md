@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer: kendi ölçümlerinde güçlü model, ucuzunun çözemediği hiçbir işi çözmedi; bu yüzden Opus kritik işe, plan moduna ve senin istediğin duruma ayrılır.
 
-> Durum: 0.9.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.9.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Ne sağlar
 
@@ -84,7 +84,7 @@ mesaj ─► sınıfla ─► yerleştir ─► karar  ─► uygula    ─► c
 2. **Yerleştirme** (`hooks/core/settle.ts`): Haiku mesajı tek başına okur, ekran görüntüsünü ya da etrafındaki işi görmez; bu yüzden cevabı kuralların gördüğünden en çok bir kademe aşağı inebilir, bir şeyi incelemeyi isteyen mesajda T2'nin altına inmez. T2 ve üstü bir işin ortasındaki mesaj (bir soru, bir açıklama, yalnızca Haiku'nun yerleştirebildiği bir mesaj) o işin en çok bir kademe altına iner; kuralların emin olduğu yeni iş, commit gibi bir angarya ya da selamlaşma baştan başlar.
 3. **Karar** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): Kademe, profil tablosundan model ve efora çevrilir, sonra iki sınırdan geçer ve limit pencerelerine bakılır:
    - **Tavan:** Seçicideki model ve efor aşılmaz.
-   - **Önbellek:** Bağlam büyükse (40K+ token) bir kademelik farklar için model değiştirilmez, yalnızca efor değişir; model geçişi bütün konuşmayı önbelleksiz yeniden gönderir. Sıcak önbellek daha zor bir işi asla Haiku'da tutmaz.
+   - **Önbellek:** Model değişince yeni model bütün konuşmayı bir kez önbelleğe yazma fiyatıyla okur (eski modelin önbelleği silinmez: abonelikte bir saat durur, her okumada süresi yenilenir). Bu yüzden bağlam büyükse (40K+ token) gearbox daha ucuz bir modele asla inmez; o tek yazma, kazançtan pahalıya gelir (Sonnet milyon token başına $2,50'ye yazar, Opus önbelleğini $0,20'ye okur; Haiku 100K tokenı aşınca beş kat öder). Uzun bir Opus konuşmasında commit, Opus'ta low eforla yapılır. Bir kademe yukarı çıkmak da modeli değiştirmez; iki kademe ya da fazlası, ya da Haiku'dan çıkmak değiştirir. Küçük konuşmada her mesaj kendi modeline gider.
    - **Tempo:** Limit penceresi modeli ya da eforu asla düşürmez: işin başarıyla bitmesi limitten önemli. 5 saatlik ya da haftalık limit %90'ı geçtiyse ya da eşit hızın üstünde harcanıyorsa (%30'dan fazlası kullanılmış ve beklenenin 20 puan önünde), bunun yerine cevabın altındaki satırda ve durum satırında uyarı çıkar (`⚠ 5 saatlik limit %92: bu iş Opus · high ile yapılıyor, limit dolabilir`). Bir pencere bitmeye yakınsa ve yarısı bile kullanılmadıysa, zor ve kritik işlerde (T3 ve üstü) efor bir kademe çıkar; max'a kadar çıkmaz, seçicinin üstüne de çıkmaz. Standart işe dokunulmaz: kademe tablosunun dayandığı ölçümlerde net anlatılmış işte fazla efor işe yaramadı.
 4. **Uygulama** (`hooks/register.tsx`, `turn.step`): Her model isteğinden hemen önce kararı uygular. Bir turun bütün istekleri aynı modelle gider, böylece tur önbelleğini korur. Alt ajanlara dokunulmaz.
 5. **Doğrulama** (`turn.complete`): API'nin bildirdiği gerçek model, seçimle karşılaştırılır (bkz. Güvenlik ağları).
