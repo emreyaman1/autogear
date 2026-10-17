@@ -13,7 +13,14 @@
 //   node eval/tasks.mjs opusplan           the opusplan model setting (Opus in plan mode, Sonnet otherwise)
 //   node eval/tasks.mjs sonnet-advisor     Sonnet · medium with Opus as its advisor
 //   node eval/tasks.mjs gearbox --runs 3 3-coupon 5-report    three runs, only these tasks
+//   node eval/tasks.mjs gearbox-0.8.1      gearbox as it was before the hunt split (hunts on Opus · high)
 //   node eval/tasks.mjs report             the arms measured so far, side by side (free)
+//
+// --set sqlglot runs the tasks of eval/tasks/sqlglot.json instead: real bugs
+// of sqlglot, a 100K-line SQL parser, each set up as the code stood just
+// before its fix (no git history, so the fix cannot be looked up) and checked
+// by the tests that fix added. It needs sqlglot cloned into
+// eval/.work/repos/sqlglot and Python 3.9 or newer.
 //
 // Every arm but report spends usage: a few model calls per task and run.
 // Opus · medium against Opus · high, and Sonnet · medium against Opus ·
@@ -29,6 +36,10 @@ import { familyOf, requireVersion, ROOT, runClaude } from '../scripts/claude.mjs
 
 const TASKS = join(ROOT, 'eval', 'tasks')
 const WORK = join(ROOT, 'eval', '.work')
+const REPOS = join(WORK, 'repos')
+
+// The commit whose gearbox still sent every hunt to Opus · high (0.8.1).
+const OLD_GEARBOX = { commit: '49ddf2d', folder: join(WORK, 'gearbox-0.8.1') }
 
 const ARMS = {
   gearbox: { plugin: ROOT, model: 'opus', effort: 'high' },
@@ -37,21 +48,70 @@ const ARMS = {
   'sonnet-medium': { plugin: null, model: 'sonnet', effort: 'medium' },
   opusplan: { plugin: null, model: 'opusplan', effort: 'medium' },
   'sonnet-advisor': { plugin: null, model: 'sonnet', effort: 'medium', settings: { advisorModel: 'opus' } },
+  'gearbox-0.8.1': { plugin: OLD_GEARBOX.folder, model: 'opus', effort: 'high' },
+}
+
+const flag = name => {
+  const at = process.argv.indexOf(name)
+
+  return at > 0 ? process.argv[at + 1] : undefined
 }
 
 // Before arms had names: "baseline" was Opus · high.
 const arm = process.argv[2] === 'baseline' ? 'opus-high' : (process.argv[2] ?? 'gearbox')
-const runsAt = process.argv.indexOf('--runs')
-const runs = runsAt > 0 ? Math.max(1, Number(process.argv[runsAt + 1]) || 1) : 1
-const only = process.argv.slice(3).filter((value, index, all) => value !== '--runs' && all[index - 1] !== '--runs')
-const tasks = JSON.parse(readFileSync(join(TASKS, 'tasks.json'), 'utf8')).filter(task => only.length === 0 || only.includes(task.name))
+const runs = Math.max(1, Number(flag('--runs')) || 1)
+const set = flag('--set') ?? 'small'
+const only = process.argv.slice(3).filter((value, index, all) => !value.startsWith('--') && !all[index - 1]?.startsWith('--'))
+const tasks = JSON.parse(readFileSync(join(TASKS, set === 'small' ? 'tasks.json' : `${set}.json`), 'utf8')).filter(task => only.length === 0 || only.includes(task.name))
+const resultsOf = name => join(WORK, set === 'small' ? `tasks-${name}.json` : `tasks-${set}-${name}.json`)
 
-const TOOLS = ['Read', 'Edit', 'Write', 'Glob', 'Grep', 'Bash(node --test:*)', 'Bash(npm test:*)', 'Bash(npm run test:*)']
+const TOOLS = ['Read', 'Edit', 'Write', 'Glob', 'Grep', 'Bash(node --test:*)', 'Bash(npm test:*)', 'Bash(npm run test:*)', 'Bash(python -m unittest:*)', 'Bash(python -m pytest:*)']
+
+const git = (args, options = {}) => spawnSync('git', ['-C', join(REPOS, set), ...args], { maxBuffer: 1024 * 1024 * 1024, ...options })
+
+// The project as it stood just before the fix, exported without its history.
+function prepareRepoTask(task, work) {
+  const archive = git(['archive', '--format=tar', `${task.commit}^`])
+  if (archive.status !== 0) {
+    throw new Error(`git archive ${task.commit}^: ${archive.stderr}`)
+  }
+  spawnSync('tar', ['-x', '-C', work], { input: archive.stdout, maxBuffer: 1024 * 1024 * 1024 })
+}
+
+// The tests the fix added, laid over Claude's work and run: the hidden check.
+function checkRepoTask(task, work) {
+  const files = git(['show', '--name-only', '--format=', task.commit, '--', 'tests'], { encoding: 'utf8' })
+    .stdout.split('\n')
+    .filter(file => file !== '' && !file.endsWith('__init__.py'))
+  for (const file of files) {
+    writeFileSync(join(work, file), git(['show', `${task.commit}:${file}`]).stdout)
+  }
+  const modules = files.filter(file => file.endsWith('.py')).map(file => file.replace(/\.py$/, '').replaceAll('/', '.'))
+  if (files.some(file => file.includes('fixtures/optimizer'))) {
+    modules.push('tests.test_optimizer')
+  }
+  const run = spawnSync('python', ['-m', 'unittest', ...modules], { cwd: work, encoding: 'utf8', timeout: 600_000 })
+  const failures =
+    run.status === 0 ? ''
+    : run.error !== undefined ? `kontrol bitmedi: ${run.error.message}`
+    : (run.stderr.match(/^(?:FAIL|ERROR): .*$/gm) ?? [run.stderr.trim().split('\n').at(-1) ?? '']).join('; ')
+
+  return { passed: run.status === 0, failures }
+}
+
+function checkSmallTask(task, work) {
+  cpSync(join(TASKS, task.name, 'hidden'), join(work, 'test'), { recursive: true })
+  const check = spawnSync(process.execPath, ['--test'], { cwd: work, encoding: 'utf8', timeout: 180_000 })
+  const passed = check.status === 0
+  const failures = passed ? '' : check.error !== undefined ? `kontrol bitmedi: ${check.error.message}` : (check.stdout.match(/^not ok .*$/gm) ?? []).join('; ')
+
+  return { passed, failures }
+}
 
 function report() {
   const rows = []
   for (const name of Object.keys(ARMS)) {
-    const file = join(WORK, `tasks-${name}.json`)
+    const file = resultsOf(name)
     if (!existsSync(file)) {
       continue
     }
@@ -77,25 +137,55 @@ if (setup === undefined) {
   console.error(`Bilinmeyen kol: ${arm}. Kollar: ${Object.keys(ARMS).join(', ')}, report.`)
   process.exit(1)
 }
+// --dry calls no model: each repo task must fail its hidden check as given
+// and pass it with the real fix's source laid in. Free.
+if (process.argv.includes('--dry')) {
+  for (const task of tasks.filter(one => one.commit !== undefined)) {
+    const work = mkdtempSync(join(tmpdir(), `gearbox-dry-${task.name}-`))
+    try {
+      prepareRepoTask(task, work)
+      const given = checkRepoTask(task, work)
+      for (const file of git(['show', '--name-only', '--format=', task.commit, '--', '.', ':!tests'], { encoding: 'utf8' }).stdout.split('\n').filter(Boolean)) {
+        writeFileSync(join(work, file), git(['show', `${task.commit}:${file}`]).stdout)
+      }
+      const fixed = checkRepoTask(task, work)
+      const isSound = !given.passed && fixed.passed
+      console.log(`${isSound ? 'UYGUN' : 'SORUNLU'}  ${task.name.padEnd(26)} verildiği gibi: ${given.passed ? 'geçti' : 'kaldı'} · düzeltmeyle: ${fixed.passed ? 'geçti' : `kaldı (${fixed.failures.slice(0, 120)})`}`)
+    } finally {
+      rmSync(work, { recursive: true, force: true })
+    }
+  }
+  process.exit(0)
+}
+if (set !== 'small' && !existsSync(join(REPOS, set))) {
+  console.error(`${join(REPOS, set)} yok: önce projeyi oraya klonla.`)
+  process.exit(1)
+}
+if (arm === 'gearbox-0.8.1' && !existsSync(OLD_GEARBOX.folder)) {
+  mkdirSync(OLD_GEARBOX.folder, { recursive: true })
+  const archive = spawnSync('git', ['-C', ROOT, 'archive', '--format=tar', OLD_GEARBOX.commit], { maxBuffer: 256 * 1024 * 1024 })
+  spawnSync('tar', ['-x', '-C', OLD_GEARBOX.folder], { input: archive.stdout })
+}
 const { binary, version } = requireVersion()
-console.log(`${arm} · ${tasks.length} görev × ${runs} çalıştırma · ${version} (${binary})`)
+console.log(`${arm} · ${set} · ${tasks.length} görev × ${runs} çalıştırma · ${version} (${binary})`)
 
 const results = []
 for (let run = 1; run <= runs; run += 1) {
   for (const task of tasks) {
     const work = mkdtempSync(join(tmpdir(), `gearbox-${task.name}-`))
-    cpSync(join(TASKS, '_fixture'), work, { recursive: true })
-    const overlay = join(TASKS, task.name, 'overlay')
-    if (existsSync(overlay)) {
-      cpSync(overlay, work, { recursive: true })
+    if (task.commit === undefined) {
+      cpSync(join(TASKS, '_fixture'), work, { recursive: true })
+      const overlay = join(TASKS, task.name, 'overlay')
+      if (existsSync(overlay)) {
+        cpSync(overlay, work, { recursive: true })
+      }
+    } else {
+      prepareRepoTask(task, work)
     }
     const extra = ['--permission-mode', 'acceptEdits', '--allowedTools', ...TOOLS, ...(setup.settings === undefined ? [] : ['--settings', JSON.stringify(setup.settings)])]
     const answer = runClaude(task.prompt, { cwd: work, plugin: setup.plugin, model: setup.model, effort: setup.effort, extra })
-    cpSync(join(TASKS, task.name, 'hidden'), join(work, 'test'), { recursive: true })
     // Each check has a time limit, so a test that hangs ends the check, not the machine's patience.
-    const check = spawnSync(process.execPath, ['--test'], { cwd: work, encoding: 'utf8', timeout: 180_000 })
-    const passed = check.status === 0
-    const failures = passed ? '' : check.error !== undefined ? `kontrol bitmedi: ${check.error.message}` : (check.stdout.match(/^not ok .*$/gm) ?? []).join('; ')
+    const { passed, failures } = task.commit === undefined ? checkSmallTask(task, work) : checkRepoTask(task, work)
     const models = answer.models.map(familyOf)
     results.push({ name: task.name, kind: task.kind, tier: task.tier, run, models, cost: answer.cost, turns: answer.turns, seconds: Math.round(answer.durationMs / 1000), passed, failures })
     console.log(
@@ -109,7 +199,7 @@ for (let run = 1; run <= runs; run += 1) {
 
 mkdirSync(WORK, { recursive: true })
 // A run of some tasks replaces their rows and keeps the rest of the arm's.
-const file = join(WORK, `tasks-${arm}.json`)
+const file = resultsOf(arm)
 const kept = only.length > 0 && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).filter(result => !only.includes(result.name)) : []
 writeFileSync(file, JSON.stringify([...kept, ...results], null, 2))
 const passed = results.filter(result => result.passed).length

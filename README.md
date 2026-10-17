@@ -260,6 +260,8 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
+`node eval/tasks.mjs <arm>` takes `--runs N` and `--set sqlglot`: ten real bugs of [sqlglot](https://github.com/tobymao/sqlglot) (MIT, about 100K lines), each set up as the code stood just before its fix, without git history, and checked by the tests that fix added. It needs sqlglot cloned into `eval/.work/repos/sqlglot` and Python 3.9+. `--dry` checks every such task for free: it must fail as given and pass with the real fix. The arm `gearbox-0.8.1` is gearbox before the hunt split, to compare the two rules.
+
 The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs Claude Code 2.1.295 or newer (2.1.295 and 2.1.299 were used): on older builds the hooks module does not load and the router tests fail (2.1.278: 75 pass, 30 fail). The `claude` on your PATH can be older than the desktop app's own build; on Windows that one lives under `%APPDATA%\Claude\claude-code\` or, in newer apps, `%LOCALAPPDATA%\Claude-Data\<profile>\claude-code\`. The measurement scripts pick the newest of them themselves (`CLAUDE_BIN` overrides) and stop before spending anything on a build older than 2.1.295.
 
 **Developing without making yourself the test.** A new version goes through four steps, each before the next, and only the last touches real work:

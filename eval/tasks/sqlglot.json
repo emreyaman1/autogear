@@ -1,0 +1,72 @@
+[
+  {
+    "name": "sq-tsql-output",
+    "commit": "f8606fe8f",
+    "tier": 3,
+    "kind": "belirsiz anlatılmış hata",
+    "prompt": "T-SQL'de output kolonlu sorgular çalışmıyor, düzelt."
+  },
+  {
+    "name": "sq-duckdb-sample",
+    "commit": "022bb41fc",
+    "tier": 2,
+    "kind": "yeri belli hata",
+    "prompt": "DuckDB'de USING SAMPLE içeren bir sorguyu sqlglot yeniden üretince USING SAMPLE, ORDER BY ve LIMIT'in arkasına düşüyor; DuckDB bunu kabul etmiyor. Şu sorgu DuckDB'de okunup aynen geri üretilmeli:\n\nSELECT a, COUNT(*) OVER w AS c FROM tbl WHERE a > 0 GROUP BY a HAVING COUNT(*) > 0 WINDOW w AS (ORDER BY a) QUALIFY c > 0 USING SAMPLE SYSTEM (50 PERCENT) ORDER BY a LIMIT 3 OFFSET 1"
+  },
+  {
+    "name": "sq-snowflake-join-marker",
+    "commit": "bffcdefc1",
+    "tier": 2,
+    "kind": "yeni özellik",
+    "prompt": "Snowflake'te Oracle tarzı (+) dış birleşim işaretini destekle. `SELECT t1.c1, t2.c2 FROM t1, t2 WHERE t1.c1 = t2.c2 (+)` ve `WHERE t1.c1 (+) = t2.c2` Snowflake'te okunup aynen üretilsin; boşluksuz `t2.c2(+)` yazımı `t2.c2 (+)` olarak üretilsin. Oracle ve Redshift'e çevirirken işaret korunsun."
+  },
+  {
+    "name": "sq-oracle-q-quote",
+    "commit": "ffb9721df",
+    "tier": 2,
+    "kind": "yeni özellik",
+    "prompt": "Oracle'ın alternatif tırnaklı dizgilerini (q'[...]') destekle. `SELECT q'[it's]' FROM dual` okunup `SELECT 'it''s' FROM dual` olarak üretilmeli. Ayraç olarak [], {}, (), <> çiftleri ve iki uçta aynı karakter (ör. q'!...!', q'#...#') kullanılabilir; Q büyük de yazılabilir. Dizginin içindeki ; ya da ] gibi karakterler dizgiyi bitirmemeli."
+  },
+  {
+    "name": "sq-starrocks-like",
+    "commit": "f321207c8",
+    "tier": 3,
+    "kind": "yanıltıcı hata",
+    "prompt": "StarRocks'tan DuckDB'ye çevirdiğimiz `SELECT LIKE('xyz', 'x%')` sorgusu DuckDB'de yanlış sonuç veriyor; çıktı `SELECT 'x%' LIKE 'xyz'` oluyor. DuckDB generator'ında LIKE üretiminde bir sorun var gibi, düzelt."
+  },
+  {
+    "name": "sq-mysql-charset-cast",
+    "commit": "93aa16deb",
+    "tier": 3,
+    "kind": "belirsiz anlatılmış hata",
+    "prompt": "MySQL'de CHARACTER SET'li CAST ve CONVERT ifadelerinde bir şey kayboluyor, düzelt."
+  },
+  {
+    "name": "sq-duckdb-array-insert",
+    "commit": "df0a3006c",
+    "tier": 3,
+    "kind": "sebebi saklı hata",
+    "prompt": "Spark ve Databricks'ten DuckDB'ye ARRAY_INSERT çevirisi negatif konumlarda bazen yanlış sonuç veriyor; özellikle -1 ile eleman eklerken. Sebebini bul ve düzelt."
+  },
+  {
+    "name": "sq-quoted-escapes",
+    "commit": "d5d436bc3",
+    "tier": 2,
+    "kind": "yeri belli hata",
+    "prompt": "Tırnaklı tanımlayıcılardaki ters bölüler yeniden üretilirken bozuluyor. Şunlar geçerli olmalı:\n\n- sqlglot'un kendi dilinde SELECT \"a\\\\\" ve SELECT \"a\\\\\"\"b\" aynen geri üretilmeli.\n- MySQL'den gelen SELECT `a\\\\b`, sqlglot'ta SELECT \"a\\\\b\" olmalı.\n- Postgres'te SELECT \"a\\b\" hem okunurken hem yazılırken aynen kalmalı.\n- ClickHouse'ta da aynı kurallar geçerli."
+  },
+  {
+    "name": "sq-nulls-order-alias",
+    "commit": "c7957e8c8",
+    "tier": 3,
+    "kind": "sebebi saklı hata",
+    "prompt": "Trino'dan MySQL'e çeviride NULL sıralamasını taklit eden CASE WHEN bazen yanlış kolona bakıyor. Örnek: `SELECT x AS v, ARRAY_AGG(v ORDER BY v) AS w FROM t GROUP BY x` çevrilince GROUP_CONCAT'ın ORDER BY'ındaki v, dış sorgunun v alias'ına (yani x'e) çözülüyor. Sebebini bul ve düzelt; bir sorgu yalnızca kendi ORDER BY alias'larını çözmeli."
+  },
+  {
+    "name": "sq-duckdb-empty-regexp",
+    "commit": "cb5d8da1b",
+    "tier": 2,
+    "kind": "yeri belli hata",
+    "prompt": "Snowflake'ten DuckDB'ye REGEXP_COUNT ve REGEXP_INSTR çevirisinde boş desen kontrolü yanlış: bayraklar verilince kontrol `'(?im)' || 'L' = ''` gibi bayrak eklenmiş desene bakıyor, bu yüzden hiç doğru olmuyor. Kontrol desenin kendisine bakmalı (`'L' = ''`), bayraklar yalnızca eşleştirmede eklenmeli."
+  }
+]

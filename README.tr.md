@@ -258,6 +258,8 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
+`node eval/tasks.mjs <kol>` `--runs N` ve `--set sqlglot` alır: [sqlglot](https://github.com/tobymao/sqlglot)'un (MIT, yaklaşık 100 bin satır) 10 gerçek hatası; her biri kodun o hata düzeltilmeden hemen önceki hâliyle, git geçmişi olmadan kurulur ve o düzeltmenin eklediği testlerle kontrol edilir. sqlglot'un `eval/.work/repos/sqlglot` altına klonlanmış olmasını ve Python 3.9+ ister. `--dry` bu görevlerin her birini ücretsiz kontrol eder: verildiği hâliyle kalmalı, gerçek düzeltmeyle geçmeli. `gearbox-0.8.1` kolu, hata avı ayrılmadan önceki gearbox; iki kuralı kıyaslamak için.
+
 Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, Claude Code 2.1.295 ya da daha yenisini ister (2.1.295 ve 2.1.299 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur (2.1.278: 75 geçti, 30 kaldı). PATH'teki `claude` masaüstü uygulamasının kendi sürümünden eski olabilir; Windows'ta o sürüm `%APPDATA%\Claude\claude-code\` ya da yeni uygulamalarda `%LOCALAPPDATA%\Claude-Data\<profil>\claude-code\` altındadır. Ölçüm betikleri bunların en yenisini kendileri bulur (`CLAUDE_BIN` ile değiştirilebilir) ve 2.1.295'ten eski bir sürümde hiçbir şey harcamadan durur.
 
 **Kendini test konusu yapmadan geliştirmek.** Yeni bir sürüm dört adımdan geçer, her biri bir sonrakinden önce, ve yalnızca sonuncusu gerçek işe dokunur:

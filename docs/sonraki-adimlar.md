@@ -330,6 +330,15 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
   - Her görevi 3 kez çalıştır.
   - Gerçek kullanım setini büyüt (adım 5).
 
+**Hazırlandı (17 Ekim 2026), ücretli çalıştırma onay bekliyor:**
+
+- sqlglot (MIT, 9.700 yıldız, yaklaşık 100 bin satır Python) kullanıcının izniyle `eval/.work/repos/sqlglot` altına indirildi (74 MB; repoya girmez).
+- 10 görev `eval/tasks/sqlglot.json`'da: Temmuz 2026'dan sonraki gerçek düzeltmeler (Claude'un bilgi sınırı Haziran 2026, ezber riski düşük). Kod düzeltmeden hemen önceki hâliyle, git geçmişi olmadan kuruluyor; kontrolü o düzeltmenin eklediği testler yapıyor. Türler: belirsiz anlatılmış hata 2, yanıltıcı hata 1 (rapor DuckDB'yi suçluyor, hata StarRocks'ta), sebebi saklı hata 2, yeri belli hata 3, yeni özellik 2.
+- `--dry` ile 10'unun 10'u ücretsiz doğrulandı: verildiği gibi kalıyor, gerçek düzeltmeyle geçiyor.
+- Optimizasyon hataları alınamadı: testleri duckdb ve pytz paketlerini istiyor; bunları kurmak ayrı bir indirme, sorulmadı.
+- Kıyaslanacak kollar: gearbox 0.8.2 (yeni hata avı kuralı), gearbox 0.8.1 (eski kural), hep Sonnet orta, hep Opus yüksek.
+- pytest ve datasette denenmedi: kurulumları paket indirmesi istiyor.
+
 ### 13. Sonuçlardan öğrenmek
 
 - **Ne:** Bir kademenin işe yarayıp yaramadığını kaydedip kuralları kendiliğinden ayarlamak: testler geçti mi, `/gear wrong` geldi mi, şikâyet var mı.
