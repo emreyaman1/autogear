@@ -1,7 +1,7 @@
-// Which Claude Code builds gearbox has been checked on.
+// Which Claude Code builds autogear has been checked on.
 
-// The newest build whose plugin API gearbox's tests and live smoke test
-// passed on. A newer build gets a one-time notice; gearbox keeps running and
+// The newest build whose plugin API autogear's tests and live smoke test
+// passed on. A newer build gets a one-time notice; autogear keeps running and
 // switches itself off if its choices stop taking effect.
 export const TESTED_THROUGH = '2.1.299'
 

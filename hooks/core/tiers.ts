@@ -33,7 +33,7 @@ const row = (
 // every profile: in the measurements behind this table Sonnet medium did that
 // work as well as Opus high for a fraction of the cost, and raising Sonnet's
 // effort on it did not help. In tasarruf hard work runs on Sonnet at high too:
-// in gearbox's own comparison (twenty tasks, two of them sets, one run each)
+// in autogear's own comparison (twenty tasks, two of them sets, one run each)
 // Opus solved none that Sonnet at medium failed, at 3.6 times the cost (the
 // person's call, 18 October 2026). No tier defaults to max; only the person
 // asks for it (+max, "max ile"). A hunt (policy.ts) runs at high at least.
@@ -69,7 +69,7 @@ export function toTier(value: number): Tier {
 export function tierSpec(profile: ProfileId, tier: Tier): TierSpec {
   const spec = PROFILES[profile][tier]
   if (spec === undefined) {
-    throw new Error(`gearbox: profile ${profile} has no tier ${tier}`)
+    throw new Error(`autogear: profile ${profile} has no tier ${tier}`)
   }
 
   return spec

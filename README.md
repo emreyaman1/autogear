@@ -1,17 +1,17 @@
-# gearbox
+# autogear
 
 [English](README.md) · [Türkçe](README.tr.md)
 
-Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer: in its own measurements the strong model solved nothing the cheaper one could not, so Opus is kept for critical work, plan mode and when you ask for it.
+Automatic gear shifting for Claude Code. For every message autogear picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer: in its own measurements the strong model solved nothing the cheaper one could not, so Opus is kept for critical work, plan mode and when you ask for it.
 
 > Status: 0.12.0. A Claude Code Mod, built on the plugin API's function hooks, which can change between Claude Code releases. The safety nets below exist for that reason. Release notes: [CHANGELOG.md](CHANGELOG.md). What it keeps and what it sends: [Privacy](#privacy).
 
 ## What you get
 
 - **The right model per message.** "What does this function do" runs on Haiku · low, a clear one-place change on Sonnet · medium, an unclear bug or an architecture question on Sonnet · high, long many-sided work and plan mode on Opus.
-- **Nothing above your picker.** Set the picker to your strongest model once; gearbox chooses at or below it.
-- **A state row.** A row above the prompt shows whether gearbox is on, in shadow mode or off, with buttons named for what they do.
-- **Every answer says who gave it.** One italic line under it names the model and effort that answered, and the helpers' models when helpers ran (with gearbox on, in shadow or off). The reasons and the money are one command away:
+- **Nothing above your picker.** Set the picker to your strongest model once; autogear chooses at or below it.
+- **A state row.** A row above the prompt shows whether autogear is on, in shadow mode or off, with buttons named for what they do.
+- **Every answer says who gave it.** One italic line under it names the model and effort that answered, and the helpers' models when helpers ran (with autogear on, in shadow or off). The reasons and the money are one command away:
 
   ```
   Opus 5.5 · effort medium · helpers: Sonnet 5.5
@@ -23,7 +23,7 @@ Automatic gear shifting for Claude Code. For every message gearbox picks the mod
 In Claude Code:
 
 ```
-/plugin install gearbox --marketplace emreyaman1/gearbox
+/plugin install autogear --marketplace emreyaman1/autogear
 ```
 
 Then set the picker to your strongest model once (for example **Opus · high**). Open a new chat after installing; chats that were already open do not load new plugins.
@@ -35,22 +35,22 @@ claude plugin marketplace add C:\gearbox
 ```
 
 ```bash
-claude plugin install gearbox@gearbox
+claude plugin install autogear@autogear
 ```
 
-It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295 and 2.1.299; the live smoke test passed on 2.1.299). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build gearbox does not load at all and cannot say why; 2.1.278 refuses 0.7 as well as 0.8. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
+It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295 and 2.1.299; the live smoke test passed on 2.1.299). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build autogear does not load at all and cannot say why; 2.1.278 refuses 0.7 as well as 0.8. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
 
 ## Using it
 
-**The picker is the ceiling.** gearbox never spends more than the model and effort the picker holds. Change the picker and it tells you the new ceiling. With the picker on **Opus · high** it is fully automatic.
+**The picker is the ceiling.** autogear never spends more than the model and effort the picker holds. Change the picker and it tells you the new ceiling. With the picker on **Opus · high** it is fully automatic.
 
-**The state row.** A small row above the prompt shows what gearbox is doing: a badge reads **AÇIK** (on, green), **GÖLGE** (shadow, violet), **KAPALI** (off, gray) or **DURDU** (stood down, amber; see Safety nets). Its dot moves a little to say what gearbox is doing: a soft pulse while it routes, a slow breath in shadow mode, still when off, a slow blink when stood down; with "reduce motion" set in your system it stays still. Beside it stands the last choice ("Sonnet · medium · T1 rutin"; in shadow mode what gearbox would have picked), or before one, what the state means. Beside it are buttons for the other states, each named for what a press does: **aç** (turn on), **gölgeye al** (shadow mode), **kapat** (turn off); stood down, **yeniden dene** (try again). When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving. While a rate-limit window is nearly full or spent too fast, the row also shows a warning (see Pace below).
+**The state row.** A small row above the prompt shows what autogear is doing: a badge reads **AÇIK** (on, green), **GÖLGE** (shadow, violet), **KAPALI** (off, gray) or **DURDU** (stood down, amber; see Safety nets). Its dot moves a little to say what autogear is doing: a soft pulse while it routes, a slow breath in shadow mode, still when off, a slow blink when stood down; with "reduce motion" set in your system it stays still. Beside it stands the last choice ("Sonnet · medium · T1 rutin"; in shadow mode what autogear would have picked), or before one, what the state means. Beside it are buttons for the other states, each named for what a press does: **aç** (turn on), **gölgeye al** (shadow mode), **kapat** (turn off); stood down, **yeniden dene** (try again). When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving. While a rate-limit window is nearly full or spent too fast, the row also shows a warning (see Pace below).
 
-**Shadow mode.** `/gear shadow` lets gearbox choose without applying the choice: every request goes out as the picker says, and gearbox writes what it would have picked in its log and on the state row (`Haiku · low · T0 would choose`). The line under the answer says only which model answered. The picker is the ceiling here too; when it cut the choice, both are written to the log (`Sonnet · high (without the ceiling Opus · high)`), so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear wrong` still marks its choices. `/gear on` turns routing back on.
+**Shadow mode.** `/gear shadow` lets autogear choose without applying the choice: every request goes out as the picker says, and autogear writes what it would have picked in its log and on the state row (`Haiku · low · T0 would choose`). The line under the answer says only which model answered. The picker is the ceiling here too; when it cut the choice, both are written to the log (`Sonnet · high (without the ceiling Opus · high)`), so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear wrong` still marks its choices. `/gear on` turns routing back on.
 
-**Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. gearbox sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") counts as hard work (T3). The line under the answer says `plan mode` and the log says so too.
+**Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. autogear sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") counts as hard work (T3). The line under the answer says `plan mode` and the log says so too.
 
-**A clean conversation (0.10, first version).** Every step of a turn sends the whole conversation again, so a large one costs more on every message. When the conversation is past 150K tokens and a piece of work has just finished (a commit or push, or a passing test run), the row above the prompt offers a clean one: `Devir notu hazırlanıyor…` while the note is written, then `Devir notu hazır · sohbet 180 bin token` with **temiz sohbet**, **notu gör** and **×**. The offer stays while you write on, until you press one of them or a newer note replaces it. gearbox has the model write a short hand-over note (project, last commit, what was done, what is open, your rules, what to read); **notu gör** shows it, **temiz sohbet** runs `/clear` and sends the note, unseen, with your next message. Nothing is cleared unless you press it, and the old conversation stays on disk: the note ends with the `claude --resume` line that opens it again. Tried once in a real conversation: the offer and the note work; the **temiz sohbet** press has not been tried there yet.
+**A clean conversation (0.10, first version).** Every step of a turn sends the whole conversation again, so a large one costs more on every message. When the conversation is past 150K tokens and a piece of work has just finished (a commit or push, or a passing test run), the row above the prompt offers a clean one: `Devir notu hazırlanıyor…` while the note is written, then `Devir notu hazır · sohbet 180 bin token` with **temiz sohbet**, **notu gör** and **×**. The offer stays while you write on, until you press one of them or a newer note replaces it. autogear has the model write a short hand-over note (project, last commit, what was done, what is open, your rules, what to read); **notu gör** shows it, **temiz sohbet** runs `/clear` and sends the note, unseen, with your next message. Nothing is cleared unless you press it, and the old conversation stays on disk: the note ends with the `claude --resume` line that opens it again. Tried once in a real conversation: the offer and the note work; the **temiz sohbet** press has not been tried there yet.
 
 **Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap` (T0), `+deep` (T4). Writing `ultrathink` means T4.
 
@@ -62,24 +62,24 @@ Or say it in words: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, se
 |---|---|
 | `/gear` | status, last decision and reason, limits, statistics, this list |
 | `/gear savings` | the savings card (see below) |
-| `/gear log` | the log of gearbox's latest decisions and the doubtful ones |
+| `/gear log` | the log of autogear's latest decisions and the doubtful ones |
 | `/gear wrong weak\|strong` | mark the latest decision: model too weak, or more than the work needed |
 | `/gear reset` | reset the savings counter and the log |
-| `/gear on` / `/gear off` | turn gearbox on / off (off: the picker's model is used) |
+| `/gear on` / `/gear off` | turn autogear on / off (off: the picker's model is used) |
 | `/gear shadow` | shadow mode: choose and write it down, apply nothing |
 | `/gear profile saver\|balanced\|quality` | which tier table to use |
 | `/gear haiku on\|off` | may trivial work go to Haiku |
 | `/gear ask on\|off` | may the rules ask Haiku when unsure |
 | `/gear note on\|off` | the line under each answer |
 | `/gear band on\|off` | the state row above the prompt |
-| `/gear lang en\|tr\|auto` | the language gearbox speaks; auto follows the system's |
+| `/gear lang en\|tr\|auto` | the language autogear speaks; auto follows the system's |
 | `/gear doctor` | checks the setup and says what to fix: state, picker, Claude Code version, whether choices are applied, the store, limits, language, and the environment settings that can pin effort or the helpers' model |
 
 The commands are English whatever the language. The old Turkish names (`oto`, `sabitle`, `golge`, `tasarruf`, `kayit`, `yanlis zayif|fazla`, `sifirla`, `profil tasarruf|dengeli|kalite`, `sor`, `not`, `bant` with `aç`/`kapa`) go on working.
 
-**Language.** gearbox speaks English or Turkish. `auto` (the default) follows the system's language, Turkish on a Turkish system and English elsewhere; Claude Code's own `language` setting is not offered to a Mod, so it is not read. `/gear lang en` or `tr` sets it by hand. The commands, the tags and the model names stay as they are; the rules that read your messages understand eight languages whatever this is set to.
+**Language.** autogear speaks English or Turkish. `auto` (the default) follows the system's language, Turkish on a Turkish system and English elsewhere; Claude Code's own `language` setting is not offered to a Mod, so it is not read. `/gear lang en` or `tr` sets it by hand. The commands, the tags and the model names stay as they are; the rules that read your messages understand eight languages whatever this is set to.
 
-**The line under every answer.** Every answer, with gearbox on, in shadow or off, ends with one italic line naming the model that answered, as the API reports it, and the effort it was asked at: *Opus 5.5 · effort medium*. When helpers (subagents) ran, their models follow: *Opus 5.5 · effort medium · helpers: Sonnet 5.5*. Plan mode and a limit warning are added beside it. `/gear note off` takes it away. What gearbox read in the message, why it chose, and the money are in `/gear`, `/gear log` and `/gear savings`.
+**The line under every answer.** Every answer, with autogear on, in shadow or off, ends with one italic line naming the model that answered, as the API reports it, and the effort it was asked at: *Opus 5.5 · effort medium*. When helpers (subagents) ran, their models follow: *Opus 5.5 · effort medium · helpers: Sonnet 5.5*. Plan mode and a limit warning are added beside it. `/gear note off` takes it away. What autogear read in the message, why it chose, and the money are in `/gear`, `/gear log` and `/gear savings`.
 
 ## How it works
 
@@ -94,7 +94,7 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
 2. **Settle** (`hooks/core/settle.ts`): Haiku reads the message alone, without the screenshot or the work around it, so its answer goes at most one tier below what the rules saw, and not under T2 for a request to look into something. A message in the middle of work at T2 or above (a question, a remark, one only Haiku could place) goes at most one tier below that work; new work the rules are sure of, a chore such as a commit, or a greeting starts afresh.
 3. **Decide** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): the tier maps to a model and effort through a profile, then passes two limits and a look at the rate-limit windows:
    - **Ceiling:** never above the picker's model and effort.
-   - **Cache:** a model switch makes the new model read the whole conversation once at its cache-write price (the old model's cache is not lost: on a subscription it lives an hour, renewed on each read). So with a large context (40K+ tokens) gearbox never steps down to a cheaper model, since that one write costs more than the saving (Sonnet writes at $2.50 a million tokens where Opus reads its cache at $0.20; Haiku past 100K tokens pays five times its price): a commit in a long Opus conversation stays on Opus at low effort. A step up of one tier keeps the model as well; two tiers or more, or off Haiku, switches. In a small conversation every message goes to its own model.
+   - **Cache:** a model switch makes the new model read the whole conversation once at its cache-write price (the old model's cache is not lost: on a subscription it lives an hour, renewed on each read). So with a large context (40K+ tokens) autogear never steps down to a cheaper model, since that one write costs more than the saving (Sonnet writes at $2.50 a million tokens where Opus reads its cache at $0.20; Haiku past 100K tokens pays five times its price): a commit in a long Opus conversation stays on Opus at low effort. A step up of one tier keeps the model as well; two tiers or more, or off Haiku, switches. In a small conversation every message goes to its own model.
    - **Pace:** a rate-limit window never lowers the model or the effort: finishing the work matters more than the window. When the 5-hour or weekly window is at 90% or more, or spent faster than an even pace (30%+ used and 20 points ahead), the line under the answer and the state row carry a warning instead (`⚠ 5-hour limit 92%: this work runs on Opus · high, the limit may run out`). If a window is nearly over with at most half used, hard and critical work (T3 and up) gets one step more effort, never as far as max and never above the picker. Standard work is left as it is: on clearly described work more effort did not help in the measurements behind the tier table.
 4. **Apply** (`hooks/register.tsx`, `turn.step`): right before each model request. All requests of a turn use the same model, so the turn keeps its cache. Subagents are left alone.
 5. **Verify** (`turn.complete`): the API names the model that really answered; it is compared with the choice (see Safety nets).
@@ -110,15 +110,15 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
 | T3 located hunt | a bug told plainly whose cause hides (it comes and goes, it shows far from where it starts), tests written to catch bugs nobody has found yet | Sonnet · high (xhigh at T4) |
 | T4 critical | long multi-step work, repeated failure | Opus · high |
 
-Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced) and `kalite` (quality) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a located hunt on Sonnet · high, and no tier runs at max unless you ask for it (`+max`, "max ile"). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that gearbox's own comparison is to check. In that comparison (Measurements) Sonnet · medium passed every hunt Opus · high passed, which is why a located hunt now goes to Sonnet at more effort; In `tasarruf` hard work and a vague hunt now run on Sonnet · high as well: over twenty tasks, two sets, Opus solved none that Sonnet · medium failed, at 3.6 times the cost. `dengeli` and `kalite` keep Opus for hard work.
+Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced) and `kalite` (quality) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a located hunt on Sonnet · high, and no tier runs at max unless you ask for it (`+max`, "max ile"). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that autogear's own comparison is to check. In that comparison (Measurements) Sonnet · medium passed every hunt Opus · high passed, which is why a located hunt now goes to Sonnet at more effort; In `tasarruf` hard work and a vague hunt now run on Sonnet · high as well: over twenty tasks, two sets, Opus solved none that Sonnet · medium failed, at 3.6 times the cost. `dengeli` and `kalite` keep Opus for hard work.
 
 A bug report counts as clear when it holds the error, a file, code, a number, the moment it happens ("when I click...") or what should happen instead; a screenshot beside it counts too.
 
 ## Reviewing its decisions
 
-The classifier numbers below were measured on labels we wrote. To see how gearbox does on your own work, it keeps a log of its decisions on your machine: the start of each message (100 characters), the tier, the model and effort that answered, what gearbox wanted when the picker cut it, the source of the choice, what the turn cost, and what happened next. The last 200 are kept.
+The classifier numbers below were measured on labels we wrote. To see how autogear does on your own work, it keeps a log of its decisions on your machine: the start of each message (100 characters), the tier, the model and effort that answered, what autogear wanted when the picker cut it, the source of the choice, what the turn cost, and what happened next. The last 200 are kept.
 
-- `/gear log` shows the latest 25 as a table, the tiers used, and the **doubtful decisions**: those the work itself called into question (you complained and gearbox moved up a tier; the tests or build failed at the end of the turn) and those you marked.
+- `/gear log` shows the latest 25 as a table, the tiers used, and the **doubtful decisions**: those the work itself called into question (you complained and autogear moved up a tier; the tests or build failed at the end of the turn) and those you marked.
 - When a decision was wrong, say so right after the answer: `/gear wrong weak` (the model was too weak) or `/gear wrong strong` (stronger than the work needed). The mark lands on the latest message.
 - The doubtful share is a floor: a wrong choice nobody noticed is not counted. With a few days of use it shows which kinds of message the rules get wrong, which is where to tune next.
 - `/gear reset` clears the log. It never leaves your machine.
@@ -152,16 +152,16 @@ Dollars per million tokens. A Haiku prompt over 100K tokens costs five times as 
 **It is an estimate.**
 
 - On a subscription you pay no dollars; the quota drains at roughly that ratio.
-- A turn that switched model rewrote its cache. On the picker's model that cache would have been warm, so those writes are priced as reads there: the cost of switching counts against gearbox.
+- A turn that switched model rewrote its cache. On the picker's model that cache would have been warm, so those writes are priced as reads there: the cost of switching counts against autogear.
 - Lower effort emits fewer tokens. That is not credited, so the saving can read a little low.
-- gearbox's own Haiku questions are subtracted. Subagents are not counted.
+- autogear's own Haiku questions are subtracted. Subagents are not counted.
 
 ## Safety nets
 
 - **Self-check:** after every turn it compares the model the API says answered with the one it chose. If 3 turns in a row differ (a Claude Code update changed the plugin API), it switches itself off and tells you; `/gear on` tries again.
 - **Fallback model:** if a chosen model gives no answer (retired id, not on your plan), the request is re-sent on the picker's model and the failed one is avoided for the session.
 - **Snowball brake:** if a turn done on a cheap model ends with failing tests or build, the next turn goes one tier up. Complaints ("still broken") also raise the tier, two tiers on the second in a row.
-- **Version notice:** one notice when Claude Code is newer than the version gearbox was tested on (`hooks/core/version.ts`).
+- **Version notice:** one notice when Claude Code is newer than the version autogear was tested on (`hooks/core/version.ts`).
 - **Weekly compatibility CI:** `.github/workflows/compat.yml` validates and tests against the newest Claude Code every week.
 - **Live smoke test:** `node scripts/smoke.mjs` sends three short messages and checks from the API's reply that the model really changed (spends a little usage).
 
@@ -181,9 +181,9 @@ How the 143 labelled messages are routed, by the rules alone, with the picker on
 
 \* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower. The bound of 0.6 costs one message here ("bu import neden kullanılıyor?" is now T1, not T0) and is what keeps the real-use errors below from happening.
 
-**Other languages** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --held`): messages written in eight languages and labelled by the work they need; code and error output left as written. gearbox as it runs (0.11.0): rules that read Spanish, German, French, Russian, Chinese and Japanese beside Turkish and English, and Haiku where the rules are unsure or the message is in neither Turkish nor English, held to the rules' floor. The numbers below are for a set written by another model that was shown neither the rules nor their word lists: 24 messages per language, each language its own messages, read once before any tuning. 17 October 2026, 139 Haiku calls, $0.08 at list price. The labels are that model's; no person has checked them.
+**Other languages** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --held`): messages written in eight languages and labelled by the work they need; code and error output left as written. autogear as it runs (0.11.0): rules that read Spanish, German, French, Russian, Chinese and Japanese beside Turkish and English, and Haiku where the rules are unsure or the message is in neither Turkish nor English, held to the rules' floor. The numbers below are for a set written by another model that was shown neither the rules nor their word lists: 24 messages per language, each language its own messages, read once before any tuning. 17 October 2026, 139 Haiku calls, $0.08 at list price. The labels are that model's; no person has checked them.
 
-| Language | Rules: within 1 tier | Rules: severe* | gearbox: exact | gearbox: within 1 tier | gearbox: severe* | Asked Haiku |
+| Language | Rules: within 1 tier | Rules: severe* | autogear: exact | autogear: within 1 tier | autogear: severe* | Asked Haiku |
 |---|---|---|---|---|---|---|
 | Turkish | 83% | 2 | 67% | 92% | 0 | 33% |
 | English | 92% | 0 | 75% | 92% | 0 | 8% |
@@ -196,19 +196,19 @@ How the 143 labelled messages are routed, by the rules alone, with the picker on
 
 What it shows, the unflattering part first:
 
-- **The rules alone are not reliable outside Turkish and English:** 83–92% within one tier and one or two severe cases in 24 on the first read, so gearbox in these languages is mostly Haiku (83–96% of messages are asked, each a Haiku call of about $0.0005 and the wait for it). Before this work (0.9.1) the translated set of the 143 labelled messages gave 2–7 severe cases in German, French, Chinese and Japanese.
+- **The rules alone are not reliable outside Turkish and English:** 83–92% within one tier and one or two severe cases in 24 on the first read, so autogear in these languages is mostly Haiku (83–96% of messages are asked, each a Haiku call of about $0.0005 and the wait for it). Before this work (0.9.1) the translated set of the 143 labelled messages gave 2–7 severe cases in German, French, Chinese and Japanese.
 - **With Haiku the goal (within one tier at least 90%, severe cases at most 2%) is met on this set in every language,** no severe case at all. 24 messages is few: one miss is four points.
-- **Exact tiers are lower, 54–79%:** Haiku pulls a message a tier down more often than the rules do (Chinese most: 54%). The rules alone are exact more often than gearbox here, but they miss badly on phrasings they have not met, so Haiku stays.
+- **Exact tiers are lower, 54–79%:** Haiku pulls a message a tier down more often than the rules do (Chinese most: 54%). The rules alone are exact more often than autogear here, but they miss badly on phrasings they have not met, so Haiku stays.
 - An earlier set written the same way (read once, then tuned on) gave the same picture on its first read: within one tier 92–100%, one severe case (Spanish). Both sets were tuned on after they were read, so the rules' scores on them now are higher and mean nothing.
 - Long English task texts (SWE-bench Verified, Terminal-Bench; `node eval/external.mjs`): the rules put a long, counted or stepwise brief at T3 and ask Haiku. Severe cases on Terminal-Bench fell from 7% to 4%; within one tier went from 83% to 78% (SWE-bench) and 76% to 75% (Terminal-Bench), more tasks put a tier too high.
 - The translations of the 143 messages are Claude's; no native speaker has checked them.
 
-**Real use**: the 49 decisions gearbox made in 11 sessions between 11 and 16 October 2026, each labelled afterwards from what the work turned out to be (one reviewer's judgment, not a panel's). What gearbox chose then, and the same messages played again through 0.6:
+**Real use**: the 49 decisions autogear made in 11 sessions between 11 and 16 October 2026, each labelled afterwards from what the work turned out to be (one reviewer's judgment, not a panel's). What autogear chose then, and the same messages played again through 0.6:
 
 | | Exact | Within 1 tier | Severe* | Too low | Too high |
 |---|---|---|---|---|---|
-| gearbox 0.3 to 0.5, as it ran | 51% | 82% | 7 | 17 | 7 |
-| gearbox 0.6, played again | 61% | 100% | 0 | 10 | 9 |
+| autogear 0.3 to 0.5, as it ran | 51% | 82% | 7 | 17 | 7 |
+| autogear 0.6, played again | 61% | 100% | 0 | 10 | 9 |
 
 What went wrong in the first row: the note Claude Code puts ahead of a message in a new session was read as the message, so a bare "merhaba" went to Opus · high; Haiku called bug reports that came with a screenshot trivial ("o tuş çıkmadı yine", "inceler misin"); a remark in the middle of a long task dropped the task to Haiku; a model asked for in words ("sonnet'e max ile ver") was ignored. The fixes of 0.6 were made from these same messages, so the second row shows that they hold, not how 0.6 does on messages it has not seen, and two of the replayed messages would go to Haiku with no logged answer. The decision log is what will tell. The messages are someone's real work, so the set and the test that replays it are kept on the developer's machine, not in this repository.
 
@@ -217,15 +217,15 @@ What went wrong in the first row: the note Claude Code puts ahead of a message i
 | Held-out half of both (350), 0.7 | Exact | Within 1 tier | Severe* | Too high | Rank agreement |
 |---|---|---|---|---|---|
 | Rules alone | 36% | 79% | 9 (3%) | 183 | 0.10 |
-| **gearbox: rules, Haiku when unsure** | **31%** | **78%** | **6 (2%)** | **207** | **0.16** |
+| **autogear: rules, Haiku when unsure** | **31%** | **78%** | **6 (2%)** | **207** | **0.16** |
 
-By set, gearbox as it runs: SWE-bench Verified 36% exact, 83% within one tier, 1 severe case in 500; Terminal-Bench 30%, 73%, 8 severe cases in 241 (3%). Before the two rule fixes of 0.7 (a chore word such as "commit" inside a long description no longer makes it trivial; a long description of work is no small change) the rules had 21 severe cases (6%) on the held-out half. Asking Haiku where the rules are unsure lowers the severe cases further and raises the rank agreement, at the price of more work sent a tier or two too high, since Haiku answers the higher tier when torn. The measurement asked Haiku 177 times, $0.38 at list price. These numbers are from 0.7: 0.8 moved three kinds of request up to T3 (a bug told without detail, tests written to catch hidden bugs, a request for a plan) and has not been measured on these sets again.
+By set, autogear as it runs: SWE-bench Verified 36% exact, 83% within one tier, 1 severe case in 500; Terminal-Bench 30%, 73%, 8 severe cases in 241 (3%). Before the two rule fixes of 0.7 (a chore word such as "commit" inside a long description no longer makes it trivial; a long description of work is no small change) the rules had 21 severe cases (6%) on the held-out half. Asking Haiku where the rules are unsure lowers the severe cases further and raises the rank agreement, at the price of more work sent a tier or two too high, since Haiku answers the higher tier when torn. The measurement asked Haiku 177 times, $0.38 at list price. These numbers are from 0.7: 0.8 moved three kinds of request up to T3 (a bug told without detail, tests written to catch hidden bugs, a request for a plan) and has not been measured on these sets again.
 
-What it shows: gearbox rarely sends hard work to a weak model, but on long English issues and task statements it hardly tells a fifteen-minute fix from a four-hour one (rank agreement 0.16), and it spends on the safe side. These texts are unlike the short prompts people type, which is what the rules were built for; and the time-to-tier mapping is ours, so some of "too high" is a tier the work may well have deserved (a quick fix in an unfamiliar codebase is still a hunt).
+What it shows: autogear rarely sends hard work to a weak model, but on long English issues and task statements it hardly tells a fifteen-minute fix from a four-hour one (rank agreement 0.16), and it spends on the safe side. These texts are unlike the short prompts people type, which is what the rules were built for; and the time-to-tier mapping is ours, so some of "too high" is a tier the work may well have deserved (a quick fix in an unfamiliar codebase is still a hunt).
 
 **Output quality** (`eval/tasks/`): ten real tasks on a small project, each checked by tests Claude never saw, run under six setups (`node eval/tasks.mjs <arm>`). Costs at API list prices, one run each, on Claude Code 2.1.299, 17 October 2026; ✗ marks a failed task.
 
-| Task | Kind | gearbox | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus advisor |
+| Task | Kind | autogear | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus advisor |
 |---|---|---|---|---|---|---|---|
 | 1 | rename | $0.01 Haiku | $0.21 | $0.21 | $0.06 | $0.09 | $0.10 |
 | 2 | small change | $0.06 Sonnet | $0.21 | $0.14 | $0.06 | $0.06 | $0.07 |
@@ -241,17 +241,17 @@ What it shows: gearbox rarely sends hard work to a weak model, but on long Engli
 
 What it shows, the unflattering part first:
 
-- **On these tasks Sonnet · medium alone did as well as anything, for the least.** Every setup but one passed all ten, so this set does not tell the models apart: it is too easy. Sonnet · medium spent $0.81, gearbox $1.96, Opus · high $3.09.
-- **gearbox costs more than Sonnet alone here** because it sent the three hunts (5, 8, 9) to Opus · high: $1.50 of its $1.96, on work Sonnet also passed. Whether that pays off on harder work is what the next measurement has to show (bigger projects, three runs each).
-- gearbox is 37% cheaper than Opus · high and 16% cheaper than Opus · medium, at the same result, and 40% faster than Opus · high.
+- **On these tasks Sonnet · medium alone did as well as anything, for the least.** Every setup but one passed all ten, so this set does not tell the models apart: it is too easy. Sonnet · medium spent $0.81, autogear $1.96, Opus · high $3.09.
+- **autogear costs more than Sonnet alone here** because it sent the three hunts (5, 8, 9) to Opus · high: $1.50 of its $1.96, on work Sonnet also passed. Whether that pays off on harder work is what the next measurement has to show (bigger projects, three runs each).
+- autogear is 37% cheaper than Opus · high and 16% cheaper than Opus · medium, at the same result, and 40% faster than Opus · high.
 - **Model or effort:** Opus · medium did what Opus · high did for 25% less; Sonnet · medium did it for a third of Opus · medium.
 - opusplan ran Sonnet throughout: these tasks were not done in plan mode.
-- The one failure was Sonnet with Opus as its advisor, on the misleading bug: it fixed the file the error pointed at, not the cause. gearbox sent that task to Sonnet too, since an error message in hand reads as a clear bug, and passed. One run, so this is luck as much as anything; the measurement does not show whether the advisor was consulted.
-- One run per cell on a small project: direction, not certainty. In an earlier run (0.7, six tasks) gearbox matched Opus · high on four tasks for $0.31 against $2.38.
+- The one failure was Sonnet with Opus as its advisor, on the misleading bug: it fixed the file the error pointed at, not the cause. autogear sent that task to Sonnet too, since an error message in hand reads as a clear bug, and passed. One run, so this is luck as much as anything; the measurement does not show whether the advisor was consulted.
+- One run per cell on a small project: direction, not certainty. In an earlier run (0.7, six tasks) autogear matched Opus · high on four tasks for $0.31 against $2.38.
 
-**A real project** (`--set sqlglot`): ten bugs fixed in [sqlglot](https://github.com/tobymao/sqlglot) after July 2026, a 100K-line SQL parser, each set up as the code stood before the fix and checked by the tests the fix added. One run each, Claude Code 2.1.299, 17 October 2026. gearbox 0.8.1 is the version that sent every hunt to Opus · high; 0.8.2 sends a located one to Sonnet · high.
+**A real project** (`--set sqlglot`): ten bugs fixed in [sqlglot](https://github.com/tobymao/sqlglot) after July 2026, a 100K-line SQL parser, each set up as the code stood before the fix and checked by the tests the fix added. One run each, Claude Code 2.1.299, 17 October 2026. autogear 0.8.1 is the version that sent every hunt to Opus · high; 0.8.2 sends a located one to Sonnet · high.
 
-| Task | Kind | gearbox 0.8.2 | gearbox 0.8.1 | Sonnet · medium | Opus · high |
+| Task | Kind | autogear 0.8.2 | autogear 0.8.1 | Sonnet · medium | Opus · high |
 |---|---|---|---|---|---|
 | sq-tsql-output | vaguely told bug | ✗ $1.28 Opus | ✗ $0.94 Opus | ✗ $0.28 | ✗ $1.38 |
 | sq-duckdb-sample | placed bug | $0.23 Sonnet | $0.22 Sonnet | $0.25 | $0.88 |
@@ -267,10 +267,10 @@ What it shows, the unflattering part first:
 
 What it shows, the unflattering part first:
 
-- **Sonnet · medium alone solved 9 of 10 for $2.49; Opus · high solved the same 9 for $8.98; gearbox 8 for about $5.** Over both sets, twenty tasks, Opus never solved one that Sonnet · medium failed: the one Sonnet failed (`sq-tsql-output`, a vague report whose quick fix breaks T-SQL's OUTPUT clause) every setup failed.
-- gearbox's two failures are tasks Sonnet · medium passed on its own, one on Sonnet and one on Opus: on one run that reads as noise, not as a model too weak.
+- **Sonnet · medium alone solved 9 of 10 for $2.49; Opus · high solved the same 9 for $8.98; autogear 8 for about $5.** Over both sets, twenty tasks, Opus never solved one that Sonnet · medium failed: the one Sonnet failed (`sq-tsql-output`, a vague report whose quick fix breaks T-SQL's OUTPUT clause) every setup failed.
+- autogear's two failures are tasks Sonnet · medium passed on its own, one on Sonnet and one on Opus: on one run that reads as noise, not as a model too weak.
 - **The hunt split held:** the two located hunts went to Sonnet under 0.8.2 and passed for $0.49, against $1.39 on Opus under 0.8.1.
-- gearbox sends work to Opus that Sonnet does as well here: the two vague reports, the misleading one and two others cost $3.52 on Opus against $1.17 for Sonnet · medium on the same tasks.
+- autogear sends work to Opus that Sonnet does as well here: the two vague reports, the misleading one and two others cost $3.52 on Opus against $1.17 for Sonnet · medium on the same tasks.
 - One run per cell. Three runs would cost about $65 more at list price.
 
 ## Project layout
@@ -290,13 +290,13 @@ What it shows, the unflattering part first:
 | `hooks/core/settle.ts` | how the rules, Haiku's answer and the work in hand settle a tier |
 | `hooks/core/savings.ts` | per-model totals, the saving, the markdown report |
 | `hooks/core/settings.ts` | stored settings and statistics, `/gear` parsing |
-| `hooks/core/text.ts` | the words gearbox says, in English and Turkish, and the language choice |
+| `hooks/core/text.ts` | the words autogear says, in English and Turkish, and the language choice |
 | `hooks/core/doctor.ts` | `/gear doctor`: the checks and their advice |
 | `hooks/core/switch.ts` | the drawing of the state badge |
 | `hooks/core/version.ts` | the newest Claude Code version it was tested on |
 | `tests/` | rules, policy, prices and savings; the router against a mock engine; the classifier eval |
 | `eval/` | classifier measurement, the external benchmarks (`external.mjs`) and the output-quality tasks |
-| `scripts/` | the live smoke test; `harvest.mjs`, which gathers gearbox's decisions from your transcripts |
+| `scripts/` | the live smoke test; `harvest.mjs`, which gathers autogear's decisions from your transcripts |
 
 ## Development
 
@@ -316,25 +316,25 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-`node eval/tasks.mjs <arm>` takes `--runs N` and `--set sqlglot`: ten real bugs of [sqlglot](https://github.com/tobymao/sqlglot) (MIT, about 100K lines), each set up as the code stood just before its fix, without git history, and checked by the tests that fix added. It needs sqlglot cloned into `eval/.work/repos/sqlglot` and Python 3.9+. `--dry` checks every such task for free: it must fail as given and pass with the real fix. The arm `gearbox-0.8.1` is gearbox before the hunt split, to compare the two rules.
+`node eval/tasks.mjs <arm>` takes `--runs N` and `--set sqlglot`: ten real bugs of [sqlglot](https://github.com/tobymao/sqlglot) (MIT, about 100K lines), each set up as the code stood just before its fix, without git history, and checked by the tests that fix added. It needs sqlglot cloned into `eval/.work/repos/sqlglot` and Python 3.9+. `--dry` checks every such task for free: it must fail as given and pass with the real fix. The arm `gearbox-0.8.1` is autogear before the hunt split, to compare the two rules.
 
 The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs Claude Code 2.1.295 or newer (2.1.295 and 2.1.299 were used): on older builds the hooks module does not load and the router tests fail (2.1.278: 75 pass, 30 fail). The `claude` on your PATH can be older than the desktop app's own build; on Windows that one lives under `%APPDATA%\Claude\claude-code\` or, in newer apps, `%LOCALAPPDATA%\Claude-Data\<profile>\claude-code\`. The measurement scripts pick the newest of them themselves (`CLAUDE_BIN` overrides) and stop before spending anything on a build older than 2.1.295.
 
 **Developing without making yourself the test.** A new version goes through four steps, each before the next, and only the last touches real work:
 
 1. Offline: `claude plugin test .` (rules, policy, router, the eval sets) and `node eval/external.mjs` (the external benchmarks, free; `--haiku` adds Haiku's answers for a little usage).
-2. In shadow mode (`/gear shadow`) on real work: gearbox chooses and writes down, the picker's model answers.
+2. In shadow mode (`/gear shadow`) on real work: autogear chooses and writes down, the picker's model answers.
 3. `node scripts/harvest.mjs` gathers those choices from the transcripts into `eval/.work/harvest.json`; labelled, they become a real-use set to replay the next version over.
 4. Only then `/gear on`.
 
 **Trying a change in your own Claude Code.** Claude Code runs an installed copy of the plugin, not the folder. After editing, raise `version` in `.claude-plugin/plugin.json`, then:
 
 ```bash
-claude plugin marketplace update gearbox
+claude plugin marketplace update autogear
 ```
 
 ```bash
-claude plugin update gearbox@gearbox
+claude plugin update autogear@autogear
 ```
 
 Restart the app and open a new chat.
@@ -362,7 +362,7 @@ Restart the app and open a new chat.
 
 ## Privacy
 
-gearbox has no server and makes no network request of its own. Everything it keeps stays in the plugin's store on your machine, the place Claude Code gives every plugin:
+autogear has no server and makes no network request of its own. Everything it keeps stays in the plugin's store on your machine, the place Claude Code gives every plugin:
 
 - your settings (mode, profile, language, the switches);
 - the decision log: for each of the last 200 messages its first 100 characters, the tier, the model and effort, the reasons, the cost; `/gear reset` clears it;
@@ -371,7 +371,7 @@ gearbox has no server and makes no network request of its own. Everything it kee
 What goes to a model, always through Claude Code itself and your own account, never to a third party:
 
 - **Haiku, when the rules cannot tell.** The first 4,000 characters of the message (and the tier of the one before it) are sent with a short instruction to ask which tier the work is. It is one small request, about $0.0002; `/gear ask off` stops it, and then unsure messages are read by the rules alone.
-- **The hand-over note.** When a large conversation has just finished a piece of work, gearbox asks the model for an eight-line summary of that conversation, from the same cache. It is shown to you and sent anywhere only if you press "clean conversation", and then to the new conversation alone. `/gear band off` stops the offer.
+- **The hand-over note.** When a large conversation has just finished a piece of work, autogear asks the model for an eight-line summary of that conversation, from the same cache. It is shown to you and sent anywhere only if you press "clean conversation", and then to the new conversation alone. `/gear band off` stops the offer.
 
 The measurement scripts in `eval/` and `scripts/` run only when you run them; they call real models and say what they will spend first.
 

@@ -1,10 +1,10 @@
 {
-  "name": "gearbox",
+  "name": "autogear",
   "owner": { "name": "Yunus Emre Yaman" },
-  "description": "gearbox: automatic model and effort selection for Claude Code.",
+  "description": "autogear: automatic model and effort selection for Claude Code.",
   "plugins": [
     {
-      "name": "gearbox",
+      "name": "autogear",
       "source": "./",
       "description": "Picks the model and effort for every prompt automatically, never above what the picker holds."
     }

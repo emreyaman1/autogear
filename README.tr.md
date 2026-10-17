@@ -1,4 +1,4 @@
-# gearbox
+# autogear
 
 [English](README.md) · **Türkçe**
 
@@ -9,9 +9,9 @@ Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) 
 ## Ne sağlar
 
 - **Mesaj başına doğru model.** "Bu fonksiyon ne yapıyor" Haiku · low ile, net ve tek yerlik bir değişiklik Sonnet · medium ile, belirsiz bir hata ya da mimari sorusu Sonnet · high ile, çok parçalı uzun iş ve plan modu Opus ile çalışır.
-- **Seçicinin üstüne çıkmaz.** Seçiciyi bir kez en güçlü modeline getirirsin; gearbox ona eşit ya da altında seçer.
-- **Bir durum satırı.** İstem kutusunun üstündeki satır gearbox'ın açık mı, gölgede mi, kapalı mı olduğunu gösterir; yanındaki düğmelerin üstünde ne yaptıkları yazar.
-- **Her cevap kimin verdiğini söyler.** Altındaki tek italik satır cevabı veren modeli ve eforu, yardımcılar çalıştıysa onların modelini yazar (gearbox açıkken, gölgedeyken ve kapalıyken de). Gerekçeler ve para tek komut ötede:
+- **Seçicinin üstüne çıkmaz.** Seçiciyi bir kez en güçlü modeline getirirsin; autogear ona eşit ya da altında seçer.
+- **Bir durum satırı.** İstem kutusunun üstündeki satır autogear'ın açık mı, gölgede mi, kapalı mı olduğunu gösterir; yanındaki düğmelerin üstünde ne yaptıkları yazar.
+- **Her cevap kimin verdiğini söyler.** Altındaki tek italik satır cevabı veren modeli ve eforu, yardımcılar çalıştıysa onların modelini yazar (autogear açıkken, gölgedeyken ve kapalıyken de). Gerekçeler ve para tek komut ötede:
 
   ```
   Opus 5.5 · efor medium · yardımcılar: Sonnet 5.5
@@ -23,7 +23,7 @@ Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) 
 Claude Code'da:
 
 ```
-/plugin install gearbox --marketplace emreyaman1/gearbox
+/plugin install autogear --marketplace emreyaman1/autogear
 ```
 
 Sonra seçiciyi bir kez en güçlü modeline getir (örneğin **Opus · high**). Kurduktan sonra yeni bir sohbet aç; zaten açık olan sohbetler yeni eklentileri yüklemez.
@@ -35,22 +35,22 @@ claude plugin marketplace add C:\gearbox
 ```
 
 ```bash
-claude plugin install gearbox@gearbox
+claude plugin install autogear@autogear
 ```
 
-Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295 ve 2.1.299'da denendi; canlı duman testi 2.1.299'da geçti). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde gearbox hiç yüklenmez ve nedenini söyleyemez; 2.1.278 hem 0.7'yi hem 0.8'i reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
+Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295 ve 2.1.299'da denendi; canlı duman testi 2.1.299'da geçti). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde autogear hiç yüklenmez ve nedenini söyleyemez; 2.1.278 hem 0.7'yi hem 0.8'i reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
 
 ## Kullanım
 
-**Seçici tavandır.** gearbox, seçicideki model ve eforun üstünde harcama yapmaz. Seçiciyi değiştirdiğinde yeni tavanı bildirir. Seçici **Opus · high** iken tam otomatiktir.
+**Seçici tavandır.** autogear, seçicideki model ve eforun üstünde harcama yapmaz. Seçiciyi değiştirdiğinde yeni tavanı bildirir. Seçici **Opus · high** iken tam otomatiktir.
 
-**Durum satırı.** İstem kutusunun üstündeki küçük satır gearbox'ın ne yaptığını gösterir: bir etikette **AÇIK** (yeşil), **GÖLGE** (mor), **KAPALI** (gri) ya da **DURDU** (turuncu; bkz. Güvenlik ağları) yazar. Etiketteki nokta gearbox'ın ne yaptığını hafifçe hareket ederek söyler: seçerken yumuşak bir nabız, gölgede yavaş bir nefes, kapalıyken durgun, durmuşken yavaş yanıp sönme; sisteminde "hareketi azalt" açıksa kıpırdamaz. Yanında son seçim durur ("Sonnet · medium · T1 rutin"; gölgede gearbox'ın önerisi), henüz seçim yoksa durumun ne demek olduğu. Yanındaki düğmeler öteki durumlar içindir ve her birinin üstünde basınca ne olacağı yazar: **aç**, **gölgeye al**, **kapat**; durmuşsa **yeniden dene**. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir. Bir limit penceresi dolmak üzereyken ya da çok hızlı harcanırken satırda bir de uyarı görünür (aşağıda Tempo).
+**Durum satırı.** İstem kutusunun üstündeki küçük satır autogear'ın ne yaptığını gösterir: bir etikette **AÇIK** (yeşil), **GÖLGE** (mor), **KAPALI** (gri) ya da **DURDU** (turuncu; bkz. Güvenlik ağları) yazar. Etiketteki nokta autogear'ın ne yaptığını hafifçe hareket ederek söyler: seçerken yumuşak bir nabız, gölgede yavaş bir nefes, kapalıyken durgun, durmuşken yavaş yanıp sönme; sisteminde "hareketi azalt" açıksa kıpırdamaz. Yanında son seçim durur ("Sonnet · medium · T1 rutin"; gölgede autogear'ın önerisi), henüz seçim yoksa durumun ne demek olduğu. Yanındaki düğmeler öteki durumlar içindir ve her birinin üstünde basınca ne olacağı yazar: **aç**, **gölgeye al**, **kapat**; durmuşsa **yeniden dene**. Kapalıyken her istek, seçici ne diyorsa tam olarak onunla gider. Sağ alttaki durum yazısı son mesaj için seçilen model ve eforu, bir de oturumun tasarrufunu gösterir. Bir limit penceresi dolmak üzereyken ya da çok hızlı harcanırken satırda bir de uyarı görünür (aşağıda Tempo).
 
-**Gölge mod.** `/gear shadow` ile gearbox seçer ama seçimini uygulamaz: her istek seçici ne diyorsa onunla gider, gearbox da ne seçeceğini günlüğüne ve durum satırına (`Haiku · low · T0 önerirdi`) yazar. Cevabın altındaki satır yalnızca hangi modelin cevapladığını söyler. Seçici burada da tavandır; seçimi kırptıysa ikisi de günlüğe yazılır (`Sonnet · high (tavansız Opus · high)`). Böylece seçici Sonnet'teyken de Opus ihtiyacı görünür. Yeni bir sürüm böylece gerçek iş üzerinde, o işe dokunmadan denenir; `/gear wrong` seçimlerini yine işaretler. `/gear on` yönlendirmeyi geri açar.
+**Gölge mod.** `/gear shadow` ile autogear seçer ama seçimini uygulamaz: her istek seçici ne diyorsa onunla gider, autogear da ne seçeceğini günlüğüne ve durum satırına (`Haiku · low · T0 önerirdi`) yazar. Cevabın altındaki satır yalnızca hangi modelin cevapladığını söyler. Seçici burada da tavandır; seçimi kırptıysa ikisi de günlüğe yazılır (`Sonnet · high (tavansız Opus · high)`). Böylece seçici Sonnet'teyken de Opus ihtiyacı görünür. Yeni bir sürüm böylece gerçek iş üzerinde, o işe dokunmadan denenir; `/gear wrong` seçimlerini yine işaretler. `/gear on` yönlendirmeyi geri açar.
 
-**Plan modu.** Claude Code'un plan modunda her istek Opus'a gider; efor, kuralların okuduğu plan büyüklüğüne göre seçilir: küçük planda medium, ortada high, çok parçalı büyük planda xhigh. Seçicinin üstüne asla çıkmaz; senin adını verdiğin model (`+sonnet`) yine önde gelir. gearbox plan modunu Claude Code'un model için eklediği nottan anlar; bu yüzden bir cevabın ortasında açılan plan modu bir sonraki mesajdan itibaren sayılır. Plan modu dışında da plan isteyen bir mesaj ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") zor iş (T3) sayılır. Cevabın altındaki satırda ve günlükte `plan modu` yazar.
+**Plan modu.** Claude Code'un plan modunda her istek Opus'a gider; efor, kuralların okuduğu plan büyüklüğüne göre seçilir: küçük planda medium, ortada high, çok parçalı büyük planda xhigh. Seçicinin üstüne asla çıkmaz; senin adını verdiğin model (`+sonnet`) yine önde gelir. autogear plan modunu Claude Code'un model için eklediği nottan anlar; bu yüzden bir cevabın ortasında açılan plan modu bir sonraki mesajdan itibaren sayılır. Plan modu dışında da plan isteyen bir mesaj ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") zor iş (T3) sayılır. Cevabın altındaki satırda ve günlükte `plan modu` yazar.
 
-**Temiz sohbet (0.10, ilk sürüm).** Bir turun her adımı konuşmanın tamamını yeniden gönderir; büyük bir sohbet her mesajda daha pahalıdır. Sohbet 150 bin tokenı geçmişse ve bir iş yeni bittiyse (commit ya da push, ya da geçen bir test çalıştırması), istem üstündeki satır temiz bir sohbet önerir: not yazılırken `Devir notu hazırlanıyor…`, sonra `Devir notu hazır · sohbet 180 bin token`, yanında **temiz sohbet**, **notu gör** ve **×**. Sen yazmaya devam etsen de öneri durur; birine basana ya da daha yeni bir not gelene kadar. gearbox modele kısa bir devir notu yazdırır (proje, son commit, yapılan, açık işler, kuralların, okunacak dosyalar); **notu gör** onu gösterir, **temiz sohbet** `/clear` çalıştırır ve notu bir sonraki mesajınla, görünmeden, gönderir. Sen basmadan hiçbir şey temizlenmez; eski sohbet diskte kalır, notun son satırı onu açan `claude --resume` komutudur. Gerçek bir sohbette bir kez denendi: öneri ve not çalışıyor; **temiz sohbet** düğmesi orada henüz denenmedi.
+**Temiz sohbet (0.10, ilk sürüm).** Bir turun her adımı konuşmanın tamamını yeniden gönderir; büyük bir sohbet her mesajda daha pahalıdır. Sohbet 150 bin tokenı geçmişse ve bir iş yeni bittiyse (commit ya da push, ya da geçen bir test çalıştırması), istem üstündeki satır temiz bir sohbet önerir: not yazılırken `Devir notu hazırlanıyor…`, sonra `Devir notu hazır · sohbet 180 bin token`, yanında **temiz sohbet**, **notu gör** ve **×**. Sen yazmaya devam etsen de öneri durur; birine basana ya da daha yeni bir not gelene kadar. autogear modele kısa bir devir notu yazdırır (proje, son commit, yapılan, açık işler, kuralların, okunacak dosyalar); **notu gör** onu gösterir, **temiz sohbet** `/clear` çalıştırır ve notu bir sonraki mesajınla, görünmeden, gönderir. Sen basmadan hiçbir şey temizlenmez; eski sohbet diskte kalır, notun son satırı onu açan `claude --resume` komutudur. Gerçek bir sohbette bir kez denendi: öneri ve not çalışıyor; **temiz sohbet** düğmesi orada henüz denenmedi.
 
 **Etiketler.** Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap` (T0), `+deep` (T4). `ultrathink` T4 demektir.
 
@@ -62,24 +62,24 @@ Ya da düz yazıyla söyle: "bu görevi sonnet'e max ile ver", "opus ile yap", "
 |---|---|
 | `/gear` | durum, son karar ve gerekçesi, limitler, istatistik, bu liste |
 | `/gear savings` | tasarruf kartı (aşağıda) |
-| `/gear log` | gearbox'ın son kararlarının günlüğü ve şüpheli olanlar |
+| `/gear log` | autogear'ın son kararlarının günlüğü ve şüpheli olanlar |
 | `/gear wrong weak\|strong` | son kararı işaretle: model çok zayıftı, ya da işin gerektirdiğinden güçlüydü |
 | `/gear reset` | tasarruf sayacını ve günlüğü sıfırla |
-| `/gear on` / `/gear off` | gearbox'ı aç / kapat (kapalıyken seçicideki model kullanılır) |
+| `/gear on` / `/gear off` | autogear'ı aç / kapat (kapalıyken seçicideki model kullanılır) |
 | `/gear shadow` | gölge mod: seç ve yaz, hiçbirini uygulama |
 | `/gear profile saver\|balanced\|quality` | hangi kademe tablosu kullanılsın (tasarruf, dengeli, kalite) |
 | `/gear haiku on\|off` | önemsiz işler Haiku'ya gitsin mi |
 | `/gear ask on\|off` | kurallar emin olamazsa Haiku'ya sorulsun mu |
 | `/gear note on\|off` | cevabın altındaki satır |
 | `/gear band on\|off` | istem kutusunun üstündeki durum satırı |
-| `/gear lang en\|tr\|auto` | gearbox'ın konuştuğu dil; auto sistemin dilini izler |
+| `/gear lang en\|tr\|auto` | autogear'ın konuştuğu dil; auto sistemin dilini izler |
 | `/gear doctor` | kurulumu kontrol eder, düzeltilecek şeyi söyler: durum, seçici, Claude Code sürümü, seçimlerin uygulanıp uygulanmadığı, depo, limitler, dil, eforu ya da yardımcıların modelini sabitleyebilen ortam ayarları |
 
 Komutlar hangi dilde olursa olsun İngilizcedir. Eski Türkçe adlar (`oto`, `sabitle`, `golge`, `tasarruf`, `kayit`, `yanlis zayif|fazla`, `sifirla`, `profil tasarruf|dengeli|kalite`, `sor`, `not`, `bant` ve `aç`/`kapa`) çalışmaya devam eder.
 
-**Dil.** gearbox İngilizce ya da Türkçe konuşur. `auto` (varsayılan) sistemin dilini izler: Türkçe sistemde Türkçe, başka yerde İngilizce. Claude Code'un kendi `language` ayarı bir Mod'a açık değil, bu yüzden okunmaz. `/gear lang en` ya da `tr` elle seçer. Komutlar, etiketler ve model adları değişmez; mesajlarını okuyan kurallar bu ayardan bağımsız olarak sekiz dili anlar.
+**Dil.** autogear İngilizce ya da Türkçe konuşur. `auto` (varsayılan) sistemin dilini izler: Türkçe sistemde Türkçe, başka yerde İngilizce. Claude Code'un kendi `language` ayarı bir Mod'a açık değil, bu yüzden okunmaz. `/gear lang en` ya da `tr` elle seçer. Komutlar, etiketler ve model adları değişmez; mesajlarını okuyan kurallar bu ayardan bağımsız olarak sekiz dili anlar.
 
-**Her cevabın altındaki satır.** gearbox açıkken, gölgedeyken ve kapalıyken de her cevabın altında, italik tek bir satır cevabı hangi modelin verdiğini (API'nin bildirdiği) ve hangi eforla istendiğini söyler: *Opus 5.5 · efor medium*. Yardımcılar (alt ajanlar) çalıştıysa modelleri de yazılır: *Opus 5.5 · efor medium · yardımcılar: Sonnet 5.5*. Plan modu ve limit uyarısı yanına eklenir. `/gear note off` satırı kaldırır. gearbox'ın mesajda ne okuduğu, neden öyle seçtiği ve para `/gear`, `/gear log` ve `/gear savings` içinde.
+**Her cevabın altındaki satır.** autogear açıkken, gölgedeyken ve kapalıyken de her cevabın altında, italik tek bir satır cevabı hangi modelin verdiğini (API'nin bildirdiği) ve hangi eforla istendiğini söyler: *Opus 5.5 · efor medium*. Yardımcılar (alt ajanlar) çalıştıysa modelleri de yazılır: *Opus 5.5 · efor medium · yardımcılar: Sonnet 5.5*. Plan modu ve limit uyarısı yanına eklenir. `/gear note off` satırı kaldırır. autogear'ın mesajda ne okuduğu, neden öyle seçtiği ve para `/gear`, `/gear log` ve `/gear savings` içinde.
 
 ## Nasıl çalışır
 
@@ -94,7 +94,7 @@ mesaj ─► sınıfla ─► yerleştir ─► karar  ─► uygula    ─► c
 2. **Yerleştirme** (`hooks/core/settle.ts`): Haiku mesajı tek başına okur, ekran görüntüsünü ya da etrafındaki işi görmez; bu yüzden cevabı kuralların gördüğünden en çok bir kademe aşağı inebilir, bir şeyi incelemeyi isteyen mesajda T2'nin altına inmez. T2 ve üstü bir işin ortasındaki mesaj (bir soru, bir açıklama, yalnızca Haiku'nun yerleştirebildiği bir mesaj) o işin en çok bir kademe altına iner; kuralların emin olduğu yeni iş, commit gibi bir angarya ya da selamlaşma baştan başlar.
 3. **Karar** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): Kademe, profil tablosundan model ve efora çevrilir, sonra iki sınırdan geçer ve limit pencerelerine bakılır:
    - **Tavan:** Seçicideki model ve efor aşılmaz.
-   - **Önbellek:** Model değişince yeni model bütün konuşmayı bir kez önbelleğe yazma fiyatıyla okur (eski modelin önbelleği silinmez: abonelikte bir saat durur, her okumada süresi yenilenir). Bu yüzden bağlam büyükse (40K+ token) gearbox daha ucuz bir modele asla inmez; o tek yazma, kazançtan pahalıya gelir (Sonnet milyon token başına $2,50'ye yazar, Opus önbelleğini $0,20'ye okur; Haiku 100K tokenı aşınca beş kat öder). Uzun bir Opus konuşmasında commit, Opus'ta low eforla yapılır. Bir kademe yukarı çıkmak da modeli değiştirmez; iki kademe ya da fazlası, ya da Haiku'dan çıkmak değiştirir. Küçük konuşmada her mesaj kendi modeline gider.
+   - **Önbellek:** Model değişince yeni model bütün konuşmayı bir kez önbelleğe yazma fiyatıyla okur (eski modelin önbelleği silinmez: abonelikte bir saat durur, her okumada süresi yenilenir). Bu yüzden bağlam büyükse (40K+ token) autogear daha ucuz bir modele asla inmez; o tek yazma, kazançtan pahalıya gelir (Sonnet milyon token başına $2,50'ye yazar, Opus önbelleğini $0,20'ye okur; Haiku 100K tokenı aşınca beş kat öder). Uzun bir Opus konuşmasında commit, Opus'ta low eforla yapılır. Bir kademe yukarı çıkmak da modeli değiştirmez; iki kademe ya da fazlası, ya da Haiku'dan çıkmak değiştirir. Küçük konuşmada her mesaj kendi modeline gider.
    - **Tempo:** Limit penceresi modeli ya da eforu asla düşürmez: işin başarıyla bitmesi limitten önemli. 5 saatlik ya da haftalık limit %90'ı geçtiyse ya da eşit hızın üstünde harcanıyorsa (%30'dan fazlası kullanılmış ve beklenenin 20 puan önünde), bunun yerine cevabın altındaki satırda ve durum satırında uyarı çıkar (`⚠ 5 saatlik limit %92: bu iş Opus · high ile yapılıyor, limit dolabilir`). Bir pencere bitmeye yakınsa ve yarısı bile kullanılmadıysa, zor ve kritik işlerde (T3 ve üstü) efor bir kademe çıkar; max'a kadar çıkmaz, seçicinin üstüne de çıkmaz. Standart işe dokunulmaz: kademe tablosunun dayandığı ölçümlerde net anlatılmış işte fazla efor işe yaramadı.
 4. **Uygulama** (`hooks/register.tsx`, `turn.step`): Her model isteğinden hemen önce kararı uygular. Bir turun bütün istekleri aynı modelle gider, böylece tur önbelleğini korur. Alt ajanlara dokunulmaz.
 5. **Doğrulama** (`turn.complete`): API'nin bildirdiği gerçek model, seçimle karşılaştırılır (bkz. Güvenlik ağları).
@@ -110,15 +110,15 @@ mesaj ─► sınıfla ─► yerleştir ─► karar  ─► uygula    ─► c
 | T3 yeri belli hata avı | açık anlatılmış ama sebebi saklı hata (bazen olup bazen olmayan, sebebinden uzakta görünen), henüz kimsenin bulmadığı hataları yakalayacak test yazma | Sonnet · high (T4'te xhigh) |
 | T4 kritik | çok adımlı büyük iş, tekrarlayan başarısızlık | Opus · high |
 
-Profiller: `tasarruf` (Pro için), `dengeli` ve `kalite` daha cömert harcar, Max planları içindir. Her profilde net anlatılmış rutin ve standart iş Sonnet · medium ile, yeri belli hata avı Sonnet · high ile çalışır; hiçbir kademe sen istemedikçe (`+max`, "max ile") max ile çalışmaz. Dayanağı: gerçek Python projelerinde gizli testlerle yapılmış açık bir ölçümde (Forn AI, 4 Ekim 2026) Sonnet · medium yeri belli 13 hatanın 13'ünü Opus · high'ın üçte bir maliyetine çözdü, net işte Sonnet'in eforunu artırmak işe yaramadı; hata çıktısının yanlış dosyayı gösterdiği hatada Opus · high 6/6, Sonnet · medium 4/6, aynı hata belirsiz anlatılınca Sonnet 0/2; 22 gizli hatayı yakalaması gereken test yazımında Opus · high 22/22, Sonnet 16–19. Bunların bir kısmı 2–6 denemeye dayanıyor; tablo bir başlangıç, gearbox'ın kendi kıyas ölçümü doğrulayacak. O kıyasta (Ölçümler) Sonnet · medium, Opus · high'ın geçtiği her hata avını geçti; bu yüzden yeri belli hata avı artık daha yüksek eforla Sonnet'e gidiyor. `tasarruf`ta zor iş ve belirsiz hata avı da artık Sonnet · high ile çalışıyor: iki sette, yirmi görevde Opus, Sonnet · medium'un çözemediği hiçbir görevi çözmedi, maliyeti 3,6 kattı. `dengeli` ve `kalite` zor işte Opus'u koruyor.
+Profiller: `tasarruf` (Pro için), `dengeli` ve `kalite` daha cömert harcar, Max planları içindir. Her profilde net anlatılmış rutin ve standart iş Sonnet · medium ile, yeri belli hata avı Sonnet · high ile çalışır; hiçbir kademe sen istemedikçe (`+max`, "max ile") max ile çalışmaz. Dayanağı: gerçek Python projelerinde gizli testlerle yapılmış açık bir ölçümde (Forn AI, 4 Ekim 2026) Sonnet · medium yeri belli 13 hatanın 13'ünü Opus · high'ın üçte bir maliyetine çözdü, net işte Sonnet'in eforunu artırmak işe yaramadı; hata çıktısının yanlış dosyayı gösterdiği hatada Opus · high 6/6, Sonnet · medium 4/6, aynı hata belirsiz anlatılınca Sonnet 0/2; 22 gizli hatayı yakalaması gereken test yazımında Opus · high 22/22, Sonnet 16–19. Bunların bir kısmı 2–6 denemeye dayanıyor; tablo bir başlangıç, autogear'ın kendi kıyas ölçümü doğrulayacak. O kıyasta (Ölçümler) Sonnet · medium, Opus · high'ın geçtiği her hata avını geçti; bu yüzden yeri belli hata avı artık daha yüksek eforla Sonnet'e gidiyor. `tasarruf`ta zor iş ve belirsiz hata avı da artık Sonnet · high ile çalışıyor: iki sette, yirmi görevde Opus, Sonnet · medium'un çözemediği hiçbir görevi çözmedi, maliyeti 3,6 kattı. `dengeli` ve `kalite` zor işte Opus'u koruyor.
 
 Bir hata bildirimi şunlardan birini içeriyorsa net sayılır: hata çıktısı, dosya adı, kod, bir sayı, ne zaman olduğu ("tıklayınca ...") ya da ne olması gerektiği; yanındaki ekran görüntüsü de sayılır.
 
 ## Kararlarını gözden geçirme
 
-Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölçüldü. Kendi işlerinde gearbox'ın nasıl yaptığını görmek için kararlarının günlüğünü makinende tutar: her mesajın başı (100 karakter), kademe, cevap veren model ve efor, seçici kırptıysa gearbox'ın istediği, seçimin kaynağı, turun maliyeti ve sonrasında ne olduğu. Son 200 karar saklanır.
+Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölçüldü. Kendi işlerinde autogear'ın nasıl yaptığını görmek için kararlarının günlüğünü makinende tutar: her mesajın başı (100 karakter), kademe, cevap veren model ve efor, seçici kırptıysa autogear'ın istediği, seçimin kaynağı, turun maliyeti ve sonrasında ne olduğu. Son 200 karar saklanır.
 
-- `/gear log` son 25 kararı tablo olarak, kullanılan kademeleri ve **şüpheli kararları** gösterir: işin kendisinin sorguladığı kararlar (şikâyet ettin ve gearbox bir kademe yükseltti; turun sonunda testler ya da derleme kırıktı) ve senin işaretlediklerin.
+- `/gear log` son 25 kararı tablo olarak, kullanılan kademeleri ve **şüpheli kararları** gösterir: işin kendisinin sorguladığı kararlar (şikâyet ettin ve autogear bir kademe yükseltti; turun sonunda testler ya da derleme kırıktı) ve senin işaretlediklerin.
 - Bir karar yanlışsa cevaptan hemen sonra söyle: `/gear wrong weak` (model çok zayıftı) ya da `/gear wrong strong` (işin gerektirdiğinden güçlüydü). İşaret son mesaja düşer.
 - Şüpheli oranı bir tabandır: kimsenin fark etmediği yanlış seçimler sayılmaz. Birkaç günlük kullanımla kuralların hangi tür mesajlarda yanıldığını gösterir, bir sonraki ayar da orada.
 - `/gear reset` günlüğü siler. Makinenden hiç çıkmaz.
@@ -152,16 +152,16 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 **Bu bir tahmindir.**
 
 - Abonelikte dolar ödemezsin; kota kabaca bu oranda tükenir.
-- Model değiştiren tur önbelleğini yeniden yazmıştır. Seçici modelinde o önbellek sıcak kalacaktı, bu yüzden oradaki yazmalar okuma fiyatından sayılır: geçişin maliyeti gearbox'ın aleyhine yazılır.
+- Model değiştiren tur önbelleğini yeniden yazmıştır. Seçici modelinde o önbellek sıcak kalacaktı, bu yüzden oradaki yazmalar okuma fiyatından sayılır: geçişin maliyeti autogear'ın aleyhine yazılır.
 - Düşük efor daha az token üretir. Bu fark hesaba katılmaz, tasarruf biraz düşük çıkabilir.
-- gearbox'ın kendi Haiku sorularının maliyeti tasarruftan düşülür. Alt ajanlar sayılmaz.
+- autogear'ın kendi Haiku sorularının maliyeti tasarruftan düşülür. Alt ajanlar sayılmaz.
 
 ## Güvenlik ağları
 
 - **Kendini denetleme:** Her turdan sonra API'nin bildirdiği gerçek modele bakar. Seçtiği model üst üste 3 tur uygulanmazsa (bir Claude Code güncellemesi eklenti API'sini değiştirmişse) kendini kapatır ve haber verir; `/gear on` yeniden dener.
 - **Yedek model:** Seçilen model yanıt vermezse (kimliği eskimiş, planında yok) istek seçicideki modelle yeniden gönderilir, o model o oturumda bir daha seçilmez.
 - **Kartopu freni:** Ucuz bir modelle yapılan tur, testleri ya da derlemesi kırık bitmişse bir sonraki tur bir kademe güçlü modelle yapılır. "Olmadı", "hâlâ aynı hata" gibi şikâyetler de kademeyi yükseltir; üst üste ikinci şikâyette iki kademe.
-- **Sürüm uyarısı:** Claude Code, gearbox'ın denendiği sürümden (`hooks/core/version.ts`) yeniyse bir kez haber verir.
+- **Sürüm uyarısı:** Claude Code, autogear'ın denendiği sürümden (`hooks/core/version.ts`) yeniyse bir kez haber verir.
 - **Haftalık uyumluluk testi:** GitHub'da `.github/workflows/compat.yml` her hafta en yeni Claude Code ile doğrulama ve testleri çalıştırır.
 - **Canlı duman testi:** `node scripts/smoke.mjs`, üç kısa mesajı gerçekten gönderip modelin değiştiğini API'nin cevabından doğrular (biraz kota harcar).
 
@@ -181,9 +181,9 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 
 \* Zor bir işi (T3+) T0/T1'e ya da iki kademe aşağı koymak. Not: ayardan önce ayrılan kümenin hataları bir kez görüldü ve yeni kümedeki hatalar "emin değilse sor" eşiğini etkiledi; gerçek isabet bir miktar düşük olabilir. 0.6'nın sınırı burada bir mesaja mal oluyor ("bu import neden kullanılıyor?" artık T0 değil T1) ve aşağıdaki gerçek kullanım hatalarını önleyen de o.
 
-**Başka diller** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --held`): sekiz dilde yazılmış ve işin gerektirdiğine göre etiketlenmiş mesajlar; kod ve hata çıktısı yazıldığı gibi bırakıldı. gearbox çalıştığı gibi (0.11.0): Türkçe ve İngilizcenin yanında İspanyolca, Almanca, Fransızca, Rusça, Çince ve Japoncayı okuyan kurallar; kurallar emin değilse ya da mesaj Türkçe veya İngilizce değilse Haiku, kuralın alt sınırına bağlı. Aşağıdaki sayılar, kuralları ve kelime listelerini görmeyen başka bir modelin yazdığı kümeye ait: dil başına 24 mesaj, her dilin kendi mesajları, ayar yapılmadan önce bir kez okundu. 17 Ekim 2026, 139 Haiku sorusu, liste fiyatıyla $0,08. Etiketler o modelin; bir kişi kontrol etmedi.
+**Başka diller** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --held`): sekiz dilde yazılmış ve işin gerektirdiğine göre etiketlenmiş mesajlar; kod ve hata çıktısı yazıldığı gibi bırakıldı. autogear çalıştığı gibi (0.11.0): Türkçe ve İngilizcenin yanında İspanyolca, Almanca, Fransızca, Rusça, Çince ve Japoncayı okuyan kurallar; kurallar emin değilse ya da mesaj Türkçe veya İngilizce değilse Haiku, kuralın alt sınırına bağlı. Aşağıdaki sayılar, kuralları ve kelime listelerini görmeyen başka bir modelin yazdığı kümeye ait: dil başına 24 mesaj, her dilin kendi mesajları, ayar yapılmadan önce bir kez okundu. 17 Ekim 2026, 139 Haiku sorusu, liste fiyatıyla $0,08. Etiketler o modelin; bir kişi kontrol etmedi.
 
-| Dil | Kurallar: ±1 kademe | Kurallar: ciddi hata* | gearbox: tam isabet | gearbox: ±1 kademe | gearbox: ciddi hata* | Haiku'ya sorulan |
+| Dil | Kurallar: ±1 kademe | Kurallar: ciddi hata* | autogear: tam isabet | autogear: ±1 kademe | autogear: ciddi hata* | Haiku'ya sorulan |
 |---|---|---|---|---|---|---|
 | Türkçe | %83 | 2 | %67 | %92 | 0 | %33 |
 | İngilizce | %92 | 0 | %75 | %92 | 0 | %8 |
@@ -196,19 +196,19 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 
 Ne gösteriyor, önce aleyhte olanlar:
 
-- **Türkçe ve İngilizce dışında kurallar tek başına güvenilir değil:** ilk okumada %83–92 ±1 kademe ve 24 mesajda bir ya da iki ciddi hata; bu yüzden gearbox bu dillerde çoğunlukla Haiku demek (mesajların %83–96'sı soruluyor, her biri yaklaşık $0,0005'lik bir Haiku çağrısı ve onun beklemesi). Bu çalışmadan önce (0.9.1) çevrilmiş 143 mesajlık küme Almanca, Fransızca, Çince ve Japoncada 2–7 ciddi hata veriyordu.
+- **Türkçe ve İngilizce dışında kurallar tek başına güvenilir değil:** ilk okumada %83–92 ±1 kademe ve 24 mesajda bir ya da iki ciddi hata; bu yüzden autogear bu dillerde çoğunlukla Haiku demek (mesajların %83–96'sı soruluyor, her biri yaklaşık $0,0005'lik bir Haiku çağrısı ve onun beklemesi). Bu çalışmadan önce (0.9.1) çevrilmiş 143 mesajlık küme Almanca, Fransızca, Çince ve Japoncada 2–7 ciddi hata veriyordu.
 - **Haiku ile hedef (±1 kademe en az %90, ciddi hata en çok %2) bu kümede her dilde tutuyor,** hiç ciddi hata yok. 24 mesaj az: bir hata dört puan.
-- **Tam isabet daha düşük, %54–79:** Haiku bir mesajı kurallardan daha sık bir kademe aşağı çekiyor (en çok Çince: %54). Kurallar tek başına burada gearbox'tan daha sık tam bulur, ama karşılaşmadıkları cümle biçimlerinde ağır kaçırır; o yüzden Haiku kalıyor.
+- **Tam isabet daha düşük, %54–79:** Haiku bir mesajı kurallardan daha sık bir kademe aşağı çekiyor (en çok Çince: %54). Kurallar tek başına burada autogear'tan daha sık tam bulur, ama karşılaşmadıkları cümle biçimlerinde ağır kaçırır; o yüzden Haiku kalıyor.
 - Aynı yolla yazılmış önceki bir küme (bir kez okundu, sonra ayar yapıldı) ilk okumada aynı resmi verdi: ±1 kademe %92–100, bir ciddi hata (İspanyolca). İki küme de okunduktan sonra ayar yapıldı; bu yüzden kuralların onlardaki şimdiki sayıları yüksek ve bir şey ifade etmiyor.
 - Uzun İngilizce görev metinleri (SWE-bench Verified, Terminal-Bench; `node eval/external.mjs`): kurallar uzun, sayı veren ya da adım adım bir tarifi T3'e koyup Haiku'ya soruyor. Terminal-Bench'te ciddi hata %7'den %4'e indi; ±1 kademe SWE-bench'te %83'ten %78'e, Terminal-Bench'te %76'dan %75'e düştü, daha çok görev bir kademe fazla yüksek konuyor.
 - 143 mesajın çevirileri Claude'un; bir anadil konuşmacısı kontrol etmedi.
 
-**Gerçek kullanım**: gearbox'ın 11-16 Ekim 2026 arasında 11 oturumda verdiği 49 karar. Her biri, işin sonradan ne çıktığına bakılarak etiketlendi (tek bir kişinin yargısı, bir kurulun değil). gearbox'ın o gün seçtiği, ve aynı mesajların 0.6 ile yeniden oynatılması:
+**Gerçek kullanım**: autogear'ın 11-16 Ekim 2026 arasında 11 oturumda verdiği 49 karar. Her biri, işin sonradan ne çıktığına bakılarak etiketlendi (tek bir kişinin yargısı, bir kurulun değil). autogear'ın o gün seçtiği, ve aynı mesajların 0.6 ile yeniden oynatılması:
 
 | | Tam isabet | ±1 kademe | Ciddi hata* | Fazla düşük | Fazla yüksek |
 |---|---|---|---|---|---|
-| gearbox 0.3-0.5, çalıştığı gibi | %51 | %82 | 7 | 17 | 7 |
-| gearbox 0.6, yeniden oynatılınca | %61 | %100 | 0 | 10 | 9 |
+| autogear 0.3-0.5, çalıştığı gibi | %51 | %82 | 7 | 17 | 7 |
+| autogear 0.6, yeniden oynatılınca | %61 | %100 | 0 | 10 | 9 |
 
 İlk satırda yanlış giden: yeni bir oturumda Claude Code'un mesajın önüne koyduğu not mesaj sanıldı, düz bir "merhaba" Opus · high'a gitti; Haiku ekran görüntüsüyle gelen hata bildirimlerini önemsiz saydı ("o tuş çıkmadı yine", "inceler misin"); uzun bir işin ortasındaki bir açıklama işi Haiku'ya düşürdü; yazıyla istenen model ("sonnet'e max ile ver") dikkate alınmadı. 0.6'nın düzeltmeleri bu mesajlardan yapıldı; ikinci satır düzeltmelerin tuttuğunu gösterir, 0.6'nın görmediği mesajlarda nasıl yaptığını değil. Yeniden oynatılan iki mesaj Haiku'ya sorulacaktı ve kayıtta cevapları yok. Bunu gösterecek olan karar günlüğü. Mesajlar birinin gerçek işi olduğu için küme de onu yeniden oynatan test de geliştiricinin makinesinde duruyor, bu repoda yok.
 
@@ -217,15 +217,15 @@ Ne gösteriyor, önce aleyhte olanlar:
 | İkisinin saklı yarısı (350), 0.7 | Tam isabet | ±1 kademe | Ciddi hata* | Fazla yüksek | Sıra uyumu |
 |---|---|---|---|---|---|
 | Yalnızca kurallar | %36 | %79 | 9 (%3) | 183 | 0,10 |
-| **gearbox: kurallar, emin değilse Haiku** | **%31** | **%78** | **6 (%2)** | **207** | **0,16** |
+| **autogear: kurallar, emin değilse Haiku** | **%31** | **%78** | **6 (%2)** | **207** | **0,16** |
 
-Kümelere göre, çalıştığı haliyle gearbox: SWE-bench Verified'da %36 tam isabet, %83 ±1 kademe, 500'de 1 ciddi hata; Terminal-Bench'te %30, %73, 241'de 8 ciddi hata (%3). 0.7'nin iki kural düzeltmesinden önce (uzun bir tarifin içindeki "commit" gibi bir angarya kelimesi onu artık basit iş yapmıyor; uzun bir iş tarifi küçük değişiklik sayılmıyor) kuralların saklı yarıda 21 ciddi hatası vardı (%6). Kuralların emin olmadığı yerde Haiku'ya sormak ciddi hataları daha da azaltıyor ve sıra uyumunu yükseltiyor; bedeli, bir iki kademe fazla gönderilen işin artması, çünkü Haiku tereddütte üst kademeyi seçiyor. Ölçüm Haiku'ya 177 kez sordu, liste fiyatıyla $0,38. Bu rakamlar 0.7'nin: 0.8 üç tür isteği T3'e çıkardı (ayrıntısız anlatılmış hata, gizli hataları yakalayacak test yazma, plan isteği) ve bu kümelerde yeniden ölçülmedi.
+Kümelere göre, çalıştığı haliyle autogear: SWE-bench Verified'da %36 tam isabet, %83 ±1 kademe, 500'de 1 ciddi hata; Terminal-Bench'te %30, %73, 241'de 8 ciddi hata (%3). 0.7'nin iki kural düzeltmesinden önce (uzun bir tarifin içindeki "commit" gibi bir angarya kelimesi onu artık basit iş yapmıyor; uzun bir iş tarifi küçük değişiklik sayılmıyor) kuralların saklı yarıda 21 ciddi hatası vardı (%6). Kuralların emin olmadığı yerde Haiku'ya sormak ciddi hataları daha da azaltıyor ve sıra uyumunu yükseltiyor; bedeli, bir iki kademe fazla gönderilen işin artması, çünkü Haiku tereddütte üst kademeyi seçiyor. Ölçüm Haiku'ya 177 kez sordu, liste fiyatıyla $0,38. Bu rakamlar 0.7'nin: 0.8 üç tür isteği T3'e çıkardı (ayrıntısız anlatılmış hata, gizli hataları yakalayacak test yazma, plan isteği) ve bu kümelerde yeniden ölçülmedi.
 
-Gösterdiği: gearbox zor işi nadiren zayıf bir modele gönderiyor, ama uzun İngilizce hata kayıtlarında ve görev tariflerinde on beş dakikalık bir düzeltmeyi dört saatlik bir işten zor ayırıyor (sıra uyumu 0,16) ve güvenli taraftan harcıyor. Bu metinler insanların yazdığı kısa mesajlara, yani kuralların yapıldığı şeye benzemiyor; süreyi kademeye çeviren eşleme de bizim, bu yüzden "fazla yüksek"in bir kısmı işin pekâlâ hak ettiği bir kademe olabilir (yabancı bir kod tabanında hızlı bir düzeltme de bir aramadır).
+Gösterdiği: autogear zor işi nadiren zayıf bir modele gönderiyor, ama uzun İngilizce hata kayıtlarında ve görev tariflerinde on beş dakikalık bir düzeltmeyi dört saatlik bir işten zor ayırıyor (sıra uyumu 0,16) ve güvenli taraftan harcıyor. Bu metinler insanların yazdığı kısa mesajlara, yani kuralların yapıldığı şeye benzemiyor; süreyi kademeye çeviren eşleme de bizim, bu yüzden "fazla yüksek"in bir kısmı işin pekâlâ hak ettiği bir kademe olabilir (yabancı bir kod tabanında hızlı bir düzeltme de bir aramadır).
 
 **Çıktı kalitesi** (`eval/tasks/`): Küçük bir proje üzerinde 10 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir. Altı düzende çalıştırıldı (`node eval/tasks.mjs <kol>`). Maliyetler API liste fiyatıyla, her hücre bir kez, Claude Code 2.1.299, 17 Ekim 2026; ✗ kalan görev.
 
-| Görev | Tür | gearbox | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus danışman |
+| Görev | Tür | autogear | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus danışman |
 |---|---|---|---|---|---|---|---|
 | 1 | yeniden adlandırma | $0,01 Haiku | $0,21 | $0,21 | $0,06 | $0,09 | $0,10 |
 | 2 | küçük değişiklik | $0,06 Sonnet | $0,21 | $0,14 | $0,06 | $0,06 | $0,07 |
@@ -239,19 +239,19 @@ Gösterdiği: gearbox zor işi nadiren zayıf bir modele gönderiyor, ama uzun �
 | 10 | küçük yeniden düzenleme | $0,08 Sonnet | $0,28 | $0,19 | $0,09 | $0,09 | $0,04 |
 | **Toplam** | | **10/10, $1,96** | **10/10, $3,09** | **10/10, $2,33** | **10/10, $0,81** | **10/10, $0,85** | **9/10, $0,92** |
 
-Gösterdiği, önce gearbox'ın aleyhine olan:
+Gösterdiği, önce autogear'ın aleyhine olan:
 
-- **Bu görevlerde tek başına Sonnet · medium herkes kadar iyi ve en ucuza yaptı.** Biri hariç bütün düzenler onda on geçti; yani bu set modelleri birbirinden ayıramıyor, fazla kolay. Sonnet · medium $0,81, gearbox $1,96, Opus · high $3,09 harcadı.
-- **gearbox burada tek başına Sonnet'ten pahalı**, çünkü üç hata avını (5, 8, 9) Opus · high'a verdi: $1,96'nın $1,50'si; Sonnet bunları da geçti. Bunun daha zor işte karşılığını verip vermediğini bir sonraki ölçüm gösterecek (büyük projeler, her biri üç kez).
-- Aynı sonuçla gearbox Opus · high'tan %37, Opus · medium'dan %16 ucuz ve Opus · high'tan %40 hızlı.
+- **Bu görevlerde tek başına Sonnet · medium herkes kadar iyi ve en ucuza yaptı.** Biri hariç bütün düzenler onda on geçti; yani bu set modelleri birbirinden ayıramıyor, fazla kolay. Sonnet · medium $0,81, autogear $1,96, Opus · high $3,09 harcadı.
+- **autogear burada tek başına Sonnet'ten pahalı**, çünkü üç hata avını (5, 8, 9) Opus · high'a verdi: $1,96'nın $1,50'si; Sonnet bunları da geçti. Bunun daha zor işte karşılığını verip vermediğini bir sonraki ölçüm gösterecek (büyük projeler, her biri üç kez).
+- Aynı sonuçla autogear Opus · high'tan %37, Opus · medium'dan %16 ucuz ve Opus · high'tan %40 hızlı.
 - **Model mi efor mu:** Opus · medium, Opus · high'ın yaptığını %25 daha ucuza yaptı; Sonnet · medium da Opus · medium'un üçte birine.
 - opusplan baştan sona Sonnet çalıştı: bu görevler plan modunda yapılmadı.
-- Tek başarısızlık Opus danışmanlı Sonnet'te, yanıltıcı hatada: hata mesajının gösterdiği dosyayı düzeltti, asıl sebebi değil. gearbox bu görevi de Sonnet'e verdi (elde hata mesajı olan bir hata net sayılıyor) ve geçti. Tek çalıştırma, yani şans payı büyük; ölçüm danışmana gerçekten sorulup sorulmadığını göstermiyor.
-- Her hücre bir kez, küçük bir projede: yön gösterir, kesin değildir. Daha önceki bir çalıştırmada (0.7, altı görev) gearbox dört görevde Opus · high ile aynı sonucu $2,38 yerine $0,31'e almıştı.
+- Tek başarısızlık Opus danışmanlı Sonnet'te, yanıltıcı hatada: hata mesajının gösterdiği dosyayı düzeltti, asıl sebebi değil. autogear bu görevi de Sonnet'e verdi (elde hata mesajı olan bir hata net sayılıyor) ve geçti. Tek çalıştırma, yani şans payı büyük; ölçüm danışmana gerçekten sorulup sorulmadığını göstermiyor.
+- Her hücre bir kez, küçük bir projede: yön gösterir, kesin değildir. Daha önceki bir çalıştırmada (0.7, altı görev) autogear dört görevde Opus · high ile aynı sonucu $2,38 yerine $0,31'e almıştı.
 
-**Gerçek bir proje** (`--set sqlglot`): 100 bin satırlık bir SQL ayrıştırıcısı olan [sqlglot](https://github.com/tobymao/sqlglot)'ta Temmuz 2026'dan sonra düzeltilmiş 10 hata. Her biri kod düzeltmeden önceki hâliyle kuruldu ve o düzeltmenin eklediği testlerle kontrol edildi. Her hücre bir kez, Claude Code 2.1.299, 17 Ekim 2026. gearbox 0.8.1 her hata avını Opus · high'a veren sürüm; 0.8.2 yeri belli olanı Sonnet · high'a veriyor.
+**Gerçek bir proje** (`--set sqlglot`): 100 bin satırlık bir SQL ayrıştırıcısı olan [sqlglot](https://github.com/tobymao/sqlglot)'ta Temmuz 2026'dan sonra düzeltilmiş 10 hata. Her biri kod düzeltmeden önceki hâliyle kuruldu ve o düzeltmenin eklediği testlerle kontrol edildi. Her hücre bir kez, Claude Code 2.1.299, 17 Ekim 2026. autogear 0.8.1 her hata avını Opus · high'a veren sürüm; 0.8.2 yeri belli olanı Sonnet · high'a veriyor.
 
-| Görev | Tür | gearbox 0.8.2 | gearbox 0.8.1 | Sonnet · medium | Opus · high |
+| Görev | Tür | autogear 0.8.2 | autogear 0.8.1 | Sonnet · medium | Opus · high |
 |---|---|---|---|---|---|
 | sq-tsql-output | belirsiz anlatılmış hata | ✗ $1,28 Opus | ✗ $0,94 Opus | ✗ $0,28 | ✗ $1,38 |
 | sq-duckdb-sample | yeri belli hata | $0,23 Sonnet | $0,22 Sonnet | $0,25 | $0,88 |
@@ -265,12 +265,12 @@ Gösterdiği, önce gearbox'ın aleyhine olan:
 | sq-duckdb-empty-regexp | yeri belli hata | $0,48 Opus | $0,39 Opus | $0,22 | $0,52 |
 | **Toplam** | | **8/10, $4,90** | **8/10, $5,43** | **9/10, $2,49** | **9/10, $8,98** |
 
-Gösterdiği, önce gearbox'ın aleyhine olan:
+Gösterdiği, önce autogear'ın aleyhine olan:
 
-- **Tek başına Sonnet · medium 10 görevin 9'unu $2,49'a çözdü; Opus · high aynı 9'u $8,98'e; gearbox 8'ini yaklaşık $5'a.** İki sette, yirmi görevde Opus, Sonnet · medium'un çözemediği hiçbir görevi çözmedi: Sonnet'in kaldığı tek görevde (`sq-tsql-output`; belirsiz bir rapor, kestirme düzeltmesi T-SQL'in OUTPUT komutunu bozuyor) bütün düzenler kaldı.
-- gearbox'ın iki başarısızlığı, tek başına Sonnet · medium'un geçtiği görevler; biri Sonnet'te, biri Opus'ta. Tek çalıştırmada bu, zayıf model değil şans payı gibi okunuyor.
+- **Tek başına Sonnet · medium 10 görevin 9'unu $2,49'a çözdü; Opus · high aynı 9'u $8,98'e; autogear 8'ini yaklaşık $5'a.** İki sette, yirmi görevde Opus, Sonnet · medium'un çözemediği hiçbir görevi çözmedi: Sonnet'in kaldığı tek görevde (`sq-tsql-output`; belirsiz bir rapor, kestirme düzeltmesi T-SQL'in OUTPUT komutunu bozuyor) bütün düzenler kaldı.
+- autogear'ın iki başarısızlığı, tek başına Sonnet · medium'un geçtiği görevler; biri Sonnet'te, biri Opus'ta. Tek çalıştırmada bu, zayıf model değil şans payı gibi okunuyor.
 - **Hata avı ayrımı tuttu:** iki yeri belli hata avı 0.8.2'de Sonnet'e gitti ve $0,49'a geçti; 0.8.1'de Opus'ta $1,39'du.
-- gearbox burada Sonnet'in de aynı iyi yaptığı işleri Opus'a veriyor: iki belirsiz rapor, yanıltıcı olan ve iki görev daha Opus'ta $3,52 tuttu; aynı görevler Sonnet · medium'da $1,17.
+- autogear burada Sonnet'in de aynı iyi yaptığı işleri Opus'a veriyor: iki belirsiz rapor, yanıltıcı olan ve iki görev daha Opus'ta $3,52 tuttu; aynı görevler Sonnet · medium'da $1,17.
 - Her hücre bir kez. Üç tur, liste fiyatıyla yaklaşık $65 daha tutar.
 
 ## Proje yapısı
@@ -290,13 +290,13 @@ Gösterdiği, önce gearbox'ın aleyhine olan:
 | `hooks/core/settle.ts` | kuralların, Haiku'nun cevabının ve süren işin bir kademeyi nasıl belirlediği |
 | `hooks/core/savings.ts` | modele göre toplamlar, tasarruf, markdown rapor |
 | `hooks/core/settings.ts` | kayıtlı ayarlar ve istatistik, `/gear` ayrıştırma |
-| `hooks/core/text.ts` | gearbox'ın söylediği sözler (İngilizce ve Türkçe) ve dil seçimi |
+| `hooks/core/text.ts` | autogear'ın söylediği sözler (İngilizce ve Türkçe) ve dil seçimi |
 | `hooks/core/doctor.ts` | `/gear doctor`: kontroller ve önerileri |
 | `hooks/core/switch.ts` | durum etiketinin çizimi |
 | `hooks/core/version.ts` | denendiği en yeni Claude Code sürümü |
 | `tests/` | kurallar, politika, fiyat ve tasarruf; sahte motora karşı yönlendirici; sınıflandırıcı ölçümü |
 | `eval/` | sınıflandırma ölçümü, dış ölçütler (`external.mjs`) ve çıktı kalitesi görevleri |
-| `scripts/` | canlı duman testi; gearbox'ın kararlarını oturum kayıtlarından toplayan `harvest.mjs` |
+| `scripts/` | canlı duman testi; autogear'ın kararlarını oturum kayıtlarından toplayan `harvest.mjs` |
 
 ## Geliştirme
 
@@ -316,25 +316,25 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-`node eval/tasks.mjs <kol>` `--runs N` ve `--set sqlglot` alır: [sqlglot](https://github.com/tobymao/sqlglot)'un (MIT, yaklaşık 100 bin satır) 10 gerçek hatası; her biri kodun o hata düzeltilmeden hemen önceki hâliyle, git geçmişi olmadan kurulur ve o düzeltmenin eklediği testlerle kontrol edilir. sqlglot'un `eval/.work/repos/sqlglot` altına klonlanmış olmasını ve Python 3.9+ ister. `--dry` bu görevlerin her birini ücretsiz kontrol eder: verildiği hâliyle kalmalı, gerçek düzeltmeyle geçmeli. `gearbox-0.8.1` kolu, hata avı ayrılmadan önceki gearbox; iki kuralı kıyaslamak için.
+`node eval/tasks.mjs <kol>` `--runs N` ve `--set sqlglot` alır: [sqlglot](https://github.com/tobymao/sqlglot)'un (MIT, yaklaşık 100 bin satır) 10 gerçek hatası; her biri kodun o hata düzeltilmeden hemen önceki hâliyle, git geçmişi olmadan kurulur ve o düzeltmenin eklediği testlerle kontrol edilir. sqlglot'un `eval/.work/repos/sqlglot` altına klonlanmış olmasını ve Python 3.9+ ister. `--dry` bu görevlerin her birini ücretsiz kontrol eder: verildiği hâliyle kalmalı, gerçek düzeltmeyle geçmeli. `gearbox-0.8.1` kolu, hata avı ayrılmadan önceki autogear; iki kuralı kıyaslamak için.
 
 Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, Claude Code 2.1.295 ya da daha yenisini ister (2.1.295 ve 2.1.299 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur (2.1.278: 75 geçti, 30 kaldı). PATH'teki `claude` masaüstü uygulamasının kendi sürümünden eski olabilir; Windows'ta o sürüm `%APPDATA%\Claude\claude-code\` ya da yeni uygulamalarda `%LOCALAPPDATA%\Claude-Data\<profil>\claude-code\` altındadır. Ölçüm betikleri bunların en yenisini kendileri bulur (`CLAUDE_BIN` ile değiştirilebilir) ve 2.1.295'ten eski bir sürümde hiçbir şey harcamadan durur.
 
 **Kendini test konusu yapmadan geliştirmek.** Yeni bir sürüm dört adımdan geçer, her biri bir sonrakinden önce, ve yalnızca sonuncusu gerçek işe dokunur:
 
 1. Çevrimdışı: `claude plugin test .` (kurallar, politika, yönlendirici, eval kümeleri) ve `node eval/external.mjs` (dış ölçütler, ücretsiz; `--haiku` biraz kota harcayarak Haiku'nun cevaplarını ekler).
-2. Gerçek işte gölge modda (`/gear shadow`): gearbox seçer ve yazar, cevabı seçicideki model verir.
+2. Gerçek işte gölge modda (`/gear shadow`): autogear seçer ve yazar, cevabı seçicideki model verir.
 3. `node scripts/harvest.mjs` bu seçimleri oturum kayıtlarından `eval/.work/harvest.json` dosyasına toplar; etiketlenince bir sonraki sürümün üzerinden yeniden oynatılacağı bir gerçek kullanım kümesi olurlar.
 4. Ancak ondan sonra `/gear on`.
 
 **Bir değişikliği kendi Claude Code'unda denemek.** Claude Code klasörü değil, eklentinin kurulu bir kopyasını çalıştırır. Düzenledikten sonra `.claude-plugin/plugin.json` içindeki `version` değerini yükselt, sonra:
 
 ```bash
-claude plugin marketplace update gearbox
+claude plugin marketplace update autogear
 ```
 
 ```bash
-claude plugin update gearbox@gearbox
+claude plugin update autogear@autogear
 ```
 
 Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
@@ -362,7 +362,7 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 
 ## Gizlilik
 
-gearbox'ın sunucusu yoktur ve kendi başına hiçbir ağ isteği yapmaz. Sakladığı her şey makinende, Claude Code'un her eklentiye verdiği depoda durur:
+autogear'ın sunucusu yoktur ve kendi başına hiçbir ağ isteği yapmaz. Sakladığı her şey makinende, Claude Code'un her eklentiye verdiği depoda durur:
 
 - ayarların (mod, profil, dil, anahtarlar);
 - karar günlüğü: son 200 mesajın her biri için ilk 100 karakteri, kademe, model ve efor, gerekçeler, maliyet; `/gear reset` siler;
@@ -371,7 +371,7 @@ gearbox'ın sunucusu yoktur ve kendi başına hiçbir ağ isteği yapmaz. Saklad
 Bir modele giden şeyler, hep Claude Code'un kendisi ve senin hesabınla, hiçbir zaman üçüncü bir tarafa değil:
 
 - **Kurallar emin olamayınca Haiku.** Mesajın ilk 4.000 karakteri (ve bir öncekinin kademesi), işin hangi kademede olduğunu soran kısa bir yönergeyle gönderilir. Küçük bir istektir, yaklaşık $0,0002; `/gear ask off` durdurur, o zaman emin olunamayan mesajları yalnızca kurallar okur.
-- **Devir notu.** Büyük bir sohbet bir işi bitirince gearbox, aynı önbellekten, modelden o sohbetin sekiz satırlık özetini ister. Sana gösterilir; "temiz sohbet"e basmazsan hiçbir yere gitmez, basarsan yalnızca yeni sohbete gider. `/gear band off` öneriyi durdurur.
+- **Devir notu.** Büyük bir sohbet bir işi bitirince autogear, aynı önbellekten, modelden o sohbetin sekiz satırlık özetini ister. Sana gösterilir; "temiz sohbet"e basmazsan hiçbir yere gitmez, basarsan yalnızca yeni sohbete gider. `/gear band off` öneriyi durdurur.
 
 `eval/` ve `scripts/` altındaki ölçüm betikleri yalnızca sen çalıştırınca çalışır; gerçek modelleri çağırır ve önce ne harcayacağını söyler.
 

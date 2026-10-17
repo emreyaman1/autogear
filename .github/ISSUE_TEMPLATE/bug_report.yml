@@ -1,5 +1,5 @@
 name: Bug report
-description: gearbox chose badly, did not load, or stopped itself
+description: autogear chose badly, did not load, or stopped itself
 labels: [bug]
 body:
   - type: textarea
@@ -13,7 +13,7 @@ body:
     id: versions
     attributes:
       label: Versions
-      description: gearbox (see /gear doctor) and Claude Code (`claude --version`).
+      description: autogear (see /gear doctor) and Claude Code (`claude --version`).
     validations:
       required: true
   - type: textarea

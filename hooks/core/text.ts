@@ -1,4 +1,4 @@
-// The words gearbox says to the person, in English or Turkish. The rules, the
+// The words autogear says to the person, in English or Turkish. The rules, the
 // log and the tests keep one Turkish form of each reason; it is turned into
 // English only when shown.
 

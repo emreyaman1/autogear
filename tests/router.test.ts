@@ -4,7 +4,7 @@ import { expect, mock, test, type Engine } from 'claude-code/testing'
 import { BADGE_COLORS, BADGE_HEIGHT, badgeWidth } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 
-// The tests read gearbox's Turkish; the English is tested by switching to it.
+// The tests read autogear's Turkish; the English is tested by switching to it.
 Object.assign(globalThis, { GEARBOX_LANG: 'tr' })
 setLang('tr')
 
@@ -129,7 +129,7 @@ test('a model that gives no answer is sent again on the picker model, then avoid
   expect(sent[2]).toEqual({ model: 'claude-sonnet-5-5', effort: 'low' })
 })
 
-test('gearbox stands down when its choices stop taking effect', async ($, on) => {
+test('autogear stands down when its choices stop taking effect', async ($, on) => {
   const { sent } = world(on)
   for (const turnId of ['t1', 't2', 't3']) {
     await say($, 'bu fonksiyon ne yapıyor?')
@@ -182,7 +182,7 @@ test('a bug whose cause hides but is told plainly goes to Sonnet at high', async
 test('a nearly full window keeps critical work on Opus and warns under the answer and in the band', async ($, on) => {
   const resetsAt = new Date(NOW + 2 * 3_600_000).toISOString()
   const { sent } = world(on, { rateLimits: [{ kind: 'five_hour', percentUsed: 92, resetsAt }] })
-  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
   expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
@@ -194,7 +194,7 @@ test('a nearly full window keeps critical work on Opus and warns under the answe
     expect(await ui.find({ type: 'Text', text: /bu iş Opus/ })).toBeUndefined()
     await ui.unmount()
   }
-  // Off, gearbox reads no windows, and the band says nothing of them.
+  // Off, autogear reads no windows, and the band says nothing of them.
   await $.command.run({ command: 'gear', args: 'sabitle' })
   const off = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await off.find({ type: 'Text', text: /limit/ })).toBeUndefined()
@@ -208,7 +208,7 @@ async function badgeOf(ui: Awaited<ReturnType<Engine['ui']['mount']>>, surface: 
   }
   for (const [name, state] of [['AÇIK', 'açık'], ['GÖLGE', 'gölge'], ['KAPALI', 'kapalı'], ['DURDU', 'durdu']] as const) {
     if ((await ui.find({ type: 'Text', text: new RegExp(` ${name} $`) })) !== undefined) {
-      return `gearbox: ${state}`
+      return `autogear: ${state}`
     }
   }
 
@@ -217,18 +217,18 @@ async function badgeOf(ui: Awaited<ReturnType<Engine['ui']['mount']>>, surface: 
 
 test('the band shows on, shadow and off apart, and each button does what it is named for', async ($, on) => {
   const { sent } = world(on)
-  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   for (const surface of ['terminal', 'desktop'] as const) {
     sent.length = 0
     await $.command.run({ command: 'gear', args: 'oto' })
     const ui = await $.ui.mount({ ...BAND, surface })
-    expect(await badgeOf(ui, surface)).toBe('gearbox: açık')
+    expect(await badgeOf(ui, surface)).toBe('autogear: açık')
     // On: the buttons offer shadow and off, not on.
     expect(await ui.find({ type: 'Button', key: 'to-auto' })).toBeUndefined()
     expect(await ui.find({ type: 'Button', key: 'to-shadow', text: 'gölgeye al' })).toBeDefined()
 
     await ui.press({ key: 'to-shadow' })
-    expect(await badgeOf(ui, surface)).toBe('gearbox: gölge')
+    expect(await badgeOf(ui, surface)).toBe('autogear: gölge')
     expect(await ui.find({ type: 'Button', key: 'to-shadow' })).toBeUndefined()
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, `shadow-${surface}`, 0, 'claude-opus-5-5', 'max')
@@ -236,7 +236,7 @@ test('the band shows on, shadow and off apart, and each button does what it is n
 
     // From shadow, "kapat" turns it off; it does not turn routing on.
     await ui.press({ key: 'to-pin' })
-    expect(await badgeOf(ui, surface)).toBe('gearbox: kapalı')
+    expect(await badgeOf(ui, surface)).toBe('autogear: kapalı')
     expect(await ui.find({ type: 'Text', text: /seçicideki model kullanılıyor/ })).toBeDefined()
     expect(await ui.find({ type: 'Button', key: 'to-auto', text: 'aç' })).toBeDefined()
     await say($, 'bu fonksiyon ne yapıyor?')
@@ -244,7 +244,7 @@ test('the band shows on, shadow and off apart, and each button does what it is n
     expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })
 
     await ui.press({ key: 'to-auto' })
-    expect(await badgeOf(ui, surface)).toBe('gearbox: açık')
+    expect(await badgeOf(ui, surface)).toBe('autogear: açık')
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, `on-${surface}`, 0, 'claude-opus-5-5', 'max')
     expect(sent[2]?.model).toBe('claude-haiku-5-5')
@@ -256,21 +256,21 @@ test('the band shows on, shadow and off apart, and each button does what it is n
 
 test('the state is an Svg badge on the desktop and colored Text on the terminal, the same on both', async ($, on) => {
   world(on)
-  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   await $.command.run({ command: 'gear', args: 'golge' })
 
   const desktop = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const badge = await desktop.find({ type: 'Svg' })
-  expect(badge?.props).toMatchObject({ alt: 'gearbox: gölge', width: badgeWidth('shadow'), height: BADGE_HEIGHT, isInteractive: true })
+  expect(badge?.props).toMatchObject({ alt: 'autogear: gölge', width: badgeWidth('shadow'), height: BADGE_HEIGHT, isInteractive: true })
   expect(badge?.props.source).toContain(BADGE_COLORS.shadow)
   expect(badge?.props.source).toContain('>GÖLGE</text>')
   await desktop.press({ key: 'to-pin' })
   const off = await desktop.find({ type: 'Svg' })
-  expect(off?.props).toMatchObject({ alt: 'gearbox: kapalı' })
+  expect(off?.props).toMatchObject({ alt: 'autogear: kapalı' })
   expect(off?.props.source).toContain(BADGE_COLORS.pin)
   await desktop.unmount()
 
-  // The desktop's press turned gearbox off: the terminal draws the same state.
+  // The desktop's press turned autogear off: the terminal draws the same state.
   const terminal = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect(await terminal.find({ type: 'Svg' })).toBeUndefined()
   expect(await terminal.find({ type: 'Text', text: /KAPALI/ })).toBeDefined()
@@ -281,17 +281,17 @@ test('the state is an Svg badge on the desktop and colored Text on the terminal,
 
 test('stood down, the band says so, offers to try again, and a state picked by hand shows as picked', async ($, on) => {
   const { sent } = world(on)
-  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   for (const turnId of ['t1', 't2', 't3']) {
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, turnId)
     await finish($, turnId, 'claude-opus-5-5')
   }
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  expect((await ui.find({ type: 'Svg' }))?.props).toMatchObject({ alt: 'gearbox: durdu' })
+  expect((await ui.find({ type: 'Svg' }))?.props).toMatchObject({ alt: 'autogear: durdu' })
   expect(await ui.find({ type: 'Button', key: 'to-auto', text: 'yeniden dene' })).toBeDefined()
   await ui.press({ key: 'to-shadow' })
-  expect((await ui.find({ type: 'Svg' }))?.props).toMatchObject({ alt: 'gearbox: gölge' })
+  expect((await ui.find({ type: 'Svg' }))?.props).toMatchObject({ alt: 'autogear: gölge' })
   await ui.press({ key: 'to-auto' })
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't4')
@@ -315,7 +315,7 @@ test('a turn answered by Haiku shows its cost and the saving against the picker,
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'tasarruf' }))).toContain('Henüz kayıtlı tur yok')
 })
 
-test('a turn that switched model counts its rewritten cache against gearbox', async ($, on) => {
+test('a turn that switched model counts its rewritten cache against autogear', async ($, on) => {
   world(on)
   const turn = async (id: string, model: string, text: string) => {
     await say($, text)
@@ -332,7 +332,7 @@ test('a turn that switched model counts its rewritten cache against gearbox', as
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'tasarruf' }))).toContain('| Haiku | 1 (%50) | $0,013 | $0,020 |')
 })
 
-const CARD = { plugin: 'gearbox', component: 'CommandOutput', props: { command: 'gear', args: 'tasarruf', text: '', isErrored: false } } as const
+const CARD = { plugin: 'autogear', component: 'CommandOutput', props: { command: 'gear', args: 'tasarruf', text: '', isErrored: false } } as const
 
 async function turnOn($: Engine, id: string, text: string, model: string, tokens: { read: number; write: number; output: number }) {
   await say($, text)
@@ -483,7 +483,7 @@ test('a +token after a system note is taken off, the note left for the model', a
   expect(prompts[0]).toContain('bu dosyada ne var?')
 })
 
-test('in shadow mode gearbox chooses and writes it down, and every request goes as the picker says', async ($, on) => {
+test('in shadow mode autogear chooses and writes it down, and every request goes as the picker says', async ($, on) => {
   const { sent } = world(on)
   const shown = JSON.stringify(await $.command.run({ command: 'gear', args: 'golge' }))
   expect(shown).toContain('gölgede')
@@ -491,7 +491,7 @@ test('in shadow mode gearbox chooses and writes it down, and every request goes 
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, turnId, 0, 'claude-opus-5-5', 'high')
     const done = await $.turn.complete({ turnId, answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
-    // Under the answer only the model that answered; what gearbox would have chosen is in the log.
+    // Under the answer only the model that answered; what autogear would have chosen is in the log.
     expect(done.text).toBe('*Opus 5.5 · efor high*')
   }
   // Not one request was changed.
@@ -508,7 +508,7 @@ test('in shadow mode gearbox chooses and writes it down, and every request goes 
   expect(sent.at(-1)).toEqual({ model: 'claude-haiku-5-5', effort: 'low' })
 })
 
-test('in shadow mode under a Sonnet picker the log keeps both what gearbox wanted and what the picker allows', async ($, on) => {
+test('in shadow mode under a Sonnet picker the log keeps both what autogear wanted and what the picker allows', async ($, on) => {
   world(on)
   await $.command.run({ command: 'gear', args: 'golge' })
   await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
@@ -545,9 +545,9 @@ test('in plan mode every request goes to Opus at an effort by the plan size, unt
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: '' }))).not.toContain('Plan modu')
 })
 
-test('before a choice the band says what the state means; in shadow mode it shows what gearbox would pick', async ($, on) => {
+test('before a choice the band says what the state means; in shadow mode it shows what autogear would pick', async ($, on) => {
   world(on)
-  const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   await $.command.run({ command: 'gear', args: 'golge' })
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await ui.find({ type: 'Text', text: /seçip yazıyor, uygulamıyor/ })).toBeDefined()
@@ -557,7 +557,7 @@ test('before a choice the band says what the state means; in shadow mode it show
   await ui.unmount()
 })
 
-test('under every answer, even with gearbox off, the model that answered and its effort; the helpers beside it', async ($, on) => {
+test('under every answer, even with autogear off, the model that answered and its effort; the helpers beside it', async ($, on) => {
   world(on)
   await $.command.run({ command: 'gear', args: 'off' })
   await say($, 'bu fonksiyon ne yapıyor?')
@@ -629,8 +629,8 @@ test('/gear lang en speaks English everywhere, /gear lang tr goes back', async (
 test('/gear doctor says what to fix and how', async ($, on) => {
   world(on)
   const before = JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))
-  expect(before).toContain('gearbox doctor')
-  expect(before).toContain('gearbox açık')
+  expect(before).toContain('autogear doctor')
+  expect(before).toContain('autogear açık')
   expect(before).toContain('seçici bilinmiyor')
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1', 0, 'claude-sonnet-5-5', 'medium')
@@ -640,5 +640,5 @@ test('/gear doctor says what to fix and how', async ($, on) => {
   await $.command.run({ command: 'gear', args: 'shadow' })
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))).toContain('`/gear on`')
   await $.command.run({ command: 'gear', args: 'off' })
-  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))).toContain('gearbox kapalı')
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))).toContain('autogear kapalı')
 })

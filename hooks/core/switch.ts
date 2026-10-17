@@ -1,20 +1,20 @@
 // The band's state badge, for the surfaces that draw an image: a rounded pill
 // in the state's color with a dot and the state's name, as one vector drawing.
-// The dot moves a little to say what gearbox is doing: a soft pulse while it
+// The dot moves a little to say what autogear is doing: a soft pulse while it
 // routes, a slow breath while it only watches (shadow), still when off, a slow
 // blink when it stood down. Pressing is left to the buttons beside it.
 
-import type { GearboxMode } from '../../types'
+import type { AutogearMode } from '../../types'
 import { L } from './text'
 
 export const BADGE_HEIGHT = 22
 
 // On green, shadow violet (it watches and writes, the picker answers), off
 // slate, stood down amber (its choices stopped taking effect).
-export const BADGE_COLORS: Record<GearboxMode, string> = { auto: '#16a34a', shadow: '#7c3aed', pin: '#64748b', down: '#d97706' }
+export const BADGE_COLORS: Record<AutogearMode, string> = { auto: '#16a34a', shadow: '#7c3aed', pin: '#64748b', down: '#d97706' }
 
 // Getters, so a name is read in the language in use when it is drawn.
-export const BADGE_NAMES: Record<GearboxMode, string> = {
+export const BADGE_NAMES: Record<AutogearMode, string> = {
   get auto() {
     return L('ON', 'AÇIK')
   },
@@ -36,20 +36,20 @@ const CAPITAL = 6.6
 const DOT_ROOM = 20
 const END_ROOM = 10
 
-export function badgeWidth(mode: GearboxMode): number {
+export function badgeWidth(mode: AutogearMode): number {
   return Math.round(DOT_ROOM + BADGE_NAMES[mode].length * CAPITAL + END_ROOM)
 }
 
 // Each state's motion, as CSS: it runs where the Svg is drawn interactive and
 // stops for a person who asked their system for less motion.
-const MOTION: Record<GearboxMode, string> = {
+const MOTION: Record<AutogearMode, string> = {
   auto: '.halo{animation:pulse 2.4s ease-out infinite;transform-origin:11px 11px}@keyframes pulse{0%{opacity:.55;transform:scale(1)}70%,100%{opacity:0;transform:scale(2.3)}}',
   shadow: '.dot{animation:breathe 3.2s ease-in-out infinite}@keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}',
   pin: '',
   down: '.dot{animation:blink 1.6s steps(2,start) infinite}@keyframes blink{to{opacity:.25}}',
 }
 
-export function badgeSvg(mode: GearboxMode): string {
+export function badgeSvg(mode: AutogearMode): string {
   const width = badgeWidth(mode)
   const radius = BADGE_HEIGHT / 2
   const color = BADGE_COLORS[mode]

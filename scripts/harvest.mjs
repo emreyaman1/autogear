@@ -1,6 +1,6 @@
-// Gathers the decisions gearbox made in your sessions, applied or in shadow
+// Gathers the decisions autogear made in your sessions, applied or in shadow
 // mode, from Claude Code's own transcripts: each prompt as you wrote it, what
-// gearbox chose and why, Haiku's answer when it was asked, and what answered.
+// autogear chose and why, Haiku's answer when it was asked, and what answered.
 // The result is the raw material for a real-use set: label it, and a new
 // version can be played over it before anyone runs it.
 //
@@ -70,7 +70,7 @@ function haikuOf(why) {
 
 const rows = []
 for (const folder of existsSync(PROJECTS) ? readdirSync(PROJECTS) : []) {
-  // gearbox's own measurements run in temporary folders: not someone's work.
+  // autogear's own measurements run in temporary folders: not someone's work.
   if (folder.includes('AppData-Local-Temp')) {
     continue
   }

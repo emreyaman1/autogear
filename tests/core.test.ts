@@ -353,7 +353,7 @@ describe('badgeSvg', () => {
     expect(badgeWidth('pin')).toBeGreaterThan(badgeWidth('auto'))
   })
 
-  test('the dot moves to say what gearbox does, and stands still for less motion', () => {
+  test('the dot moves to say what autogear does, and stands still for less motion', () => {
     expect(badgeSvg('auto')).toContain('animation:pulse')
     expect(badgeSvg('shadow')).toContain('animation:breathe')
     expect(badgeSvg('down')).toContain('animation:blink')

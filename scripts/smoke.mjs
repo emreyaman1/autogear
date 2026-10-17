@@ -1,4 +1,4 @@
-// Live check that gearbox still changes the model on this Claude Code build.
+// Live check that autogear still changes the model on this Claude Code build.
 //
 // Sends three short prompts through `claude -p` with the plugin loaded and
 // reads which model the API reports as having answered. It spends a little

@@ -52,7 +52,7 @@ export function costOf(family: Family, tokens: Tokens): number {
 // What a turn cost, and what the same tokens would have cost on the picker's
 // model. A turn that changed model rewrote the cache; on the picker's model
 // that cache would have been warm, so there the writes are priced as reads:
-// the switch counts against gearbox, never for it.
+// the switch counts against autogear, never for it.
 export function turnMoney(answered: Family, ceiling: Family, tokens: Tokens, isSwitch: boolean): { spent: number; baseline: number } {
   const warm = isSwitch
     ? {

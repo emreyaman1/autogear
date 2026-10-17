@@ -1,4 +1,4 @@
-// What gearbox has saved: the dollars the turns cost against the same turns on
+// What autogear has saved: the dollars the turns cost against the same turns on
 // the picker's model, kept per model family for the session and for good, and
 // the report of them.
 
@@ -19,7 +19,7 @@ export type Bucket = {
 
 export type Totals = {
   families: Record<Family, Bucket>
-  // What gearbox's own questions to Haiku cost.
+  // What autogear's own questions to Haiku cost.
   overhead: number
 }
 
@@ -56,7 +56,7 @@ export function sumOf(totals: Totals): Bucket {
 
 export const savedBy = (bucket: Bucket): number => bucket.baseline - bucket.spent
 
-// Net of what gearbox's own questions cost.
+// Net of what autogear's own questions cost.
 export const savedOf = (totals: Totals): number => savedBy(sumOf(totals)) - totals.overhead
 
 // The share of the picker's bill that was saved, from 0 (none, or less) to 1.
@@ -142,8 +142,8 @@ export function savingsText(session: Totals, all: Totals, since: number | undefi
   const [now, ever] = [sumOf(session), sumOf(all)]
   if (ever.turns === 0) {
     return L(
-      '**Savings**\n\nNo turns recorded yet: the figures build up as gearbox finishes answers.',
-      '**Tasarruf**\n\nHenüz kayıtlı tur yok: rakamlar gearbox bir cevap bitirdikçe birikir.',
+      '**Savings**\n\nNo turns recorded yet: the figures build up as autogear finishes answers.',
+      '**Tasarruf**\n\nHenüz kayıtlı tur yok: rakamlar autogear bir cevap bitirdikçe birikir.',
     )
   }
   const gain = (totals: Totals, bucket: Bucket): string => {
@@ -176,8 +176,8 @@ export function savingsText(session: Totals, all: Totals, since: number | undefi
     all.overhead === 0
       ? undefined
       : L(
-          `gearbox's own cost (questions to Haiku): ${usd(all.overhead)}, taken off the saving.`,
-          `gearbox'ın kendi maliyeti (Haiku'ya sorular): ${usd(all.overhead)}, tasarruftan düşüldü.`,
+          `autogear's own cost (questions to Haiku): ${usd(all.overhead)}, taken off the saving.`,
+          `autogear'ın kendi maliyeti (Haiku'ya sorular): ${usd(all.overhead)}, tasarruftan düşüldü.`,
         ),
     since === undefined || since === 0
       ? undefined

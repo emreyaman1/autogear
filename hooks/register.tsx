@@ -1,4 +1,4 @@
-// gearbox: picks the model and effort of every main-thread request from the
+// autogear: picks the model and effort of every main-thread request from the
 // prompt that started the turn, never above what the picker holds.
 
 import { atom, read, update } from 'claude-code'
@@ -28,7 +28,7 @@ import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, badgeSvg, badgeWidth } from '.
 import { asLangSetting, getLang, L, pct, profileName, reasonText, resolveLang, setLang, sourceText, systemLocale, tierName } from './core/text'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { isNewerThan, TESTED_THROUGH } from './core/version'
-import type { GearboxMode } from '../types'
+import type { AutogearMode } from '../types'
 
 // Prompts a person sent: the rest (task notifications, peers, plugins) carry
 // on with the last choice.
@@ -39,7 +39,7 @@ const CHECK_COMMAND =
   /\b(?:test|tests|jest|vitest|pytest|mocha|tsc|eslint|lint|build|make|gradle|mvn|cargo|go (?:test|build|vet)|dotnet (?:build|test)|node --test)\b/
 
 // After this many turns in a row answered by another model than the one
-// chosen, gearbox concludes its choices no longer take effect and stands down.
+// chosen, autogear concludes its choices no longer take effect and stands down.
 const MISMATCH_LIMIT = 3
 
 const SOURCE_NAMES: Record<string, string> = {
@@ -56,11 +56,11 @@ const windowName = (kind: string): string =>
 const limitTitle = (kind: string): string =>
   kind === 'five_hour' ? L('Session limit · 5 hours', 'Oturum sınırı · 5 saat') : kind === 'seven_day' ? L('Weekly limit', 'Haftalık sınır') : kind
 
-const modeName = (mode: GearboxMode): string =>
+const modeName = (mode: AutogearMode): string =>
   mode === 'auto' ? L('on', 'açık') : mode === 'shadow' ? L('shadow', 'gölge') : mode === 'pin' ? L('off', 'kapalı') : L('stopped', 'durdu')
 
 // What each state of the band means, beside its badge.
-const modeNote = (mode: GearboxMode): string =>
+const modeNote = (mode: AutogearMode): string =>
   mode === 'auto' ? L('picks the model and effort for the work', 'işe göre model ve efor seçiyor')
   : mode === 'shadow' ? L("chooses and writes it down, applies nothing; the picker's model answers", 'seçip yazıyor, uygulamıyor; cevabı seçici veriyor')
   : mode === 'pin' ? L("the picker's model is used", 'seçicideki model kullanılıyor')
@@ -73,7 +73,7 @@ const MODE_ACTIONS = [
   { mode: 'pin', key: 'to-pin' },
 ] as const
 
-const actionLabel = (target: GearboxMode, from: GearboxMode): string =>
+const actionLabel = (target: AutogearMode, from: AutogearMode): string =>
   target === 'auto' ? (from === 'down' ? L('try again', 'yeniden dene') : L('turn on', 'aç'))
   : target === 'shadow' ? L('to shadow', 'gölgeye al')
   : L('turn off', 'kapat')
@@ -85,17 +85,17 @@ const help = (): string =>
     '|:--|:--|',
     `| \`/gear\` | ${L('status, last decision, limits', 'durum, son karar, limitler')} |`,
     `| \`/gear savings\` | ${L("spent, what it would have cost on the picker's model, saved", 'harcama, seçici modeliyle olacak harcama, tasarruf')} |`,
-    `| \`/gear log\` | ${L("gearbox's last decisions and the doubtful ones", "gearbox'ın son kararları ve şüpheli olanlar")} |`,
+    `| \`/gear log\` | ${L("autogear's last decisions and the doubtful ones", "autogear'ın son kararları ve şüpheli olanlar")} |`,
     `| \`/gear wrong weak\` · \`strong\` | ${L("mark the last message's decision: the model was too weak · stronger than needed", 'son mesajın kararını işaretle: model çok zayıftı · gereğinden güçlüydü')} |`,
     `| \`/gear reset\` | ${L('reset the savings counter and the log', 'tasarruf sayacını ve günlüğü sıfırla')} |`,
-    `| \`/gear on\` · \`/gear off\` | ${L("turn gearbox on · off (off, the picker's model is used)", "gearbox'ı aç · kapat (kapalıyken seçici model kullanılır)")} |`,
+    `| \`/gear on\` · \`/gear off\` | ${L("turn autogear on · off (off, the picker's model is used)", "autogear'ı aç · kapat (kapalıyken seçici model kullanılır)")} |`,
     `| \`/gear shadow\` | ${L("shadow: chooses and writes it down but applies nothing, the picker's model answers; to try a new version without touching your work", 'gölge: seçer ve yazar ama uygulamaz, cevabı seçicideki model verir; yeni bir sürümü işini etkilemeden denemek için')} |`,
     `| \`/gear profile <name>\` | ${L('saver, balanced or quality', 'saver (tasarruf), balanced (dengeli) ya da quality (kalite)')} |`,
     `| \`/gear haiku on\` · \`off\` | ${L('may trivial work go to Haiku', 'önemsiz işler Haiku\'ya gitsin mi')} |`,
     `| \`/gear ask on\` · \`off\` | ${L('ask Haiku when the rules cannot tell', "kurallar emin olamazsa Haiku'ya sorulsun mu")} |`,
     `| \`/gear note on\` · \`off\` | ${L('the line under each answer', 'cevabın altındaki satır')} |`,
     `| \`/gear band on\` · \`off\` | ${L('the on/off band above the prompt', 'istem kutusunun üstündeki aç/kapa düğmesi')} |`,
-    `| \`/gear lang en\` · \`tr\` · \`auto\` | ${L("the language gearbox speaks (auto follows the system's)", "gearbox'ın konuştuğu dil (auto sistemin dilini izler)")} |`,
+    `| \`/gear lang en\` · \`tr\` · \`auto\` | ${L("the language autogear speaks (auto follows the system's)", "autogear'ın konuştuğu dil (auto sistemin dilini izler)")} |`,
     `| \`/gear doctor\` | ${L('check the setup and say what to fix', 'kurulumu kontrol et, düzeltilecek şeyi söyle')} |`,
     '',
     L('Tags at the start of a message: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap`, `+deep`.', 'Mesajın başına yazılan etiketler: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap`, `+deep`.'),
@@ -125,7 +125,7 @@ type State = {
   // This session's money, and the family that answered the turn before.
   session: Totals
   lastAnswered: Family | undefined
-  // What gearbox's own questions to Haiku cost since the last turn ended.
+  // What autogear's own questions to Haiku cost since the last turn ended.
   overhead: number
   // The tier of the work in hand, which a question or a remark in its middle
   // does not drop far below.
@@ -148,31 +148,31 @@ type State = {
   helpers: Set<string>
 }
 
-const modeAtom = atom({ plugin: 'gearbox', key: 'mode' } as const, 'auto')
+const modeAtom = atom({ plugin: 'autogear', key: 'mode' } as const, 'auto')
 
-const warningAtom = atom({ plugin: 'gearbox', key: 'warning' } as const, '')
+const warningAtom = atom({ plugin: 'autogear', key: 'warning' } as const, '')
 
 // The last choice as the band shows it; '' before one.
-const noteAtom = atom({ plugin: 'gearbox', key: 'note' } as const, '')
+const noteAtom = atom({ plugin: 'autogear', key: 'note' } as const, '')
 
 // In plan mode, as the engine's plan-mode notes say (the session.append hook
 // below). Kept in the session's state, so a reload of the module keeps it.
 // Plan mode set in the middle of a turn counts from the next turn: a turn
 // keeps its one model.
-const planningAtom = atom({ plugin: 'gearbox', key: 'planning' } as const, false)
+const planningAtom = atom({ plugin: 'autogear', key: 'planning' } as const, false)
 
 // The hand-over note the band offers; '' when none. Its size, and whether the
 // /clear has run and the note waits for the first prompt.
-const handoverAtom = atom({ plugin: 'gearbox', key: 'handover' } as const, '')
+const handoverAtom = atom({ plugin: 'autogear', key: 'handover' } as const, '')
 
-const handoverSizeAtom = atom({ plugin: 'gearbox', key: 'handoverTokens' } as const, 0)
+const handoverSizeAtom = atom({ plugin: 'autogear', key: 'handoverTokens' } as const, 0)
 
-const handoverArmedAtom = atom({ plugin: 'gearbox', key: 'handoverArmed' } as const, false)
+const handoverArmedAtom = atom({ plugin: 'autogear', key: 'handoverArmed' } as const, false)
 
 // A note is being written: the turn has ended, the note follows in a few seconds.
-const handoverPendingAtom = atom({ plugin: 'gearbox', key: 'handoverPending' } as const, false)
+const handoverPendingAtom = atom({ plugin: 'autogear', key: 'handoverPending' } as const, false)
 
-const HANDOVER_PANE = 'gearbox-handover'
+const HANDOVER_PANE = 'autogear-handover'
 
 const onOff = (value: boolean): string => (value ? L('on', 'açık') : L('off', 'kapalı'))
 
@@ -190,7 +190,7 @@ function isRouting(state: State): boolean {
   return state.settings.mode === 'auto' && !state.isStoodDown
 }
 
-function modeOf(state: State): GearboxMode {
+function modeOf(state: State): AutogearMode {
   return state.isStoodDown ? 'down' : state.settings.mode
 }
 
@@ -210,13 +210,13 @@ function showStatus($: EngineInterface, state: State): void {
   const note = choice === undefined ? '' : mode === 'shadow' ? `${choice} ${L('would choose', 'önerirdi')}` : choice
   void update($, noteAtom, () => note)
   $.ui.status(
-    mode === 'down' ? L("⚙ gearbox: stopped (the picker's model), /gear", '⚙ gearbox: devre dışı (seçici), /gear')
-    : mode === 'pin' ? L("⚙ gearbox: off (the picker's model)", '⚙ gearbox: kapalı (seçici model)')
+    mode === 'down' ? L("⚙ autogear: stopped (the picker's model), /gear", '⚙ autogear: devre dışı (seçici), /gear')
+    : mode === 'pin' ? L("⚙ autogear: off (the picker's model)", '⚙ autogear: kapalı (seçici model)')
     : mode === 'shadow'
       ? last === undefined
-        ? L('⚙ gearbox: in shadow, writing its choices down', '⚙ gearbox: gölgede, seçimleri yazıyor')
+        ? L('⚙ autogear: in shadow, writing its choices down', '⚙ autogear: gölgede, seçimleri yazıyor')
         : L(`⚙ shadow: ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} would choose`, `⚙ gölge: ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} önerirdi`)
-    : last === undefined ? L(`⚙ gearbox: automatic · ${profileName(settings.profile)}`, `⚙ gearbox: otomatik · ${settings.profile}`)
+    : last === undefined ? L(`⚙ autogear: automatic · ${profileName(settings.profile)}`, `⚙ autogear: otomatik · ${settings.profile}`)
     : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} ${tierLabel(state, last)}${savedNote(state)}`,
   )
 }
@@ -249,7 +249,7 @@ function remember($: EngineInterface, state: State, turnId: string, decision: De
 function noticeCeiling($: EngineInterface, state: State, model: string, effort: Effort | undefined): void {
   const seen = `${displayModel(model)} · ${effort ?? L('default effort', 'varsayılan efor')}`
   if (state.ceilingSeen !== undefined && seen !== state.ceilingSeen) {
-    $.ui.toast(L(`gearbox ceiling: ${seen}`, `gearbox tavanı: ${seen}`))
+    $.ui.toast(L(`autogear ceiling: ${seen}`, `autogear tavanı: ${seen}`))
   }
   state.ceilingSeen = seen
   state.ceiling = { model, effort }
@@ -337,7 +337,7 @@ async function decideTurn(
 }
 
 // The band's warning for the turn about to run: the window under pressure and
-// what the work runs on, gearbox's choice or, in shadow mode, the picker's.
+// what the work runs on, autogear's choice or, in shadow mode, the picker's.
 async function showWarning($: EngineInterface, state: State, decision: Decision, e: Pick<TurnStepInput, 'model' | 'effort'>): Promise<void> {
   const running =
     state.settings.mode === 'shadow'
@@ -383,8 +383,8 @@ function noteUnavailable($: EngineInterface, state: State, e: Pick<TurnStepInput
   })
   $.ui.toast(
     L(
-      `gearbox: ${MODEL_IDS[decision.family]} gave no answer; I will not use it this session, the picker's model carries on.`,
-      `gearbox: ${MODEL_IDS[decision.family]} yanıt vermedi; bu oturumda kullanmıyorum, seçicideki model devam ediyor.`,
+      `autogear: ${MODEL_IDS[decision.family]} gave no answer; I will not use it this session, the picker's model carries on.`,
+      `autogear: ${MODEL_IDS[decision.family]} yanıt vermedi; bu oturumda kullanmıyorum, seçicideki model devam ediyor.`,
     ),
     { timeoutMs: 10000 },
   )
@@ -441,7 +441,7 @@ async function afterShadowTurn($: EngineInterface, state: State, decision: Decis
 
 async function afterTurn($: EngineInterface, state: State, decision: Decision, usage: TurnUsage | undefined): Promise<TurnMoney | undefined> {
   // The API names the model that answered: if it is not the chosen one, turn
-  // after turn, the plugin API has changed under gearbox and it stands down.
+  // after turn, the plugin API has changed under autogear and it stands down.
   const answered = familyOf(usage?.model)
   if (answered !== undefined) {
     state.mismatches = answered === decision.family ? 0 : state.mismatches + 1
@@ -449,8 +449,8 @@ async function afterTurn($: EngineInterface, state: State, decision: Decision, u
       state.isStoodDown = true
       $.ui.toast(
         L(
-          `gearbox: the model I chose has not been applied for ${MISMATCH_LIMIT} turns, so I switched myself off; requests go with the picker's model. /gear on tries again.`,
-          `gearbox: seçtiğim model ${MISMATCH_LIMIT} turdur uygulanmıyor, kendimi kapattım; istekler seçicideki modelle gidiyor. /gear on ile yeniden dener.`,
+          `autogear: the model I chose has not been applied for ${MISMATCH_LIMIT} turns, so I switched myself off; requests go with the picker's model. /gear on tries again.`,
+          `autogear: seçtiğim model ${MISMATCH_LIMIT} turdur uygulanmıyor, kendimi kapattım; istekler seçicideki modelle gidiyor. /gear on ile yeniden dener.`,
         ),
         { timeoutMs: 15000 },
       )
@@ -517,7 +517,7 @@ async function noteDecision(
         at: await $.clock.now(),
         text: snippet(decision.prompt),
         tier: decision.tier,
-        // A shadow entry keeps what gearbox chose; the model that answered beside it.
+        // A shadow entry keeps what autogear chose; the model that answered beside it.
         family: decision.isShadow === true ? decision.family : (answered ?? decision.family),
         effort: decision.effort,
         source: SOURCE_NAMES[decision.source] ?? decision.source,
@@ -635,8 +635,8 @@ async function noticeVersion($: EngineInterface): Promise<void> {
     if (isNewerThan(base ?? version, TESTED_THROUGH) && (await $.store.get('versionNotice')) !== version) {
       $.ui.toast(
         L(
-          `gearbox has not been tried on Claude Code ${version} yet. If its choices are not applied it switches itself off; or use /gear off.`,
-          `gearbox, Claude Code ${version} ile henüz denenmedi. Seçimleri uygulanmazsa kendini kapatır; istersen /gear off.`,
+          `autogear has not been tried on Claude Code ${version} yet. If its choices are not applied it switches itself off; or use /gear off.`,
+          `autogear, Claude Code ${version} ile henüz denenmedi. Seçimleri uygulanmazsa kendini kapatır; istersen /gear off.`,
         ),
         { timeoutMs: 12000 },
       )
@@ -653,15 +653,15 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
   showStatus($, state)
   await $.command.register({
     name: 'gear',
-    description: L('gearbox: automatic model and effort choice', 'gearbox: otomatik model ve efor seçimi'),
+    description: L('autogear: automatic model and effort choice', 'autogear: otomatik model ve efor seçimi'),
     argumentHint: '[on | off | shadow | profile <name> | haiku | ask | note | band | lang | savings | log | wrong | reset | doctor]',
   })
   await noticeVersion($)
   if ((await $.store.get('tipShown')) !== true) {
     $.ui.toast(
       L(
-        "gearbox is on: the picker's model and effort count as the ceiling, and gearbox chooses under it. For full automation set the picker to Opus · high.",
-        'gearbox açık: seçicideki model ve efor tavan sayılır, gearbox bunun altında seçer. Tam otomatik için seçiciyi Opus · high yap.',
+        "autogear is on: the picker's model and effort count as the ceiling, and autogear chooses under it. For full automation set the picker to Opus · high.",
+        'autogear açık: seçicideki model ve efor tavan sayılır, autogear bunun altında seçer. Tam otomatik için seçiciyi Opus · high yap.',
       ),
       { timeoutMs: 12000 },
     )
@@ -680,7 +680,7 @@ async function switchMode($: EngineInterface, state: State, mode: Settings['mode
     state.unavailable.clear()
   }
   if (mode === 'pin') {
-    // Off, gearbox reads no windows: an old warning would stand there unchecked.
+    // Off, autogear reads no windows: an old warning would stand there unchecked.
     await update($, warningAtom, () => '')
   }
   state.settings = { ...state.settings, mode }
@@ -784,7 +784,7 @@ async function writeHandover($: EngineInterface, state: State, answered: Family 
     if (!reply.isAnswered) {
       return
     }
-    // The note is gearbox's own spending, counted against what it saves.
+    // The note is autogear's own spending, counted against what it saves.
     state.overhead += costOf(answered ?? 'opus', readTokens(reply.usage ?? {}))
     const note = cleanNote(reply.text)
     if (note === '') {
@@ -822,7 +822,7 @@ async function startCleanConversation($: EngineInterface, state: State): Promise
   }
   if (state.handover?.isCleared !== true) {
     state.handover = undefined
-    $.ui.toast(L('gearbox: the conversation could not be cleared; everything stays as it was.', 'gearbox: sohbet temizlenemedi; her şey olduğu gibi duruyor.'), { timeoutMs: 10000 })
+    $.ui.toast(L('autogear: the conversation could not be cleared; everything stays as it was.', 'autogear: sohbet temizlenemedi; her şey olduğu gibi duruyor.'), { timeoutMs: 10000 })
 
     return
   }
@@ -901,7 +901,7 @@ export const register: Register = on => {
     return parsed.tokens.length === 0 ? next(sent) : next({ ...sent, text: withoutTokens(e.text, said, parsed.text) })
   }).catch(($, e, next) => next(e))
 
-  // A /clear: the one gearbox ran on the person's press, or theirs, after
+  // A /clear: the one autogear ran on the person's press, or theirs, after
   // which an offer for the old conversation no longer stands.
   on('session.end', async ($, e, next) => {
     if (e.reason === 'clear') {
@@ -1034,7 +1034,7 @@ export const register: Register = on => {
     } else if (decision !== undefined) {
       await afterTurn($, state, decision, e.usage)
     }
-    // Under every answer, gearbox on, in shadow or off: which model answered.
+    // Under every answer, autogear on, in shadow or off: which model answered.
     const line = state.settings.footer ? answerLine(state, e.turnId, e.usage, decision) : undefined
     state.helpers.clear()
 
@@ -1042,7 +1042,7 @@ export const register: Register = on => {
   })
 
   // A small row above the prompt: a badge in the state's color whose dot
-  // moves a little to say what gearbox is doing, the last choice beside it,
+  // moves a little to say what autogear is doing, the last choice beside it,
   // and a button for each other state named for what it does, so a press
   // never does what the row did not say. The terminal draws the badge as
   // colored Text; a desktop draws it as an Svg in an interactive frame, where
@@ -1080,7 +1080,7 @@ export const register: Register = on => {
       const { Box, Button, Text } = $.ui.resolve(e)
       const row = (
         <Box>
-          <Text dimColor>⚙ gearbox </Text>
+          <Text dimColor>⚙ autogear </Text>
           <Text backgroundColor={BADGE_COLORS[mode]} color="#ffffff" bold>
             {` ${mode === 'pin' ? '○' : '●'} ${BADGE_NAMES[mode]} `}
           </Text>
@@ -1110,9 +1110,9 @@ export const register: Register = on => {
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
     const row = (
       <Box alignItems="center" columnGap={1}>
-        <Text dimColor>⚙ gearbox</Text>
+        <Text dimColor>⚙ autogear</Text>
         <Box flexShrink={0}>
-          <Svg source={badgeSvg(mode)} alt={`gearbox: ${modeName(mode)}`} width={badgeWidth(mode)} height={BADGE_HEIGHT} isInteractive />
+          <Svg source={badgeSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={badgeWidth(mode)} height={BADGE_HEIGHT} isInteractive />
         </Box>
         <Text dimColor>{note}</Text>
         {warning !== '' && <Text color="warning">⚠ {warning}</Text>}

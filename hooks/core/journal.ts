@@ -1,4 +1,4 @@
-// A log of what gearbox decided for each message, kept on this machine, so the
+// A log of what autogear decided for each message, kept on this machine, so the
 // decisions can be looked over afterwards: which ones the work itself called
 // wrong (a complaint, a failing test), and which ones the person marks.
 
@@ -24,13 +24,13 @@ export type Entry = {
   flags: string[]
   // What the person said: the model was too weak, or more than the work needed.
   mark: Mark | undefined
-  // Why gearbox chose as it did, for looking the decision over later.
+  // Why autogear chose as it did, for looking the decision over later.
   reasons?: string[]
   // Chosen in shadow mode: written down, not applied; `answered` is the model
   // the picker held, which did answer.
   isShadow?: true
   answered?: Family
-  // What gearbox asked for before the picker's ceiling cut it to family and
+  // What autogear asked for before the picker's ceiling cut it to family and
   // effort: a need for Opus the picker hid. Absent when nothing was cut.
   wanted?: { family: Family; effort: Effort }
   // Chosen in plan mode.
@@ -195,14 +195,14 @@ export function journalText(entries: readonly Entry[]): string {
     shadows === 0
       ? undefined
       : L(
-          `Chosen in shadow and not applied: ${shadows}. The picker's model answered those; "Model · effort" is gearbox's suggestion.`,
-          `Gölgede seçilip uygulanmayan: ${shadows}. Onlarda cevabı seçicideki model verdi; "Model · efor" gearbox'ın önerisi.`,
+          `Chosen in shadow and not applied: ${shadows}. The picker's model answered those; "Model · effort" is autogear's suggestion.`,
+          `Gölgede seçilip uygulanmayan: ${shadows}. Onlarda cevabı seçicideki model verdi; "Model · efor" autogear'ın önerisi.`,
         ),
     cut.length === 0
       ? undefined
       : L(
-          `Cut by the picker's ceiling: ${cut.length}, of which ${cutModel} wanted a stronger model. "Model · effort" is what could be applied, "without the ceiling" what gearbox wanted.`,
-          `Seçici tavanı yüzünden kırpılan: ${cut.length}, bunların ${cutModel} tanesinde daha güçlü bir model istenmişti. "Model · efor" uygulanabilecek olan, "tavansız" gearbox'ın istediği.`,
+          `Cut by the picker's ceiling: ${cut.length}, of which ${cutModel} wanted a stronger model. "Model · effort" is what could be applied, "without the ceiling" what autogear wanted.`,
+          `Seçici tavanı yüzünden kırpılan: ${cut.length}, bunların ${cutModel} tanesinde daha güçlü bir model istenmişti. "Model · efor" uygulanabilecek olan, "tavansız" autogear'ın istediği.`,
         ),
     L(
       `Doubtful decisions: ${doubtful.length} / ${entries.length} (${Math.round((100 * doubtful.length) / entries.length)}%): raised after a complaint ${complaints}, ended with broken tests or build ${broken}, marked by you ${marked.length}.`,

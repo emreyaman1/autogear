@@ -7,8 +7,8 @@ import { join, resolve } from 'node:path'
 
 export const ROOT = resolve(import.meta.dirname, '..')
 
-// The oldest Claude Code whose plugin API loads gearbox's hooks module; an
-// older one refuses it whole, and a measurement would run without gearbox.
+// The oldest Claude Code whose plugin API loads autogear's hooks module; an
+// older one refuses it whole, and a measurement would run without autogear.
 export const MIN_VERSION = '2.1.295'
 
 const parts = version => (version.match(/\d+/g) ?? []).slice(0, 3).map(Number)
@@ -66,12 +66,12 @@ export function claudeBinary() {
   return process.platform === 'win32' && existsSync(npmBinary) ? npmBinary : 'claude'
 }
 
-// Stops a measurement before it spends anything on a build that would not load gearbox.
+// Stops a measurement before it spends anything on a build that would not load autogear.
 export function requireVersion() {
   const binary = claudeBinary()
   const version = spawnSync(binary, ['--version'], { encoding: 'utf8' }).stdout?.trim() ?? ''
   if (version === '' || isOlder(version, MIN_VERSION)) {
-    throw new Error(`${binary} is Claude Code ${version || '(unknown)'}; gearbox needs ${MIN_VERSION} or newer. Set CLAUDE_BIN to a newer claude.`)
+    throw new Error(`${binary} is Claude Code ${version || '(unknown)'}; autogear needs ${MIN_VERSION} or newer. Set CLAUDE_BIN to a newer claude.`)
   }
 
   return { binary, version }
@@ -81,7 +81,7 @@ export function familyOf(model = '') {
   return ['haiku', 'sonnet', 'opus', 'fable'].find(family => model.toLowerCase().includes(family)) ?? model
 }
 
-// `plugin: null` runs Claude Code without gearbox. User settings stay out
+// `plugin: null` runs Claude Code without autogear. User settings stay out
 // (`--setting-sources project`) so the person's own hooks and plugins do not
 // run inside a test.
 export function runClaude(prompt, { cwd, plugin = ROOT, model = 'opus', effort = 'high', extra = [], timeoutMs = 900_000 } = {}) {

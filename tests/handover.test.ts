@@ -4,7 +4,7 @@ import { describe, expect, mock, test, type Engine } from 'claude-code/testing'
 import { cleanNote, handoverContext, isWorkDone } from '../hooks/core/handover'
 import { setLang } from '../hooks/core/text'
 
-// The tests read gearbox's Turkish; the English is tested by switching to it.
+// The tests read autogear's Turkish; the English is tested by switching to it.
 Object.assign(globalThis, { GEARBOX_LANG: 'tr' })
 setLang('tr')
 
@@ -13,19 +13,19 @@ const NOW = Date.parse('2026-10-17T12:00:00Z')
 const ZERO = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
 
 const NOTE = [
-  'Devir notu: gearbox (17 Ekim 2026)',
-  'Proje: C:\\gearbox, dal main, son commit 6431f74',
+  'Devir notu: autogear (17 Ekim 2026)',
+  'Proje: C:\\autogear, dal main, son commit 6431f74',
   'Yapılan: adım 5 ölçüldü',
   'Açık: adım 17',
   'Kurallar: Türkçe, sade anlat',
   'Oku: docs/sonraki-adimlar.md, CLAUDE.md',
 ].join('\n')
 
-const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
 
 type World = { forks: number; clears: number; opened: string[]; contexts: (readonly string[] | undefined)[] }
 
-// The engine beneath gearbox: a conversation of `contextTokens`, a fork that
+// The engine beneath autogear: a conversation of `contextTokens`, a fork that
 // writes NOTE, a /clear that ends the session as the engine's does, and the
 // prompts with what they carried beside them.
 function world(engine: Engine, on: On, { contextTokens = 700_000 }: { contextTokens?: number } = {}): World {
@@ -124,7 +124,7 @@ describe('the hand-over offer', () => {
     expect(seen.forks).toBe(0)
   })
 
-  test('with gearbox off, no note is written', async ($, on) => {
+  test('with autogear off, no note is written', async ($, on) => {
     const seen = world($, on)
     await $.command.run({ command: 'gear', args: 'sabitle' })
     await turnWith($, 't1', 'git commit -m x')
@@ -137,16 +137,16 @@ describe('the hand-over offer', () => {
       await turnWith($, 't1', 'npm test')
       const band = await $.ui.mount({ ...BAND, surface })
       await band.press({ key: 'handover-show' })
-      expect(seen.opened).toEqual(['gearbox-handover'])
+      expect(seen.opened).toEqual(['autogear-handover'])
       expect(seen.clears).toBe(0)
       const pane = await $.ui.mount({
-        plugin: 'gearbox',
+        plugin: 'autogear',
         surface,
         component: 'Pane',
-        requestId: 'gearbox-handover',
+        requestId: 'autogear-handover',
         props: { title: 'Devir notu', isFocused: false, bodyColumns: 80, placement: 'dock', scroll: { offset: 0, bodyRows: 20 }, view: {} },
       })
-      expect(await pane.find({ type: 'Text', text: 'Devir notu: gearbox (17 Ekim 2026)' })).toBeDefined()
+      expect(await pane.find({ type: 'Text', text: 'Devir notu: autogear (17 Ekim 2026)' })).toBeDefined()
       expect(await pane.find({ type: 'Text', text: 'Eski sohbet: claude --resume old-1' })).toBeDefined()
       await pane.unmount()
       await band.unmount()
@@ -164,7 +164,7 @@ describe('the hand-over offer', () => {
     const before = seen.contexts.length
     await say($, 'adım 18 ile devam edelim')
     const carried = seen.contexts[before]?.join('\n') ?? ''
-    expect(carried).toContain('Devir notu: gearbox (17 Ekim 2026)')
+    expect(carried).toContain('Devir notu: autogear (17 Ekim 2026)')
     expect(carried).toContain('Eski sohbet: claude --resume old-1')
     expect(carried).not.toContain('```')
     await say($, 'bir şey daha')
@@ -205,7 +205,7 @@ describe('the hand-over offer', () => {
 describe('the hand-over rules', () => {
   test('finished work is a commit, a push or a passing test run', () => {
     expect(isWorkDone('git commit -m "x"', false)).toBe(true)
-    expect(isWorkDone('git -C /c/gearbox push origin main', false)).toBe(true)
+    expect(isWorkDone('git -C /c/autogear push origin main', false)).toBe(true)
     expect(isWorkDone('npm test', false)).toBe(true)
     expect(isWorkDone('claude plugin test .', false)).toBe(true)
     expect(isWorkDone('npm test', true)).toBe(false)

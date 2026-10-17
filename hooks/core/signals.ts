@@ -629,7 +629,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   if (SYMPTOM.test(rest)) {
     return rule(2, 'high', ['bir şey olması gerektiği gibi olmuyor'])
   }
-  // A complaint whose earlier turn gearbox did not see (a restart since):
+  // A complaint whose earlier turn autogear did not see (a restart since):
   // something is broken, so it is debugging.
   if (complaint.length > 0) {
     return rule(2, 'high', [`şikâyet ${quote(complaint)}`], 'complaint')

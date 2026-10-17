@@ -30,5 +30,5 @@ body:
   - type: textarea
     id: got
     attributes:
-      label: What gearbox chose
+      label: What autogear chose
       description: The line under the answer, or the row from /gear log.

@@ -18,7 +18,7 @@ export type Decision = {
   source: string
   reasons: string[]
   isClamped: boolean
-  // The picker's model when the choice was made: what the turn would have cost without gearbox.
+  // The picker's model when the choice was made: what the turn would have cost without autogear.
   ceilingModel?: string
   // The message the choice was made for; absent when no message prompted it.
   prompt?: string

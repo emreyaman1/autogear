@@ -1,5 +1,5 @@
 {
-  "name": "gearbox",
+  "name": "autogear",
   "version": "0.12.0",
   "description": "Picks the model and effort for every prompt automatically, never above what the picker holds.",
   "author": {

@@ -181,7 +181,7 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
     return (
       <Box flexDirection="column" borderStyle="round" borderColor="promptBorder" paddingX={2} paddingY={1} gap={1} width={inner + FRAME}>
         <Text bold>{L('Savings', 'Tasarruf')}</Text>
-        <Text dimColor>{L('No turns recorded yet: the figures build up as gearbox finishes answers.', 'Henüz kayıtlı tur yok: rakamlar gearbox bir cevap bitirdikçe birikir.')}</Text>
+        <Text dimColor>{L('No turns recorded yet: the figures build up as autogear finishes answers.', 'Henüz kayıtlı tur yok: rakamlar autogear bir cevap bitirdikçe birikir.')}</Text>
       </Box>
     )
   }
@@ -189,7 +189,7 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
   const overhead =
     input.all.overhead === 0
       ? ''
-      : L(`gearbox's own Haiku questions ${usd(input.all.overhead)}, taken off the saving. `, `gearbox'ın kendi Haiku soruları ${usd(input.all.overhead)}, tasarruftan düşüldü. `)
+      : L(`autogear's own Haiku questions ${usd(input.all.overhead)}, taken off the saving. `, `autogear'ın kendi Haiku soruları ${usd(input.all.overhead)}, tasarruftan düşüldü. `)
   const since =
     input.since === 0
       ? ''

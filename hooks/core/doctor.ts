@@ -1,17 +1,17 @@
-// `/gear doctor`: what gearbox can see about its own setup, read as a short
+// `/gear doctor`: what autogear can see about its own setup, read as a short
 // list of checks, each saying what is wrong and what to do about it.
 
-import type { GearboxMode } from '../../types'
+import type { AutogearMode } from '../../types'
 import { effortRank, familyOf, familyRank, type Effort } from './models'
 import { L, profileName, type Lang, type LangSetting } from './text'
 
 export type Facts = {
   // The state in force: stood down shows as 'down'.
-  mode: GearboxMode
+  mode: AutogearMode
   profile: string
   // The picker's model and effort as the last request saw them; none before one.
   ceiling: { model: string; display: string; effort: Effort | undefined } | undefined
-  // Claude Code's version, when it says; the newest one gearbox was tried on.
+  // Claude Code's version, when it says; the newest one autogear was tried on.
   version: string | undefined
   testedThrough: string
   isNewer: boolean
@@ -40,26 +40,26 @@ const MARK = { ok: '✓', fix: '⚠', info: 'ℹ' } as const
 function modeCheck(facts: Facts): Check {
   switch (facts.mode) {
     case 'auto':
-      return { level: 'ok', text: L('gearbox is on: it picks the model and effort for each message.', 'gearbox açık: her mesaj için model ve eforu seçiyor.') }
+      return { level: 'ok', text: L('autogear is on: it picks the model and effort for each message.', 'autogear açık: her mesaj için model ve eforu seçiyor.') }
     case 'shadow':
       return {
         level: 'fix',
         text: L(
-          "gearbox is in shadow: it writes its choices down but applies none, the picker's model answers. To use it: `/gear on`.",
-          'gearbox gölgede: seçimlerini yazıyor ama hiçbirini uygulamıyor, cevabı seçicideki model veriyor. Kullanmak için: `/gear on`.',
+          "autogear is in shadow: it writes its choices down but applies none, the picker's model answers. To use it: `/gear on`.",
+          'autogear gölgede: seçimlerini yazıyor ama hiçbirini uygulamıyor, cevabı seçicideki model veriyor. Kullanmak için: `/gear on`.',
         ),
       }
     case 'pin':
       return {
         level: 'fix',
-        text: L("gearbox is off: every request goes with the picker's model. To use it: `/gear on`.", 'gearbox kapalı: bütün istekler seçicideki modelle gidiyor. Kullanmak için: `/gear on`.'),
+        text: L("autogear is off: every request goes with the picker's model. To use it: `/gear on`.", 'autogear kapalı: bütün istekler seçicideki modelle gidiyor. Kullanmak için: `/gear on`.'),
       }
     case 'down':
       return {
         level: 'fix',
         text: L(
-          "gearbox stopped itself: its choices were not applied for several turns, so Claude Code may have changed its plugin API. Try `/gear on`; if it stops again, update gearbox.",
-          'gearbox kendini durdurdu: seçimleri üst üste birkaç tur uygulanmadı, Claude Code eklenti arayüzünü değiştirmiş olabilir. `/gear on` ile dene; yine durursa gearbox\'ı güncelle.',
+          "autogear stopped itself: its choices were not applied for several turns, so Claude Code may have changed its plugin API. Try `/gear on`; if it stops again, update autogear.",
+          'autogear kendini durdurdu: seçimleri üst üste birkaç tur uygulanmadı, Claude Code eklenti arayüzünü değiştirmiş olabilir. `/gear on` ile dene; yine durursa autogear\'ı güncelle.',
         ),
       }
   }
@@ -78,13 +78,13 @@ function pickerCheck(facts: Facts): Check {
     return {
       level: 'fix',
       text: L(
-        `The picker holds ${ceiling.display} · ${effort}. gearbox never goes above the picker, so it cannot use ${held ? 'Opus' : 'high effort'}. For full automation choose Opus · high in the model picker.`,
-        `Seçici ${ceiling.display} · ${effort} tutuyor. gearbox seçicinin üstüne çıkmaz, bu yüzden ${held ? 'Opus' : 'yüksek eforu'} kullanamaz. Tam otomatik için model seçicide Opus · high seç.`,
+        `The picker holds ${ceiling.display} · ${effort}. autogear never goes above the picker, so it cannot use ${held ? 'Opus' : 'high effort'}. For full automation choose Opus · high in the model picker.`,
+        `Seçici ${ceiling.display} · ${effort} tutuyor. autogear seçicinin üstüne çıkmaz, bu yüzden ${held ? 'Opus' : 'yüksek eforu'} kullanamaz. Tam otomatik için model seçicide Opus · high seç.`,
       ),
     }
   }
 
-  return { level: 'ok', text: L(`The picker holds ${ceiling.display} · ${effort}: gearbox has the whole range under it.`, `Seçici ${ceiling.display} · ${effort} tutuyor: gearbox'ın altında tüm aralık açık.`) }
+  return { level: 'ok', text: L(`The picker holds ${ceiling.display} · ${effort}: autogear has the whole range under it.`, `Seçici ${ceiling.display} · ${effort} tutuyor: autogear'ın altında tüm aralık açık.`) }
 }
 
 function versionCheck(facts: Facts): Check | undefined {
@@ -95,13 +95,13 @@ function versionCheck(facts: Facts): Check | undefined {
     return {
       level: 'fix',
       text: L(
-        `Claude Code ${facts.version} is newer than the newest version gearbox was tried on (${facts.testedThrough}). It keeps working unless its choices stop being applied; then it stops itself.`,
-        `Claude Code ${facts.version}, gearbox'ın denendiği en yeni sürümden (${facts.testedThrough}) yeni. Seçimleri uygulanmaz hâle gelmedikçe çalışmaya devam eder; gelirse kendini durdurur.`,
+        `Claude Code ${facts.version} is newer than the newest version autogear was tried on (${facts.testedThrough}). It keeps working unless its choices stop being applied; then it stops itself.`,
+        `Claude Code ${facts.version}, autogear'ın denendiği en yeni sürümden (${facts.testedThrough}) yeni. Seçimleri uygulanmaz hâle gelmedikçe çalışmaya devam eder; gelirse kendini durdurur.`,
       ),
     }
   }
 
-  return { level: 'ok', text: L(`Claude Code ${facts.version} is a version gearbox was tried on (up to ${facts.testedThrough}).`, `Claude Code ${facts.version}, gearbox'ın denendiği sürümlerden (en yeni ${facts.testedThrough}).`) }
+  return { level: 'ok', text: L(`Claude Code ${facts.version} is a version autogear was tried on (up to ${facts.testedThrough}).`, `Claude Code ${facts.version}, autogear'ın denendiği sürümlerden (en yeni ${facts.testedThrough}).`) }
 }
 
 function appliedChecks(facts: Facts): Check[] {
@@ -110,8 +110,8 @@ function appliedChecks(facts: Facts): Check[] {
     checks.push({
       level: 'fix',
       text: L(
-        `The last ${facts.mismatches} turn(s) were answered by another model than the one chosen; at ${facts.mismatchLimit} in a row gearbox stops itself.`,
-        `Son ${facts.mismatches} tur seçilenden başka bir modelle cevaplandı; üst üste ${facts.mismatchLimit} olursa gearbox kendini durdurur.`,
+        `The last ${facts.mismatches} turn(s) were answered by another model than the one chosen; at ${facts.mismatchLimit} in a row autogear stops itself.`,
+        `Son ${facts.mismatches} tur seçilenden başka bir modelle cevaplandı; üst üste ${facts.mismatchLimit} olursa autogear kendini durdurur.`,
       ),
     })
   } else if (facts.hasDecided) {
@@ -138,8 +138,8 @@ function envChecks(facts: Facts): Check[] {
     checks.push({
       level: 'fix',
       text: L(
-        `CLAUDE_CODE_EFFORT_LEVEL=${facts.env.effortLevel} is set in the environment: it can hold the effort for every request. Remove it if gearbox's effort choices do not show.`,
-        `Ortamda CLAUDE_CODE_EFFORT_LEVEL=${facts.env.effortLevel} ayarlı: bütün isteklerin eforunu sabitleyebilir. gearbox'ın efor seçimleri görünmüyorsa kaldır.`,
+        `CLAUDE_CODE_EFFORT_LEVEL=${facts.env.effortLevel} is set in the environment: it can hold the effort for every request. Remove it if autogear's effort choices do not show.`,
+        `Ortamda CLAUDE_CODE_EFFORT_LEVEL=${facts.env.effortLevel} ayarlı: bütün isteklerin eforunu sabitleyebilir. autogear'ın efor seçimleri görünmüyorsa kaldır.`,
       ),
     })
   }
@@ -191,7 +191,7 @@ export function doctorText(facts: Facts): string {
   const toFix = checks.filter(check => check.level === 'fix').length
 
   return [
-    `**gearbox doctor** · ${L('profile', 'profil')} ${profileName(facts.profile)}`,
+    `**autogear doctor** · ${L('profile', 'profil')} ${profileName(facts.profile)}`,
     '',
     toFix === 0 ? L('Nothing to fix.', 'Düzeltilecek bir şey yok.') : L(`${toFix} thing(s) to look at, marked ⚠.`, `Bakılacak ${toFix} şey var, ⚠ ile işaretli.`),
     '',

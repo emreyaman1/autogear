@@ -19,7 +19,7 @@ export type Settings = {
   footer: boolean
   // Show the on/off band above the prompt?
   band: boolean
-  // The language gearbox speaks: auto follows the system's.
+  // The language autogear speaks: auto follows the system's.
   lang: LangSetting
 }
 

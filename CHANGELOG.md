@@ -5,8 +5,8 @@ Each release, newest first. The evidence behind each change is in `docs/sonraki-
 ## 0.12.0 (18 October 2026)
 
 - The commands are English: `/gear on`, `off`, `shadow`, `savings`, `log`, `wrong`, `reset`, `profile saver|balanced|quality`, `haiku`, `ask`, `note`, `band`, `lang`, `doctor`. The old Turkish names keep working.
-- gearbox speaks English or Turkish; `auto` follows the system's language, `/gear lang` sets it.
-- One italic line under every answer, with gearbox on, in shadow or off: the model that answered, its effort, the helpers' models. The reasons and the money moved to `/gear`, `/gear log` and `/gear savings`.
+- autogear speaks English or Turkish; `auto` follows the system's language, `/gear lang` sets it.
+- One italic line under every answer, with autogear on, in shadow or off: the model that answered, its effort, the helpers' models. The reasons and the money moved to `/gear`, `/gear log` and `/gear savings`.
 - `/gear doctor` checks the setup and says what to fix.
 - Tested through Claude Code 2.1.299.
 

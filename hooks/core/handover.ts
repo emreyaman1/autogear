@@ -1,5 +1,5 @@
 // Moving a large conversation to a clean one: when a piece of work has just
-// finished, gearbox offers a hand-over note and a /clear; the note goes with
+// finished, autogear offers a hand-over note and a /clear; the note goes with
 // the first prompt of the clean conversation.
 
 import { L } from './text'
