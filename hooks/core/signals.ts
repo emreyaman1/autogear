@@ -656,7 +656,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   const sentences = raw.match(SENTENCE_END)?.length ?? 0
   const isCounted = SCALE_NUMBER.test(rest)
   const isSequenced = words.SEQUENCE.test(rest)
-  if (length > DESCRIBED_LENGTH && sentences >= 2 && ((isCounted && isSequenced) || (sentences >= 3 && (length > MID_LENGTH || isCounted || isSequenced)))) {
+  if (length > DESCRIBED_LENGTH && sentences >= 2 && ((isCounted && isSequenced) || (sentences >= 3 && length > MID_LENGTH && (isCounted || isSequenced)))) {
     return rule(3, 'low', ['uzun, çok cümleli iş tarifi'], 'work')
   }
 

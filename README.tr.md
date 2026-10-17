@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer: kendi ölçümlerinde güçlü model, ucuzunun çözemediği hiçbir işi çözmedi; bu yüzden Opus kritik işe, plan moduna ve senin istediğin duruma ayrılır.
 
-> Durum: 0.10.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.11.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Ne sağlar
 
@@ -173,25 +173,27 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 
 \* Zor bir işi (T3+) T0/T1'e ya da iki kademe aşağı koymak. Not: ayardan önce ayrılan kümenin hataları bir kez görüldü ve yeni kümedeki hatalar "emin değilse sor" eşiğini etkiledi; gerçek isabet bir miktar düşük olabilir. 0.6'nın sınırı burada bir mesaja mal oluyor ("bu import neden kullanılıyor?" artık T0 değil T1) ve aşağıdaki gerçek kullanım hatalarını önleyen de o.
 
-**Başka diller** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --languages`): aynı 143 etiketli mesaj sekiz dilde, her küme baştan sona tek dilde, etiketler aynı; kod ve hata çıktısı çevrilmedi. Çeviriler Claude'un; bir anadil konuşmacısı kontrol etmedi. gearbox çalıştığı gibi (0.9.1): kurallar; kurallar emin değilse ya da mesaj Türkçe veya İngilizce değilse Haiku, kuralın alt sınırına bağlı. 17 Ekim 2026, 851 Haiku sorusu, liste fiyatıyla $0,43.
+**Başka diller** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --held`): sekiz dilde yazılmış ve işin gerektirdiğine göre etiketlenmiş mesajlar; kod ve hata çıktısı yazıldığı gibi bırakıldı. gearbox çalıştığı gibi (0.11.0): Türkçe ve İngilizcenin yanında İspanyolca, Almanca, Fransızca, Rusça, Çince ve Japoncayı okuyan kurallar; kurallar emin değilse ya da mesaj Türkçe veya İngilizce değilse Haiku, kuralın alt sınırına bağlı. Aşağıdaki sayılar, kuralları ve kelime listelerini görmeyen başka bir modelin yazdığı kümeye ait: dil başına 24 mesaj, her dilin kendi mesajları, ayar yapılmadan önce bir kez okundu. 17 Ekim 2026, 139 Haiku sorusu, liste fiyatıyla $0,08. Etiketler o modelin; bir kişi kontrol etmedi.
 
 | Dil | Kurallar: ±1 kademe | Kurallar: ciddi hata* | gearbox: tam isabet | gearbox: ±1 kademe | gearbox: ciddi hata* | Haiku'ya sorulan |
 |---|---|---|---|---|---|---|
-| Türkçe | %97 | 4 | %92 | %100 | 0 | %16 |
-| İngilizce | %92 | 9 | %86 | %99 | 0 | %21 |
-| İspanyolca | %73 | 35 | %69 | %98 | 2 | %95 |
-| Almanca | %75 | 34 | %64 | %97 | 5 | %94 |
-| Fransızca | %77 | 30 | %61 | %94 | 7 | %94 |
-| Rusça | %67 | 47 | %68 | %100 | 0 | %97 |
-| Çince | %67 | 46 | %54 | %97 | 4 | %97 |
-| Japonca | %67 | 46 | %63 | %97 | 3 | %96 |
+| Türkçe | %83 | 2 | %67 | %92 | 0 | %33 |
+| İngilizce | %92 | 0 | %75 | %92 | 0 | %8 |
+| İspanyolca | %88 | 2 | %79 | %96 | 0 | %88 |
+| Almanca | %83 | 2 | %79 | %100 | 0 | %83 |
+| Fransızca | %92 | 1 | %79 | %96 | 0 | %83 |
+| Rusça | %83 | 2 | %71 | %96 | 0 | %88 |
+| Çince | %92 | 2 | %54 | %100 | 0 | %96 |
+| Japonca | %92 | 1 | %71 | %100 | 0 | %92 |
 
 Ne gösteriyor, önce aleyhte olanlar:
 
-- **Türkçe ve İngilizce dışında kurallar işlemiyor; gearbox orada Haiku demek:** mesajların %94–97'si Haiku'ya soruluyor. Her biri bir Haiku çağrısı (liste fiyatıyla yaklaşık $0,0005) ve onun beklemesi.
-- **Hedef (±1 kademe en az %90, ciddi hata en çok %2) Türkçe, İngilizce, Rusça ve İspanyolcada tutuyor; Japonca (143'te 3), Çince (4), Almanca (5) ve Fransızcada (7) ciddi hatada tutmuyor.** Hepsi kuralların emin olmadığı bir mesajda Haiku'nun cevabı ve daha önce görülen türlerden: soru gibi sorulan bir yarış durumu (çift tıklama iki sipariş açıyor, bir kupon iki kez kullanılıyor), ayrıntısız "hâlâ bozuk" şikâyeti, bir tasarım sorusu (veritabanı şeması, Redux mu Zustand mı), sıfırdan büyük bir iş iki kademe aşağıda (bir CRM, bir yönetim paneli). Haiku aynı mesajı dilden dile farklı değerlendiriyor: CRM yalnızca Almanca ve Fransızcada ciddi hata.
-- Tam isabet %86–92'den %54–69'a düşüyor, çoğu bir kademe aşağı: bu dillerde gearbox ucuz tarafa kayıyor.
-- Türkçe ve İngilizce kümelerde kuralların ayarlandığı 66 mesaj da var; o satırlar kuralları olduğundan iyi gösterir. Tek ölçüm; Haiku'nun cevapları çalıştırmadan çalıştırmaya değişir.
+- **Türkçe ve İngilizce dışında kurallar tek başına güvenilir değil:** ilk okumada %83–92 ±1 kademe ve 24 mesajda bir ya da iki ciddi hata; bu yüzden gearbox bu dillerde çoğunlukla Haiku demek (mesajların %83–96'sı soruluyor, her biri yaklaşık $0,0005'lik bir Haiku çağrısı ve onun beklemesi). Bu çalışmadan önce (0.9.1) çevrilmiş 143 mesajlık küme Almanca, Fransızca, Çince ve Japoncada 2–7 ciddi hata veriyordu.
+- **Haiku ile hedef (±1 kademe en az %90, ciddi hata en çok %2) bu kümede her dilde tutuyor,** hiç ciddi hata yok. 24 mesaj az: bir hata dört puan.
+- **Tam isabet daha düşük, %54–79:** Haiku bir mesajı kurallardan daha sık bir kademe aşağı çekiyor (en çok Çince: %54). Kurallar tek başına burada gearbox'tan daha sık tam bulur, ama karşılaşmadıkları cümle biçimlerinde ağır kaçırır; o yüzden Haiku kalıyor.
+- Aynı yolla yazılmış önceki bir küme (bir kez okundu, sonra ayar yapıldı) ilk okumada aynı resmi verdi: ±1 kademe %92–100, bir ciddi hata (İspanyolca). İki küme de okunduktan sonra ayar yapıldı; bu yüzden kuralların onlardaki şimdiki sayıları yüksek ve bir şey ifade etmiyor.
+- Uzun İngilizce görev metinleri (SWE-bench Verified, Terminal-Bench; `node eval/external.mjs`): kurallar uzun, sayı veren ya da adım adım bir tarifi T3'e koyup Haiku'ya soruyor. Terminal-Bench'te ciddi hata %7'den %4'e indi; ±1 kademe SWE-bench'te %83'ten %78'e, Terminal-Bench'te %76'dan %75'e düştü, daha çok görev bir kademe fazla yüksek konuyor.
+- 143 mesajın çevirileri Claude'un; bir anadil konuşmacısı kontrol etmedi.
 
 **Gerçek kullanım**: gearbox'ın 11-16 Ekim 2026 arasında 11 oturumda verdiği 49 karar. Her biri, işin sonradan ne çıktığına bakılarak etiketlendi (tek bir kişinin yargısı, bir kurulun değil). gearbox'ın o gün seçtiği, ve aynı mesajların 0.6 ile yeniden oynatılması:
 
