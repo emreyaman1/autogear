@@ -41,15 +41,9 @@ export const MAX_ENTRIES = 200
 const SNIPPET = 100
 const SHOWN = 25
 
-// Getters, so a name is read in the language in use when it is shown.
-const MARK_NAMES: Record<Mark, string> = {
-  get zayif() {
-    return L('was too weak', 'çok zayıftı')
-  },
-  get fazla() {
-    return L('was stronger than needed', 'gereğinden güçlüydü')
-  },
-}
+// A mark as said, in the language in use when it is shown.
+export const markName = (mark: Mark): string =>
+  mark === 'zayif' ? L('was too weak', 'çok zayıftı') : L('was stronger than needed', 'gereğinden güçlüydü')
 
 const record = (value: unknown): Record<string, unknown> => (typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {})
 
@@ -175,7 +169,7 @@ export function journalText(entries: readonly Entry[]): string {
           ]
         : []
     const planning = entry.isPlanning === true ? [L('plan mode', 'plan modu')] : []
-    const notes = [...planning, ...shadow, ...entry.flags.map(flagText), ...(entry.mark === undefined ? [] : [`${L('you', 'siz')}: ${MARK_NAMES[entry.mark]}`])].join('; ')
+    const notes = [...planning, ...shadow, ...entry.flags.map(flagText), ...(entry.mark === undefined ? [] : [`${L('you', 'siz')}: ${markName(entry.mark)}`])].join('; ')
 
     const wanted = entry.wanted === undefined ? '' : ` (${L('without the ceiling', 'tavansız')} ${FAMILY_NAMES[entry.wanted.family]} · ${entry.wanted.effort})`
 
@@ -219,4 +213,3 @@ export function journalText(entries: readonly Entry[]): string {
     .join('\n')
 }
 
-export { MARK_NAMES }

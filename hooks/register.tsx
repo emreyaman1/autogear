@@ -15,7 +15,7 @@ import { savingsCard, type LimitRow } from './card'
 import { doctorText, type Facts } from './core/doctor'
 import { cleanNote, dayOf, handoverContext, HANDOVER_TOKENS, isWorkDone, notePrompt, resumeLine } from './core/handover'
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
-import { addEntry, flagLast, journalText, markLast, MARK_NAMES, readJournal, snippet, type Mark } from './core/journal'
+import { addEntry, flagLast, journalText, markLast, markName, readJournal, snippet, type Mark } from './core/journal'
 import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort, type Family } from './core/models'
 import { pace, paceWarning } from './core/pacing'
 import { decide, type Decision } from './core/policy'
@@ -24,7 +24,7 @@ import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from '
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
 import { readRule, settle, type Task } from './core/settle'
-import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, badgeSvg, badgeWidth } from './core/switch'
+import { BADGE_COLORS, BADGE_HEIGHT, badgeName, badgeSvg, badgeWidth } from './core/switch'
 import { asLangSetting, getLang, L, pct, profileName, reasonText, resolveLang, setLang, sourceText, systemLocale, tierName } from './core/text'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { isNewerThan, TESTED_THROUGH } from './core/version'
@@ -748,8 +748,8 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
 
     return {
       text: L(
-        `Marked: for "${entry.text}", ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${MARK_NAMES[mark]}.`,
-        `İşaretlendi: "${entry.text}" için ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${MARK_NAMES[mark]}.`,
+        `Marked: for "${entry.text}", ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${markName(mark)}.`,
+        `İşaretlendi: "${entry.text}" için ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${markName(mark)}.`,
       ),
     }
   }
@@ -1109,7 +1109,7 @@ export const register: Register = on => {
         <Box>
           <Text dimColor>⚙ autogear </Text>
           <Text backgroundColor={BADGE_COLORS[mode]} color="#ffffff" bold>
-            {` ${mode === 'pin' ? '○' : '●'} ${BADGE_NAMES[mode]} `}
+            {` ${mode === 'pin' ? '○' : '●'} ${badgeName(mode)} `}
           </Text>
           <Text dimColor> {note} </Text>
           {warning !== '' && <Text color="warning">⚠ {warning} </Text>}

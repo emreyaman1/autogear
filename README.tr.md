@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer: kendi ölçümlerinde güçlü model, ucuzunun çözemediği hiçbir işi çözmedi; bu yüzden Opus kritik işe, plan moduna ve senin istediğin duruma ayrılır.
 
-> Durum: 0.12.1. Claude Code için bir Mod; eklenti API'sinin function hooks'una dayanır, o API Claude Code sürümleri arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var. Sürüm notları: [CHANGELOG.md](CHANGELOG.md). Neyi sakladığı ve neyi gönderdiği: [Gizlilik](#gizlilik).
+> Durum: 0.12.2. Claude Code için bir Mod; eklenti API'sinin function hooks'una dayanır, o API Claude Code sürümleri arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var. Sürüm notları: [CHANGELOG.md](CHANGELOG.md). Neyi sakladığı ve neyi gönderdiği: [Gizlilik](#gizlilik).
 
 ![autogear 28 saniyede: her mesaj ihtiyacı olan modeli alır, seçicinin üstüne çıkılmaz](docs/demo/autogear-demo.gif)
 
@@ -370,6 +370,25 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] İngilizce komutlar, İngilizce ya da Türkçe konuşma, her cevabın altında cevabı veren modeli söyleyen tek italik satır ve `/gear doctor` (0.12)
 - [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
 - [ ] Günlükteki düzeltmelerden öğrenme
+
+## Neye bağlanır, ne çalıştırır
+
+autogear tek bir hooks modülüdür (`hooks/register.tsx`). Bağlandığı olaylar ve her birinde yaptığı:
+
+- **`prompt.submit`**: gönderdiğin her mesajı sınıflamak için okur. Baştaki seçimi (`+opus`) model görmeden siler; **temiz sohbet**e bastıysan devir notunu ilk mesajına bir kez ekler. Mesajda başka hiçbir şey değişmez.
+- **`turn.step`**: ana sohbetteki her model isteğinden hemen önce autogear'ın seçtiği modeli ve eforu koyar. Yardımcıların (alt ajanların) istekleri değişmeden geçer; yalnızca modelleri cevabın altındaki satır için not edilir.
+- **`turn.complete`**: cevabı hangi modelin verdiğini ve kullandığı tokenları okur (kendini denetleme ve tasarruf için) ve cevabın altına italik satırı ekler.
+- **`tool.call`** (yalnızca Bash): bir komut çalıştıktan sonra, ana sohbetteki bir test, derleme, commit ya da push'un geçip geçmediğini okur (kartopu freni ve temiz sohbet önerisi için). Hiçbir komutu değiştirmez ya da durdurmaz.
+- **`session.append`** (yalnızca ekler): Claude Code'un plan modunda eklediği notları okur, plan modunun açık olduğunu bilmek için.
+- **`session.start`**, **`session.end`**: ayarları yükler; bir `/clear` olduğunu not eder.
+- **`ui.render`**: istem üstündeki durum satırını, devir notu panelini ve `/gear savings` kartını çizer.
+- **`command.run`** (`gear`): `/gear`'ı cevaplar.
+
+Kendi başına çağırdıkları:
+
+- **Tek bir eğik çizgi komutu, `/clear`**; o da yalnızca durum satırında **temiz sohbet**e bastığında. autogear başka hiçbir komut çalıştırmaz.
+- **Bir model**, Claude Code üzerinden: kurallar emin olamayınca Haiku, devir notu için oturumun modeli (bkz. Gizlilik).
+- **Kendi deposu** (ayarlar, günlük, toplamlar), durum yazısı, kısa bildirimler ve `/gear doctor` için iki ortam değişkeni (bkz. Gizlilik).
 
 ## Gizlilik
 

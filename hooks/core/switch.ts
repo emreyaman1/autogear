@@ -13,21 +13,9 @@ export const BADGE_HEIGHT = 22
 // slate, stood down amber (its choices stopped taking effect).
 export const BADGE_COLORS: Record<AutogearMode, string> = { auto: '#16a34a', shadow: '#7c3aed', pin: '#64748b', down: '#d97706' }
 
-// Getters, so a name is read in the language in use when it is drawn.
-export const BADGE_NAMES: Record<AutogearMode, string> = {
-  get auto() {
-    return L('ON', 'AÇIK')
-  },
-  get shadow() {
-    return L('SHADOW', 'GÖLGE')
-  },
-  get pin() {
-    return L('OFF', 'KAPALI')
-  },
-  get down() {
-    return L('STOPPED', 'DURDU')
-  },
-}
+// A state's name, in the language in use when it is drawn.
+export const badgeName = (mode: AutogearMode): string =>
+  mode === 'auto' ? L('ON', 'AÇIK') : mode === 'shadow' ? L('SHADOW', 'GÖLGE') : mode === 'pin' ? L('OFF', 'KAPALI') : L('STOPPED', 'DURDU')
 
 const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
 
@@ -37,7 +25,7 @@ const DOT_ROOM = 20
 const END_ROOM = 10
 
 export function badgeWidth(mode: AutogearMode): number {
-  return Math.round(DOT_ROOM + BADGE_NAMES[mode].length * CAPITAL + END_ROOM)
+  return Math.round(DOT_ROOM + badgeName(mode).length * CAPITAL + END_ROOM)
 }
 
 // Each state's motion, as CSS: it runs where the Svg is drawn interactive and
@@ -67,7 +55,7 @@ export function badgeSvg(mode: AutogearMode): string {
     `<rect width="${width}" height="${BADGE_HEIGHT}" rx="${radius}" fill="${color}"/>`,
     `<rect width="${width}" height="${BADGE_HEIGHT}" rx="${radius}" fill="url(#sheen)"/>`,
     dot,
-    `<text x="${DOT_ROOM}" y="${radius + 3.5}" font-family="${FONT}" font-size="10" font-weight="600" letter-spacing=".5" fill="#fff">${BADGE_NAMES[mode]}</text>`,
+    `<text x="${DOT_ROOM}" y="${radius + 3.5}" font-family="${FONT}" font-size="10" font-weight="600" letter-spacing=".5" fill="#fff">${badgeName(mode)}</text>`,
     '</svg>',
   ].join('')
 }

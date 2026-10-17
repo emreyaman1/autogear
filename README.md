@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code. For every message autogear picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer: in its own measurements the strong model solved nothing the cheaper one could not, so Opus is kept for critical work, plan mode and when you ask for it.
 
-> Status: 0.12.1. A Claude Code Mod, built on the plugin API's function hooks, which can change between Claude Code releases. The safety nets below exist for that reason. Release notes: [CHANGELOG.md](CHANGELOG.md). What it keeps and what it sends: [Privacy](#privacy).
+> Status: 0.12.2. A Claude Code Mod, built on the plugin API's function hooks, which can change between Claude Code releases. The safety nets below exist for that reason. Release notes: [CHANGELOG.md](CHANGELOG.md). What it keeps and what it sends: [Privacy](#privacy).
 
 ![autogear in 28 seconds: each message gets the model it needs, never above your picker](docs/demo/autogear-demo.gif)
 
@@ -304,7 +304,7 @@ What it shows, the unflattering part first:
 | `hooks/core/switch.ts` | the drawing of the state badge |
 | `hooks/core/version.ts` | the newest Claude Code version it was tested on |
 | `docs/` | `sonraki-adimlar.md` (open steps and decisions, in Turkish) and `demo/` (the animation above and how it is made) |
-| `tests/` | rules, policy, prices and savings; the router against a mock engine; the classifier eval |
+| `tests/` | rules, policy, prices and savings; the router against a mock engine; the classifier measurement |
 | `eval/` | classifier measurement, the external benchmarks (`external.mjs`) and the output-quality tasks |
 | `scripts/` | the live smoke test; `harvest.mjs`, which gathers autogear's decisions from your transcripts |
 
@@ -370,6 +370,25 @@ Restart the app and open a new chat.
 - [x] English commands, English or Turkish speech, one italic line under every answer naming the model that answered, and `/gear doctor` (0.12)
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
 - [ ] Learning from the log's corrections
+
+## What it hooks and runs
+
+autogear is one hooks module (`hooks/register.tsx`). The events it hooks, and what each does:
+
+- **`prompt.submit`**: reads each message you send, to classify it. It takes a leading override (`+opus`) off before the model sees the message, and after you press **clean conversation** it adds the hand-over note to your first message, once. Nothing else in a message is changed.
+- **`turn.step`**: right before each model request of the main conversation, sets the model and effort autogear chose. Requests of helpers (subagents) pass unchanged; only their model is noted for the line under the answer.
+- **`turn.complete`**: reads which model answered and the tokens it used, for the self-check and the savings, and adds the italic line under the answer.
+- **`tool.call`** (Bash only): after a command has run, reads whether a test, build, commit or push in the main conversation passed or failed, for the snowball brake and the clean-conversation offer. It never changes or blocks a command.
+- **`session.append`** (attachments only): reads the notes Claude Code adds in plan mode, to know plan mode is on.
+- **`session.start`**, **`session.end`**: loads the settings; notes that a `/clear` happened.
+- **`ui.render`**: draws the state row above the prompt, the hand-over note pane and the `/gear savings` card.
+- **`command.run`** (`gear`): answers `/gear`.
+
+What it calls on its own:
+
+- **One slash command, `/clear`**, and only when you press **clean conversation** on the state row. autogear runs no other command.
+- **A model**, through Claude Code: Haiku when the rules are unsure, and the session's model for the hand-over note (see Privacy).
+- **Its store** (settings, log, totals), the status text, short notices, and two environment variables for `/gear doctor` (see Privacy).
 
 ## Privacy
 

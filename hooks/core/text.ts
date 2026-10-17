@@ -20,14 +20,10 @@ export const getLang = (): Lang => current
 // One line, in the language in use.
 export const L = (en: string, tr: string): string => (current === 'tr' ? tr : en)
 
-type Global = { AUTOGEAR_LANG?: string; process?: { env?: Record<string, string | undefined> } }
-
-// An AUTOGEAR_LANG global (the tests set it) or environment variable, else the
-// system's language. Claude Code's own `language` setting is not offered to a
-// Mod, so it is not read.
+// An AUTOGEAR_LANG global (the tests set it), else the system's language.
+// Claude Code's own `language` setting is not offered to a Mod, so it is not read.
 export function systemLocale(): string | undefined {
-  const here = globalThis as Global
-  const forced = here.AUTOGEAR_LANG ?? here.process?.env?.AUTOGEAR_LANG
+  const forced = (globalThis as { AUTOGEAR_LANG?: string }).AUTOGEAR_LANG
   if (forced !== undefined && forced !== '') {
     return forced
   }

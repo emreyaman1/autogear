@@ -8,7 +8,7 @@ import { addEntry, flagLast, journalText, markLast, MAX_ENTRIES, readJournal, sn
 import { applyCommand, DEFAULTS, readSettings, readStats } from '../hooks/core/settings'
 import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
 import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
-import { BADGE_COLORS, BADGE_HEIGHT, BADGE_NAMES, badgeSvg, badgeWidth } from '../hooks/core/switch'
+import { BADGE_COLORS, BADGE_HEIGHT, badgeName, badgeSvg, badgeWidth } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 import { isNewerThan } from '../hooks/core/version'
 
@@ -348,7 +348,7 @@ describe('badgeSvg', () => {
     for (const mode of modes) {
       const svg = badgeSvg(mode)
       expect(svg).toContain(`<rect width="${badgeWidth(mode)}" height="${BADGE_HEIGHT}" rx="${BADGE_HEIGHT / 2}" fill="${BADGE_COLORS[mode]}"/>`)
-      expect(svg).toContain(`>${BADGE_NAMES[mode]}</text>`)
+      expect(svg).toContain(`>${badgeName(mode)}</text>`)
     }
     expect(badgeWidth('pin')).toBeGreaterThan(badgeWidth('auto'))
   })

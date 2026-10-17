@@ -8,10 +8,6 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 
-// Set on every run this file starts. Its runs never start more: a run that
-// could reach this file again would copy and start itself without end.
-const INNER = 'GEARBOX_MUTANT_RUN'
-
 // Bugs the tests Claude wrote must catch, each one alone: a test run on the
 // changed code has to fail. The project's own shop.test.js is left out, so
 // only the new tests count.
@@ -28,7 +24,10 @@ const isHidden = file => file.includes('.hidden.')
 
 const theirTests = readdirSync(join(ROOT, 'test')).filter(file => file.endsWith('.js') && file !== 'shop.test.js' && !isHidden(file))
 
-if (process.env[INNER] === undefined) {
+// AUTOGEAR_MUTANT_RUN is set on every run this file starts. Its runs never
+// start more: a run that could reach this file again would copy and start
+// itself without end.
+if (process.env.AUTOGEAR_MUTANT_RUN === undefined) {
   test('the source was left as it was', () => {
     for (const [file, before] of MUTANTS) {
       assert.ok(readFileSync(join(ROOT, file), 'utf8').includes(before), `${file} changed`)
@@ -56,7 +55,7 @@ if (process.env[INNER] === undefined) {
         const run = spawnSync(process.execPath, ['--test', ...theirTests.map(name => join('test', name))], {
           cwd: copy,
           encoding: 'utf8',
-          env: { ...env, [INNER]: '1' },
+          env: { ...env, AUTOGEAR_MUTANT_RUN: '1' },
           timeout: 30_000,
         })
         assert.equal(run.error, undefined, 'the run did not finish')
