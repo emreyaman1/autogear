@@ -1,7 +1,7 @@
 {
   "name": "autogear",
   "version": "0.12.0",
-  "description": "Picks the model and effort for every prompt automatically, never above what the picker holds.",
+  "description": "Automatic gear shifting for Claude Code: picks the model and effort each message needs, never above your model picker, so your usage limits last longer.",
   "author": {
     "name": "Yunus Emre Yaman"
   },
