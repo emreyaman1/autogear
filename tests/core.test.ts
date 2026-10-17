@@ -612,9 +612,15 @@ describe('what real use taught (0.6)', () => {
     expect(namedChoice("bunu opus'la yap")?.override).toEqual({ family: 'opus' })
     expect(namedChoice('max eforla düzelt')?.override).toEqual({ effort: 'max' })
     expect(namedChoice('please use opus for this')?.override).toEqual({ family: 'opus' })
+    // The README's English examples.
+    expect(namedChoice('switch to sonnet at max')?.override).toEqual({ family: 'sonnet', effort: 'max' })
+    expect(namedChoice('go with haiku')?.override).toEqual({ family: 'haiku' })
+    expect(namedChoice('max effort on this one')?.override).toEqual({ effort: 'max' })
     expect(namedChoice('haiku low ile yaptı ve o modele güvenmiyorum')).toBeUndefined()
     expect(namedChoice('opus ile sonnet arasındaki fark ne?')).toBeUndefined()
     expect(namedChoice('opus pahalı mı?')).toBeUndefined()
+    expect(namedChoice('haiku did that')).toBeUndefined()
+    expect(namedChoice('is opus expensive?')).toBeUndefined()
   })
 })
 

@@ -183,7 +183,7 @@ export function savingsText(session: Totals, all: Totals, since: number | undefi
       ? undefined
       : L(
           `Counting since ${new Date(since).toLocaleDateString('en-US')}; /gear reset clears it.`,
-          `Sayım ${new Date(since).toLocaleDateString('tr-TR')} tarihinden beri; /gear sifirla ile sıfırlanır.`,
+          `Sayım ${new Date(since).toLocaleDateString('tr-TR')} tarihinden beri; /gear reset ile sıfırlanır.`,
         ),
   ]
     .filter(line => line !== undefined)

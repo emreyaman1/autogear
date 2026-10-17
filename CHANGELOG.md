@@ -2,6 +2,13 @@
 
 Each release, newest first. The evidence behind each change is in `docs/sonraki-adimlar.md` (Turkish) and in the README's Measurements.
 
+## 0.12.1 (18 October 2026)
+
+- After a `/clear` the state row showed autogear as on whatever its state; it now shows the state autogear is in.
+- `/gear doctor` now sees `CLAUDE_CODE_EFFORT_LEVEL` and `CLAUDE_CODE_SUBAGENT_MODEL`; before, that check never ran.
+- The Turkish texts name the English commands (`/gear wrong`, `/gear reset`); an effort asked for in words shows in English in `/gear`.
+- README: the Turkish examples in the English README are in English, the measurements say which version they were taken on, the clean-conversation press is tried, and the privacy section names the two environment variables `/gear doctor` reads.
+
 ## 0.12.0 (18 October 2026)
 
 - The commands are English: `/gear on`, `off`, `shadow`, `savings`, `log`, `wrong`, `reset`, `profile saver|balanced|quality`, `haiku`, `ask`, `note`, `band`, `lang`, `doctor`. The old Turkish names keep working.
@@ -20,7 +27,7 @@ Each release, newest first. The evidence behind each change is in `docs/sonraki-
 
 ## 0.9.x (17 October 2026)
 
-- In `tasarruf`, hard work runs on Sonnet · high; Opus is kept for critical work, plan mode and when you ask. A large conversation never steps down to a cheaper model.
+- In `saver`, hard work runs on Sonnet · high; Opus is kept for critical work, plan mode and when you ask. A large conversation never steps down to a cheaper model.
 
 ## 0.8.x (17 October 2026)
 

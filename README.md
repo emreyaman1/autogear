@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code. For every message autogear picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer: in its own measurements the strong model solved nothing the cheaper one could not, so Opus is kept for critical work, plan mode and when you ask for it.
 
-> Status: 0.12.0. A Claude Code Mod, built on the plugin API's function hooks, which can change between Claude Code releases. The safety nets below exist for that reason. Release notes: [CHANGELOG.md](CHANGELOG.md). What it keeps and what it sends: [Privacy](#privacy).
+> Status: 0.12.1. A Claude Code Mod, built on the plugin API's function hooks, which can change between Claude Code releases. The safety nets below exist for that reason. Release notes: [CHANGELOG.md](CHANGELOG.md). What it keeps and what it sends: [Privacy](#privacy).
 
 ![autogear in 28 seconds: each message gets the model it needs, never above your picker](docs/demo/autogear-demo.gif)
 
@@ -42,7 +42,7 @@ claude plugin marketplace add <path to your copy of the repository>
 claude plugin install autogear@autogear
 ```
 
-It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295 and 2.1.299; the live smoke test passed on 2.1.299). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build autogear does not load at all and cannot say why; 2.1.278 refuses 0.7 as well as 0.8. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
+It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295 and 2.1.299; the live smoke test passed on 2.1.299). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build autogear does not load at all and cannot say why; 2.1.278 refuses every version since 0.7. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
 
 ## Using it
 
@@ -52,13 +52,13 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 
 **Shadow mode.** `/gear shadow` lets autogear choose without applying the choice: every request goes out as the picker says, and autogear writes what it would have picked in its log and on the state row (`Haiku · low · T0 would choose`). The line under the answer says only which model answered. The picker is the ceiling here too; when it cut the choice, both are written to the log (`Sonnet · high (without the ceiling Opus · high)`), so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear wrong` still marks its choices. `/gear on` turns routing back on.
 
-**Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. autogear sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") counts as hard work (T3). The line under the answer says `plan mode` and the log says so too.
+**Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. autogear sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("make a plan", "how should we approach this", "a roadmap for the release", "plan the migration") counts as hard work (T3). The line under the answer says `plan mode` and the log says so too.
 
-**A clean conversation (0.10, first version).** Every step of a turn sends the whole conversation again, so a large one costs more on every message. When the conversation is past 150K tokens and a piece of work has just finished (a commit or push, or a passing test run), the row above the prompt offers a clean one: `Preparing the hand-over note…` while the note is written, then `Hand-over note ready · conversation 180K tokens` with **clean conversation**, **see note** and **×**. The offer stays while you write on, until you press one of them or a newer note replaces it. autogear has the model write a short hand-over note (project, last commit, what was done, what is open, your rules, what to read); **see note** shows it, **clean conversation** runs `/clear` and sends the note, unseen, with your next message. Nothing is cleared unless you press it, and the old conversation stays on disk: the note ends with the `claude --resume` line that opens it again. Tried once in a real conversation: the offer and the note work; the **clean conversation** press has not been tried there yet.
+**A clean conversation (0.10, first version).** Every step of a turn sends the whole conversation again, so a large one costs more on every message. When the conversation is past 150K tokens and a piece of work has just finished (a commit or push, or a passing test run), the row above the prompt offers a clean one: `Preparing the hand-over note…` while the note is written, then `Hand-over note ready · conversation 180K tokens` with **clean conversation**, **see note** and **×**. The offer stays while you write on, until you press one of them or a newer note replaces it. autogear has the model write a short hand-over note (project, last commit, what was done, what is open, your rules, what to read); **see note** shows it, **clean conversation** runs `/clear` and sends the note, unseen, with your next message. Nothing is cleared unless you press it, and the old conversation stays on disk: the note ends with the `claude --resume` line that opens it again. Tried in a real desktop conversation of 447K tokens: the offer, the note and the press work, and the clean conversation began without the old one, carrying only the note. Right after the press the desktop app still shows the old messages above and may show the old size in its context box; what goes to the model is the clean conversation.
 
 **Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap` (T0), `+deep` (T4). Writing `ultrathink` means T4.
 
-Or say it in words: "bu görevi sonnet'e max ile ver", "opus ile yap", "opus, sen de bak", "use opus" pick the model, and the effort when one is named, for that message. Talking about a model ("haiku ile yaptı", "opus pahalı mı?") picks nothing. A choice made in words, like a token, may go above the picker.
+Or say it in words: "use opus", "switch to sonnet at max", "go with haiku", "max effort" pick the model, and the effort when one is named, for that message (the Turkish forms work too). Talking about a model ("haiku did that", "is opus expensive?") picks nothing. A choice made in words, like a token, may go above the picker.
 
 **Commands.**
 
@@ -114,7 +114,7 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
 | T3 located hunt | a bug told plainly whose cause hides (it comes and goes, it shows far from where it starts), tests written to catch bugs nobody has found yet | Sonnet · high (xhigh at T4) |
 | T4 critical | long multi-step work, repeated failure | Opus · high |
 
-Profiles: `saver` (for Pro; stored and still accepted as `tasarruf`), `balanced` (`dengeli`) and `quality` (`kalite`) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a located hunt on Sonnet · high, and no tier runs at max unless you ask for it (`+max`, "max ile"). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that autogear's own comparison is to check. In that comparison (Measurements) Sonnet · medium passed every hunt Opus · high passed, which is why a located hunt now goes to Sonnet at more effort. In `saver` hard work and a vague hunt now run on Sonnet · high as well: over twenty tasks, two sets, Opus solved none that Sonnet · medium failed, at 3.6 times the cost. `balanced` and `quality` keep Opus for hard work.
+Profiles: `saver` (for Pro; stored and still accepted as `tasarruf`), `balanced` (`dengeli`) and `quality` (`kalite`) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a located hunt on Sonnet · high, and no tier runs at max unless you ask for it (`+max`, or "max effort" in words). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that autogear's own comparison is to check. In that comparison (Measurements) Sonnet · medium passed every hunt Opus · high passed, which is why a located hunt now goes to Sonnet at more effort. In `saver` hard work and a vague hunt now run on Sonnet · high as well: over twenty tasks, two sets, Opus solved none that Sonnet · medium failed, at 3.6 times the cost. `balanced` and `quality` keep Opus for hard work.
 
 A bug report counts as clear when it holds the error, a file, code, a number, the moment it happens ("when I click...") or what should happen instead; a screenshot beside it counts too.
 
@@ -181,11 +181,13 @@ Dollars per million tokens. A Haiku prompt over 100K tokens costs five times as 
 | **Rules, Haiku when unsure, held to the rules' signs (0.6)** | **88%** | **100%** | **0** | **19%** |
 | Always Haiku, take the higher | 74% | 96% | 0 | 100% |
 
-How the 143 labelled messages are routed, by the rules alone, with the picker on Opus · high (0.8, `saver`; `claude plugin test .` prints it as `EVAL route`): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Sonnet · high 26, T3 located hunt Sonnet · high 10, T4 Opus · high 13. Until 0.7 the 33 standard ones ran on Sonnet · high and the 10 hunts on Opus · medium; the tiers themselves did not change.
+The table is from 0.5 and 0.6, as its rows say. The rules have changed since; the same 77 messages now give 88% exact, 99% within one tier and no severe case by the rules alone, but both sets have been read while tuning, so that figure flatters.
 
-\* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower. The bound of 0.6 costs one message here ("bu import neden kullanılıyor?" is now T1, not T0) and is what keeps the real-use errors below from happening.
+How the 143 labeled messages are routed, by the rules alone, with the picker on Opus · high (0.12, `saver`; `claude plugin test .` prints it as `EVAL route`): T0 Haiku · low 24, T1 Sonnet · medium 33, T2 Sonnet · medium 33, T3 Sonnet · high 29, T3 located hunt Sonnet · high 10, T4 Opus · high 14. Until 0.7 the 33 standard ones ran on Sonnet · high and the 10 hunts on Opus · medium; the tiers themselves did not change.
 
-**Other languages** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --held`): messages written in eight languages and labelled by the work they need; code and error output left as written. autogear as it runs (0.11.0): rules that read Spanish, German, French, Russian, Chinese and Japanese beside Turkish and English, and Haiku where the rules are unsure or the message is in neither Turkish nor English, held to the rules' floor. The numbers below are for a set written by another model that was shown neither the rules nor their word lists: 24 messages per language, each language its own messages, read once before any tuning. 17 October 2026, 139 Haiku calls, $0.08 at list price. The labels are that model's; no person has checked them.
+\* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower. The bound of 0.6 costs one message here (a Turkish "why is this import used?" is now T1, not T0) and is what keeps the real-use errors below from happening.
+
+**Other languages** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --held`): messages written in eight languages and labeled by the work they need; code and error output left as written. autogear as it runs (0.11.0): rules that read Spanish, German, French, Russian, Chinese and Japanese beside Turkish and English, and Haiku where the rules are unsure or the message is in neither Turkish nor English, held to the rules' floor. The numbers below are for a set written by another model that was shown neither the rules nor their word lists: 24 messages per language, each language its own messages, read once before any tuning. 17 October 2026, 139 Haiku calls, $0.08 at list price. The labels are that model's; no person has checked them.
 
 | Language | Rules: within 1 tier | Rules: severe* | autogear: exact | autogear: within 1 tier | autogear: severe* | Asked Haiku |
 |---|---|---|---|---|---|---|
@@ -200,21 +202,21 @@ How the 143 labelled messages are routed, by the rules alone, with the picker on
 
 What it shows, the unflattering part first:
 
-- **The rules alone are not reliable outside Turkish and English:** 83–92% within one tier and one or two severe cases in 24 on the first read, so autogear in these languages is mostly Haiku (83–96% of messages are asked, each a Haiku call of about $0.0005 and the wait for it). Before this work (0.9.1) the translated set of the 143 labelled messages gave 2–7 severe cases in German, French, Chinese and Japanese.
+- **The rules alone are not reliable outside Turkish and English:** 83–92% within one tier and one or two severe cases in 24 on the first read, so autogear in these languages is mostly Haiku (83–96% of messages are asked, each a Haiku call of about $0.0005 and the wait for it). Before this work (0.9.1) the translated set of the 143 labeled messages gave 2–7 severe cases in German, French, Chinese and Japanese.
 - **With Haiku the goal (within one tier at least 90%, severe cases at most 2%) is met on this set in every language,** no severe case at all. 24 messages is few: one miss is four points.
 - **Exact tiers are lower, 54–79%:** Haiku pulls a message a tier down more often than the rules do (Chinese most: 54%). The rules alone are exact more often than autogear here, but they miss badly on phrasings they have not met, so Haiku stays.
 - An earlier set written the same way (read once, then tuned on) gave the same picture on its first read: within one tier 92–100%, one severe case (Spanish). Both sets were tuned on after they were read, so the rules' scores on them now are higher and mean nothing.
 - Long English task texts (SWE-bench Verified, Terminal-Bench; `node eval/external.mjs`): the rules put a long, counted or stepwise brief at T3 and ask Haiku. Severe cases on Terminal-Bench fell from 7% to 4%; within one tier went from 83% to 78% (SWE-bench) and 76% to 75% (Terminal-Bench), more tasks put a tier too high.
 - The translations of the 143 messages are Claude's; no native speaker has checked them.
 
-**Real use**: the 49 decisions autogear made in 11 sessions between 11 and 16 October 2026, each labelled afterwards from what the work turned out to be (one reviewer's judgment, not a panel's). What autogear chose then, and the same messages played again through 0.6:
+**Real use**: the 49 decisions autogear made in 11 sessions between 11 and 16 October 2026, each labeled afterwards from what the work turned out to be (one reviewer's judgment, not a panel's). What autogear chose then, and the same messages played again through 0.6:
 
 | | Exact | Within 1 tier | Severe* | Too low | Too high |
 |---|---|---|---|---|---|
 | autogear 0.3 to 0.5, as it ran | 51% | 82% | 7 | 17 | 7 |
 | autogear 0.6, played again | 61% | 100% | 0 | 10 | 9 |
 
-What went wrong in the first row: the note Claude Code puts ahead of a message in a new session was read as the message, so a bare "merhaba" went to Opus · high; Haiku called bug reports that came with a screenshot trivial ("o tuş çıkmadı yine", "inceler misin"); a remark in the middle of a long task dropped the task to Haiku; a model asked for in words ("sonnet'e max ile ver") was ignored. The fixes of 0.6 were made from these same messages, so the second row shows that they hold, not how 0.6 does on messages it has not seen, and two of the replayed messages would go to Haiku with no logged answer. The decision log is what will tell. The messages are someone's real work, so the set and the test that replays it are kept on the developer's machine, not in this repository.
+What went wrong in the first row: the note Claude Code puts ahead of a message in a new session was read as the message, so a bare "hello" went to Opus · high; Haiku called bug reports that came with a screenshot trivial ("that button didn't show up again", "could you look into it"); a remark in the middle of a long task dropped the task to Haiku; a model asked for in words ("give it to Sonnet at max") was ignored. The messages were in Turkish; these are translations. The fixes of 0.6 were made from these same messages, so the second row shows that they hold, not how 0.6 does on messages it has not seen, and two of the replayed messages would go to Haiku with no logged answer. The decision log is what will tell. The messages are someone's real work, so the set and the test that replays it are kept on the developer's machine, not in this repository.
 
 **External benchmarks** (`eval/external.mjs`): difficulty set by other people, on public sets of coding-agent work. [SWE-bench Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified): 500 GitHub issues, each with the time annotators judged an engineer would need to fix it. [Terminal-Bench](https://github.com/harbor-framework/terminal-bench-1): 241 tasks done in a terminal, each with its author's estimate of an expert's time. Time maps to tier (under 15 minutes T1, under an hour T2, under four hours T3, more T4); neither set holds trivial work. Each set is split in two by a hash of the task id: the rules may be tuned while looking at one half, the other is only measured. The texts are fetched into `eval/.work` and never kept in this repository, as the benchmarks ask.
 
@@ -229,7 +231,7 @@ What it shows: autogear rarely sends hard work to a weak model, but on long Engl
 
 **Output quality** (`eval/tasks/`): ten real tasks on a small project, each checked by tests Claude never saw, run under six setups (`node eval/tasks.mjs <arm>`). Costs at API list prices, one run each, on Claude Code 2.1.299, 17 October 2026; ✗ marks a failed task.
 
-| Task | Kind | autogear | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus advisor |
+| Task | Kind | autogear 0.8.1 | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus advisor |
 |---|---|---|---|---|---|---|---|
 | 1 | rename | $0.01 Haiku | $0.21 | $0.21 | $0.06 | $0.09 | $0.10 |
 | 2 | small change | $0.06 Sonnet | $0.21 | $0.14 | $0.06 | $0.06 | $0.07 |
@@ -238,7 +240,7 @@ What it shows: autogear rarely sends hard work to a weak model, but on long Engl
 | 5 | bug whose cause hides | $0.36 Opus | $0.34 | $0.23 | $0.10 | $0.08 | $0.11 |
 | 6 | bug, place given | $0.07 Sonnet | $0.26 | $0.21 | $0.07 | $0.07 | $0.09 |
 | 7 | misleading bug: the error points at the wrong file | $0.08 Sonnet | $0.33 | $0.24 | $0.07 | $0.08 | ✗ $0.09 |
-| 8 | the same bug told as "bu çalışmıyor, düzelt" | $0.33 Opus | $0.35 | $0.24 | $0.08 | $0.09 | $0.11 |
+| 8 | the same bug told vaguely: "this doesn't work, fix it" | $0.33 Opus | $0.35 | $0.24 | $0.08 | $0.09 | $0.11 |
 | 9 | tests that must catch six inserted bugs | $0.81 Opus | $0.58 | $0.45 | $0.12 | $0.13 | $0.13 |
 | 10 | small refactor | $0.08 Sonnet | $0.28 | $0.19 | $0.09 | $0.09 | $0.04 |
 | **Total** | | **10/10, $1.96** | **10/10, $3.09** | **10/10, $2.33** | **10/10, $0.81** | **10/10, $0.85** | **9/10, $0.92** |
@@ -246,7 +248,7 @@ What it shows: autogear rarely sends hard work to a weak model, but on long Engl
 What it shows, the unflattering part first:
 
 - **On these tasks Sonnet · medium alone did as well as anything, for the least.** Every setup but one passed all ten, so this set does not tell the models apart: it is too easy. Sonnet · medium spent $0.81, autogear $1.96, Opus · high $3.09.
-- **autogear costs more than Sonnet alone here** because it sent the three hunts (5, 8, 9) to Opus · high: $1.50 of its $1.96, on work Sonnet also passed. Whether that pays off on harder work is what the next measurement has to show (bigger projects, three runs each).
+- **autogear costs more than Sonnet alone here** because it sent the three hunts (5, 8, 9) to Opus · high: $1.50 of its $1.96, on work Sonnet also passed. That is why 0.8.2 sends a located hunt (5, 9) to Sonnet · high and 0.9 sends a vague one (8) there too in `saver`; this set has not been run again since.
 - autogear is 37% cheaper than Opus · high and 16% cheaper than Opus · medium, at the same result, and 40% faster than Opus · high.
 - **Model or effort:** Opus · medium did what Opus · high did for 25% less; Sonnet · medium did it for a third of Opus · medium.
 - opusplan ran Sonnet throughout: these tasks were not done in plan mode.
@@ -276,6 +278,7 @@ What it shows, the unflattering part first:
 - **The hunt split held:** the two located hunts went to Sonnet under 0.8.2 and passed for $0.49, against $1.39 on Opus under 0.8.1.
 - autogear sends work to Opus that Sonnet does as well here: the two vague reports, the misleading one and two others cost $3.52 on Opus against $1.17 for Sonnet · medium on the same tasks.
 - One run per cell. Three runs would cost about $65 more at list price.
+- Since 0.9, `saver` sends hard work and vague reports to Sonnet · high as well, so most of the tasks that went to Opus here would now run on Sonnet; this set has not been run again since.
 
 ## Project layout
 
@@ -325,13 +328,13 @@ node eval/tasks.mjs
 
 `node eval/tasks.mjs <arm>` takes `--runs N` and `--set sqlglot`: ten real bugs of [sqlglot](https://github.com/tobymao/sqlglot) (MIT, about 100K lines), each set up as the code stood just before its fix, without git history, and checked by the tests that fix added. It needs sqlglot cloned into `eval/.work/repos/sqlglot` and Python 3.9+. `--dry` checks every such task for free: it must fail as given and pass with the real fix. The arm `gearbox-0.8.1` is autogear (then called gearbox, which is why the eval arms keep that name) before the hunt split, to compare the two rules.
 
-The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs Claude Code 2.1.295 or newer (2.1.295 and 2.1.299 were used): on older builds the hooks module does not load and the router tests fail (2.1.278: 75 pass, 30 fail). The `claude` on your PATH can be older than the desktop app's own build; on Windows that one lives under `%APPDATA%\Claude\claude-code\` or, in newer apps, `%LOCALAPPDATA%\Claude-Data\<profile>\claude-code\`. The measurement scripts pick the newest of them themselves (`CLAUDE_BIN` overrides) and stop before spending anything on a build older than 2.1.295.
+The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs Claude Code 2.1.295 or newer (2.1.295 and 2.1.299 were used): on older builds the hooks module does not load and every test that touches it fails. The `claude` on your PATH can be older than the desktop app's own build; on Windows that one lives under `%APPDATA%\Claude\claude-code\` or, in newer apps, `%LOCALAPPDATA%\Claude-Data\<profile>\claude-code\`. The measurement scripts pick the newest of them themselves (`CLAUDE_BIN` overrides) and stop before spending anything on a build older than 2.1.295.
 
 **Developing without making yourself the test.** A new version goes through four steps, each before the next, and only the last touches real work:
 
 1. Offline: `claude plugin test .` (rules, policy, router, the eval sets) and `node eval/external.mjs` (the external benchmarks, free; `--haiku` adds Haiku's answers for a little usage).
 2. In shadow mode (`/gear shadow`) on real work: autogear chooses and writes down, the picker's model answers.
-3. `node scripts/harvest.mjs` gathers those choices from the transcripts into `eval/.work/harvest.json`; labelled, they become a real-use set to replay the next version over.
+3. `node scripts/harvest.mjs` gathers those choices from the transcripts into `eval/.work/harvest.json`; labeled, they become a real-use set to replay the next version over.
 4. Only then `/gear on`.
 
 **Trying a change in your own Claude Code.** Claude Code runs an installed copy of the plugin, not the folder. After editing, raise `version` in `.claude-plugin/plugin.json`, then:
@@ -358,15 +361,15 @@ Restart the app and open a new chat.
 - [x] Classifier and output-quality measurements
 - [x] Per-turn cost, savings counter and card
 - [x] English README, MIT license, published on GitHub
+- [x] Decision log with your marks, to see where the rules go wrong
+- [x] Review of real use: system notes, the bound on Haiku, the hold on work in hand, models named in words (0.6)
 - [x] Shadow mode, external benchmarks and a harvest of real decisions, so a new version is judged before it routes anyone's work (0.7)
 - [x] Rate-limit windows warn instead of lowering the choice; the effort table retuned from measurements (Sonnet · medium for clear work, hunts at high, no max unasked); a state row that shows on, shadow and off apart; the shadow log keeps what the picker cut; plan mode goes to Opus (0.8)
 - [x] Measured against five setups on twenty tasks, ten of them real sqlglot bugs; in `saver` hard work moves to Sonnet · high, Opus kept for critical work, plan mode and when asked (0.9)
 - [x] A large conversation offers a clean one with a hand-over note (0.10); the rules read eight languages (0.11)
 - [x] English commands, English or Turkish speech, one italic line under every answer naming the model that answered, and `/gear doctor` (0.12)
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
-- [x] Decision log with your marks, to see where the rules go wrong
-- [x] Review of real use: system notes, the bound on Haiku, the hold on work in hand, models named in words (0.6)
-- [ ] Learning from those corrections
+- [ ] Learning from the log's corrections
 
 ## Privacy
 
@@ -375,6 +378,8 @@ autogear has no server and makes no network request of its own. Everything it ke
 - your settings (mode, profile, language, the switches);
 - the decision log: for each of the last 200 messages its first 100 characters, the tier, the model and effort, the reasons, the cost; `/gear reset` clears it;
 - the savings totals, and the hand-over note you pressed "clean conversation" for (it is replaced by the next one).
+
+`/gear doctor` reads two environment variables, `CLAUDE_CODE_EFFORT_LEVEL` and `CLAUDE_CODE_SUBAGENT_MODEL`, to tell you whether they hold the effort or the helpers' model; no other variable or setting is read.
 
 What goes to a model, always through Claude Code itself and your own account, never to a third party:
 

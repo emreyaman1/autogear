@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer: kendi ölçümlerinde güçlü model, ucuzunun çözemediği hiçbir işi çözmedi; bu yüzden Opus kritik işe, plan moduna ve senin istediğin duruma ayrılır.
 
-> Durum: 0.12.0. Claude Code için bir Mod; eklenti API'sinin function hooks'una dayanır, o API Claude Code sürümleri arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var. Sürüm notları: [CHANGELOG.md](CHANGELOG.md). Neyi sakladığı ve neyi gönderdiği: [Gizlilik](#gizlilik).
+> Durum: 0.12.1. Claude Code için bir Mod; eklenti API'sinin function hooks'una dayanır, o API Claude Code sürümleri arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var. Sürüm notları: [CHANGELOG.md](CHANGELOG.md). Neyi sakladığı ve neyi gönderdiği: [Gizlilik](#gizlilik).
 
 ![autogear 28 saniyede: her mesaj ihtiyacı olan modeli alır, seçicinin üstüne çıkılmaz](docs/demo/autogear-demo.gif)
 
@@ -42,7 +42,7 @@ claude plugin marketplace add <deponun kopyasının yolu>
 claude plugin install autogear@autogear
 ```
 
-Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295 ve 2.1.299'da denendi; canlı duman testi 2.1.299'da geçti). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde autogear hiç yüklenmez ve nedenini söyleyemez; 2.1.278 hem 0.7'yi hem 0.8'i reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
+Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295 ve 2.1.299'da denendi; canlı duman testi 2.1.299'da geçti). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde autogear hiç yüklenmez ve nedenini söyleyemez; 2.1.278, 0.7'den bu yana her sürümü reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
 
 ## Kullanım
 
@@ -54,7 +54,7 @@ Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması 
 
 **Plan modu.** Claude Code'un plan modunda her istek Opus'a gider; efor, kuralların okuduğu plan büyüklüğüne göre seçilir: küçük planda medium, ortada high, çok parçalı büyük planda xhigh. Seçicinin üstüne asla çıkmaz; senin adını verdiğin model (`+sonnet`) yine önde gelir. autogear plan modunu Claude Code'un model için eklediği nottan anlar; bu yüzden bir cevabın ortasında açılan plan modu bir sonraki mesajdan itibaren sayılır. Plan modu dışında da plan isteyen bir mesaj ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") zor iş (T3) sayılır. Cevabın altındaki satırda ve günlükte `plan modu` yazar.
 
-**Temiz sohbet (0.10, ilk sürüm).** Bir turun her adımı konuşmanın tamamını yeniden gönderir; büyük bir sohbet her mesajda daha pahalıdır. Sohbet 150 bin tokenı geçmişse ve bir iş yeni bittiyse (commit ya da push, ya da geçen bir test çalıştırması), istem üstündeki satır temiz bir sohbet önerir: not yazılırken `Devir notu hazırlanıyor…`, sonra `Devir notu hazır · sohbet 180 bin token`, yanında **temiz sohbet**, **notu gör** ve **×**. Sen yazmaya devam etsen de öneri durur; birine basana ya da daha yeni bir not gelene kadar. autogear modele kısa bir devir notu yazdırır (proje, son commit, yapılan, açık işler, kuralların, okunacak dosyalar); **notu gör** onu gösterir, **temiz sohbet** `/clear` çalıştırır ve notu bir sonraki mesajınla, görünmeden, gönderir. Sen basmadan hiçbir şey temizlenmez; eski sohbet diskte kalır, notun son satırı onu açan `claude --resume` komutudur. Gerçek bir sohbette bir kez denendi: öneri ve not çalışıyor; **temiz sohbet** düğmesi orada henüz denenmedi.
+**Temiz sohbet (0.10, ilk sürüm).** Bir turun her adımı konuşmanın tamamını yeniden gönderir; büyük bir sohbet her mesajda daha pahalıdır. Sohbet 150 bin tokenı geçmişse ve bir iş yeni bittiyse (commit ya da push, ya da geçen bir test çalıştırması), istem üstündeki satır temiz bir sohbet önerir: not yazılırken `Devir notu hazırlanıyor…`, sonra `Devir notu hazır · sohbet 180 bin token`, yanında **temiz sohbet**, **notu gör** ve **×**. Sen yazmaya devam etsen de öneri durur; birine basana ya da daha yeni bir not gelene kadar. autogear modele kısa bir devir notu yazdırır (proje, son commit, yapılan, açık işler, kuralların, okunacak dosyalar); **notu gör** onu gösterir, **temiz sohbet** `/clear` çalıştırır ve notu bir sonraki mesajınla, görünmeden, gönderir. Sen basmadan hiçbir şey temizlenmez; eski sohbet diskte kalır, notun son satırı onu açan `claude --resume` komutudur. 447 bin tokenlık gerçek bir masaüstü sohbetinde denendi: öneri, not ve düğme çalışıyor; temiz sohbet eski konuşmayı taşımadan, yalnızca notla başladı. Düğmeye bastıktan hemen sonra masaüstü uygulaması eski mesajları yukarıda göstermeye devam eder ve bağlam kutusunda eski boyutu gösterebilir; modele giden, temiz sohbettir.
 
 **Etiketler.** Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap` (T0), `+deep` (T4). `ultrathink` T4 demektir.
 
@@ -181,7 +181,9 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 | **Kurallar + emin değilse Haiku, kuralın işaretine bağlı (0.6)** | **%88** | **%100** | **0** | **%19** |
 | Her zaman Haiku, yüksek olan | %74 | %96 | 0 | %100 |
 
-143 etiketli mesajın, yalnızca kurallarla ve seçici Opus · high iken nereye gittiği (0.8, `tasarruf`; `claude plugin test .` bunu `EVAL route` satırında yazar): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Sonnet · high 26, T3 yeri belli hata avı Sonnet · high 10, T4 Opus · high 13. 0.7'ye kadar 33 standart mesaj Sonnet · high ile, 10 hata avı Opus · medium ile çalışıyordu; kademelerin kendisi değişmedi.
+Tablo 0.5 ve 0.6'dan, satırlarında yazdığı gibi. Kurallar o zamandan beri değişti; aynı 77 mesajda kurallar tek başına bugün %88 tam, %99 bir kademe içinde ve hiç ciddi hata vermiyor, ama iki set de ayar yapılırken okundu, bu yüzden bu rakam olduğundan iyi görünür.
+
+143 etiketli mesajın, yalnızca kurallarla ve seçici Opus · high iken nereye gittiği (0.12, `tasarruf`; `claude plugin test .` bunu `EVAL route` satırında yazar): T0 Haiku · low 24, T1 Sonnet · medium 33, T2 Sonnet · medium 33, T3 Sonnet · high 29, T3 yeri belli hata avı Sonnet · high 10, T4 Opus · high 14. 0.7'ye kadar 33 standart mesaj Sonnet · high ile, 10 hata avı Opus · medium ile çalışıyordu; kademelerin kendisi değişmedi.
 
 \* Zor bir işi (T3+) T0/T1'e ya da iki kademe aşağı koymak. Not: ayardan önce ayrılan kümenin hataları bir kez görüldü ve yeni kümedeki hatalar "emin değilse sor" eşiğini etkiledi; gerçek isabet bir miktar düşük olabilir. 0.6'nın sınırı burada bir mesaja mal oluyor ("bu import neden kullanılıyor?" artık T0 değil T1) ve aşağıdaki gerçek kullanım hatalarını önleyen de o.
 
@@ -229,7 +231,7 @@ Gösterdiği: autogear zor işi nadiren zayıf bir modele gönderiyor, ama uzun 
 
 **Çıktı kalitesi** (`eval/tasks/`): Küçük bir proje üzerinde 10 gerçek görev; her görevin sonucu Claude'un çalışırken görmediği testlerle kontrol edilir. Altı düzende çalıştırıldı (`node eval/tasks.mjs <kol>`). Maliyetler API liste fiyatıyla, her hücre bir kez, Claude Code 2.1.299, 17 Ekim 2026; ✗ kalan görev.
 
-| Görev | Tür | autogear | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus danışman |
+| Görev | Tür | autogear 0.8.1 | Opus · high | Opus · medium | Sonnet · medium | opusplan | Sonnet + Opus danışman |
 |---|---|---|---|---|---|---|---|
 | 1 | yeniden adlandırma | $0,01 Haiku | $0,21 | $0,21 | $0,06 | $0,09 | $0,10 |
 | 2 | küçük değişiklik | $0,06 Sonnet | $0,21 | $0,14 | $0,06 | $0,06 | $0,07 |
@@ -246,7 +248,7 @@ Gösterdiği: autogear zor işi nadiren zayıf bir modele gönderiyor, ama uzun 
 Gösterdiği, önce autogear'ın aleyhine olan:
 
 - **Bu görevlerde tek başına Sonnet · medium herkes kadar iyi ve en ucuza yaptı.** Biri hariç bütün düzenler onda on geçti; yani bu set modelleri birbirinden ayıramıyor, fazla kolay. Sonnet · medium $0,81, autogear $1,96, Opus · high $3,09 harcadı.
-- **autogear burada tek başına Sonnet'ten pahalı**, çünkü üç hata avını (5, 8, 9) Opus · high'a verdi: $1,96'nın $1,50'si; Sonnet bunları da geçti. Bunun daha zor işte karşılığını verip vermediğini bir sonraki ölçüm gösterecek (büyük projeler, her biri üç kez).
+- **autogear burada tek başına Sonnet'ten pahalı**, çünkü üç hata avını (5, 8, 9) Opus · high'a verdi: $1,96'nın $1,50'si; Sonnet bunları da geçti. Bu yüzden 0.8.2 yeri belli hata avını (5, 9), 0.9 da `tasarruf`ta belirsiz olanı (8) Sonnet · high'a veriyor; bu set o zamandan beri yeniden çalıştırılmadı.
 - Aynı sonuçla autogear Opus · high'tan %37, Opus · medium'dan %16 ucuz ve Opus · high'tan %40 hızlı.
 - **Model mi efor mu:** Opus · medium, Opus · high'ın yaptığını %25 daha ucuza yaptı; Sonnet · medium da Opus · medium'un üçte birine.
 - opusplan baştan sona Sonnet çalıştı: bu görevler plan modunda yapılmadı.
@@ -276,6 +278,7 @@ Gösterdiği, önce autogear'ın aleyhine olan:
 - **Hata avı ayrımı tuttu:** iki yeri belli hata avı 0.8.2'de Sonnet'e gitti ve $0,49'a geçti; 0.8.1'de Opus'ta $1,39'du.
 - autogear burada Sonnet'in de aynı iyi yaptığı işleri Opus'a veriyor: iki belirsiz rapor, yanıltıcı olan ve iki görev daha Opus'ta $3,52 tuttu; aynı görevler Sonnet · medium'da $1,17.
 - Her hücre bir kez. Üç tur, liste fiyatıyla yaklaşık $65 daha tutar.
+- 0.9'dan beri `tasarruf` zor işi ve belirsiz raporları da Sonnet · high'a veriyor; burada Opus'a giden görevlerin çoğu bugün Sonnet'te çalışırdı. Bu set o zamandan beri yeniden çalıştırılmadı.
 
 ## Proje yapısı
 
@@ -325,7 +328,7 @@ node eval/tasks.mjs
 
 `node eval/tasks.mjs <kol>` `--runs N` ve `--set sqlglot` alır: [sqlglot](https://github.com/tobymao/sqlglot)'un (MIT, yaklaşık 100 bin satır) 10 gerçek hatası; her biri kodun o hata düzeltilmeden hemen önceki hâliyle, git geçmişi olmadan kurulur ve o düzeltmenin eklediği testlerle kontrol edilir. sqlglot'un `eval/.work/repos/sqlglot` altına klonlanmış olmasını ve Python 3.9+ ister. `--dry` bu görevlerin her birini ücretsiz kontrol eder: verildiği hâliyle kalmalı, gerçek düzeltmeyle geçmeli. `gearbox-0.8.1` kolu, hata avı ayrılmadan önceki autogear; iki kuralı kıyaslamak için.
 
-Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, Claude Code 2.1.295 ya da daha yenisini ister (2.1.295 ve 2.1.299 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve yönlendirici testleri başarısız olur (2.1.278: 75 geçti, 30 kaldı). PATH'teki `claude` masaüstü uygulamasının kendi sürümünden eski olabilir; Windows'ta o sürüm `%APPDATA%\Claude\claude-code\` ya da yeni uygulamalarda `%LOCALAPPDATA%\Claude-Data\<profil>\claude-code\` altındadır. Ölçüm betikleri bunların en yenisini kendileri bulur (`CLAUDE_BIN` ile değiştirilebilir) ve 2.1.295'ten eski bir sürümde hiçbir şey harcamadan durur.
+Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `eval/.work` altında önbelleğe alınır. `plugin test`, Claude Code 2.1.295 ya da daha yenisini ister (2.1.295 ve 2.1.299 kullanıldı): eski sürümlerde hooks modülü yüklenmez ve ona dokunan her test başarısız olur. PATH'teki `claude` masaüstü uygulamasının kendi sürümünden eski olabilir; Windows'ta o sürüm `%APPDATA%\Claude\claude-code\` ya da yeni uygulamalarda `%LOCALAPPDATA%\Claude-Data\<profil>\claude-code\` altındadır. Ölçüm betikleri bunların en yenisini kendileri bulur (`CLAUDE_BIN` ile değiştirilebilir) ve 2.1.295'ten eski bir sürümde hiçbir şey harcamadan durur.
 
 **Kendini test konusu yapmadan geliştirmek.** Yeni bir sürüm dört adımdan geçer, her biri bir sonrakinden önce, ve yalnızca sonuncusu gerçek işe dokunur:
 
@@ -358,15 +361,15 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] Sınıflandırma ve çıktı kalitesi ölçümleri
 - [x] Tur başına maliyet, tasarruf sayacı ve kart
 - [x] İngilizce README, MIT lisansı, GitHub'da yayın
+- [x] Senin işaretlerinle karar günlüğü, kuralların nerede yanıldığını görmek için
+- [x] Gerçek kullanımın incelenmesi: sistem notları, Haiku'ya sınır, süren işin tutulması, yazıyla istenen model (0.6)
 - [x] Gölge mod, dış ölçütler ve gerçek kararların toplanması: yeni bir sürüm, kimsenin işini yönlendirmeden önce sınanır (0.7)
 - [x] Limit pencereleri seçimi düşürmek yerine uyarıyor; efor tablosu ölçümlere göre yeniden ayarlandı (net işte Sonnet · medium, hata avında high, istenmedikçe max yok); açık, gölge ve kapalıyı ayrı gösteren durum satırı; gölge kaydı seçicinin kırptığını da tutuyor; plan modu Opus'a gidiyor (0.8)
 - [x] Yirmi görevde beş düzenle kıyas, onu sqlglot'un gerçek hataları; `tasarruf`ta zor iş Sonnet · high'a geçti, Opus kritik işe, plan moduna ve istenince kullanılır (0.9)
 - [x] Büyük sohbet, devir notuyla temiz bir sohbet önerir (0.10); kurallar sekiz dili okur (0.11)
 - [x] İngilizce komutlar, İngilizce ya da Türkçe konuşma, her cevabın altında cevabı veren modeli söyleyen tek italik satır ve `/gear doctor` (0.12)
 - [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
-- [x] Senin işaretlerinle karar günlüğü, kuralların nerede yanıldığını görmek için
-- [x] Gerçek kullanımın incelenmesi: sistem notları, Haiku'ya sınır, süren işin tutulması, yazıyla istenen model (0.6)
-- [ ] Bu düzeltmelerden öğrenme
+- [ ] Günlükteki düzeltmelerden öğrenme
 
 ## Gizlilik
 
@@ -375,6 +378,8 @@ autogear'ın sunucusu yoktur ve kendi başına hiçbir ağ isteği yapmaz. Sakla
 - ayarların (mod, profil, dil, anahtarlar);
 - karar günlüğü: son 200 mesajın her biri için ilk 100 karakteri, kademe, model ve efor, gerekçeler, maliyet; `/gear reset` siler;
 - tasarruf toplamları ve "temiz sohbet"e bastığın devir notu (bir sonrakiyle değişir).
+
+`/gear doctor` iki ortam değişkenini okur, `CLAUDE_CODE_EFFORT_LEVEL` ve `CLAUDE_CODE_SUBAGENT_MODEL`: eforu ya da yardımcıların modelini sabitleyip sabitlemediklerini söylemek için. Başka hiçbir değişken ya da ayar okunmaz.
 
 Bir modele giden şeyler, hep Claude Code'un kendisi ve senin hesabınla, hiçbir zaman üçüncü bir tarafa değil:
 

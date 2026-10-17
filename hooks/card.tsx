@@ -1,4 +1,4 @@
-// The savings card: what `/gear tasarruf` draws in the transcript in place of
+// The savings card: what `/gear savings` draws in the transcript in place of
 // a block of text. Only Box and Text, so every surface can draw it; bars are
 // runs of one thin line glyph, the filled part in color, the rest dim.
 
@@ -213,7 +213,7 @@ export function savingsCard({ Box, Text }: Elements, input: CardInput): RenderEl
             'Aynı tokenların seçicideki modelde ne tutacağıyla karşılaştırılır; abonelikte kota bu oranda tükenir.',
           )}
         </Text>
-        <Text dimColor>{`${overhead}${since}${L('/gear reset clears it.', '/gear sifirla ile sıfırlanır.')}`}</Text>
+        <Text dimColor>{`${overhead}${since}${L('/gear reset clears it.', '/gear reset ile sıfırlanır.')}`}</Text>
       </Box>
     </Box>
   )

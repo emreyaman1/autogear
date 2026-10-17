@@ -20,14 +20,14 @@ export const getLang = (): Lang => current
 // One line, in the language in use.
 export const L = (en: string, tr: string): string => (current === 'tr' ? tr : en)
 
-type Global = { GEARBOX_LANG?: string; process?: { env?: Record<string, string | undefined> } }
+type Global = { AUTOGEAR_LANG?: string; process?: { env?: Record<string, string | undefined> } }
 
-// A GEARBOX_LANG global (the tests set it) or environment variable, else the
+// An AUTOGEAR_LANG global (the tests set it) or environment variable, else the
 // system's language. Claude Code's own `language` setting is not offered to a
 // Mod, so it is not read.
 export function systemLocale(): string | undefined {
   const here = globalThis as Global
-  const forced = here.GEARBOX_LANG ?? here.process?.env?.GEARBOX_LANG
+  const forced = here.AUTOGEAR_LANG ?? here.process?.env?.AUTOGEAR_LANG
   if (forced !== undefined && forced !== '') {
     return forced
   }
@@ -113,6 +113,7 @@ const REASONS: readonly (readonly [RegExp, string])[] = [
   [/^Türkçe ya da İngilizce değil: Haiku'ya sorulur$/, 'not Turkish or English: Haiku is asked'],
   [/^görsel\/ek var$/, 'image or attachment present'],
   [/^okunamadı: (.+)$/, 'could not read: $1'],
+  [/^istek: (\w+) efor$/, 'asked: $1 effort'],
   [/^istek: (.+)$/, 'asked: $1'],
   [/^elle: (.+)$/, 'by hand: $1'],
   [/^Haiku T(\d), kurallar T(\d): en az T(\d)$/, 'Haiku T$1, rules T$2: at least T$3'],

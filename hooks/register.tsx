@@ -201,14 +201,23 @@ function savedNote(state: State): string {
   return saved >= 0.01 ? ` · ${usd(saved)} ${L('saved', 'tasarruf')}` : ''
 }
 
+// What the band says beside the badge: the last choice, in shadow mode what
+// autogear would have picked; '' before one, when the band says what the state means.
+function lastNote(state: State): string {
+  const { last } = state
+  if (last === undefined) {
+    return ''
+  }
+  const choice = `${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)}`
+
+  return modeOf(state) === 'shadow' ? `${choice} ${L('would choose', 'önerirdi')}` : choice
+}
+
 function showStatus($: EngineInterface, state: State): void {
   const { settings, last } = state
   const mode = modeOf(state)
   void update($, modeAtom, () => mode)
-  // The band says what the last choice was beside the badge, or what the state means before one.
-  const choice = last === undefined ? undefined : `${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)}`
-  const note = choice === undefined ? '' : mode === 'shadow' ? `${choice} ${L('would choose', 'önerirdi')}` : choice
-  void update($, noteAtom, () => note)
+  void update($, noteAtom, () => lastNote(state))
   $.ui.status(
     mode === 'down' ? L("⚙ autogear: stopped (the picker's model), /gear", '⚙ autogear: devre dışı (seçici), /gear')
     : mode === 'pin' ? L("⚙ autogear: off (the picker's model)", '⚙ autogear: kapalı (seçici model)')
@@ -604,8 +613,19 @@ async function gatherFacts($: EngineInterface, state: State): Promise<Facts> {
   } catch {
     isStoreWorking = false
   }
-  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {}
-  const given = (value: string | undefined): string | undefined => (value === undefined || value === '' ? undefined : value)
+  // The two variables that can pin what autogear chooses, read by name; nothing
+  // else of the environment is read.
+  const variable = async (get: () => Promise<string | undefined>): Promise<string | undefined> => {
+    try {
+      const value = await get()
+
+      return value === undefined || value === '' ? undefined : value
+    } catch {
+      return undefined
+    }
+  }
+  const effortLevel = await variable(() => $.env.get('CLAUDE_CODE_EFFORT_LEVEL'))
+  const subagentModel = await variable(() => $.env.get('CLAUDE_CODE_SUBAGENT_MODEL'))
 
   return {
     mode: modeOf(state),
@@ -625,7 +645,7 @@ async function gatherFacts($: EngineInterface, state: State): Promise<Facts> {
     isBandOn: state.settings.band,
     lang: getLang(),
     langSetting: state.settings.lang,
-    env: { effortLevel: given(env.CLAUDE_CODE_EFFORT_LEVEL), subagentModel: given(env.CLAUDE_CODE_SUBAGENT_MODEL) },
+    env: { effortLevel, subagentModel },
   }
 }
 
@@ -741,7 +761,7 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
 
     return { text: L('The savings counter and the log were reset.', 'tasarruf sayacı ve günlük sıfırlandı.') }
   }
-  // `/gear oto` also tries again after standing down, though the mode was already auto.
+  // `/gear on` also tries again after standing down, though the mode was already auto.
   if (changed.mode === 'auto' || changed.mode !== state.settings.mode) {
     await switchMode($, state, changed.mode)
   }
@@ -829,6 +849,7 @@ async function startCleanConversation($: EngineInterface, state: State): Promise
   // A clean conversation may start with a fresh state: the band is told again.
   await update($, handoverAtom, () => note)
   await update($, handoverArmedAtom, () => true)
+  showStatus($, state)
   $.ui.toast(L('Clean conversation: the hand-over note will go with your first message.', 'Temiz sohbet: devir notu ilk mesajınla birlikte gidecek.'), { timeoutMs: 10000 })
 }
 
@@ -1051,12 +1072,18 @@ export const register: Register = on => {
     if (e.props.hasSurvey || !state.settings.band) {
       return next(e)
     }
-    const mode = await read($, modeAtom)
+    // A /clear starts the session's state afresh and runs no session.start, so
+    // the atoms would read as their initials ("on"): the band takes the state
+    // and the last choice from the module, and reads the atoms only to be drawn
+    // again when they change.
+    await read($, modeAtom)
+    await read($, noteAtom)
+    const mode = modeOf(state)
     const isWorking = mode === 'auto' || mode === 'shadow'
     // The band keeps the warning's head ("5 saatlik limit %93"); the line under
     // the answer and /gear say the rest.
     const warning = isWorking ? (await read($, warningAtom)).split(':')[0] : ''
-    const last = isWorking ? await read($, noteAtom) : ''
+    const last = isWorking ? lastNote(state) : ''
     const note = last === '' ? modeNote(mode) : last
     const actions = MODE_ACTIONS.filter(action => action.mode !== mode)
     // Stood down, "turn on" tries again.

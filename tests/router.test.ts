@@ -5,7 +5,7 @@ import { BADGE_COLORS, BADGE_HEIGHT, badgeWidth } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 
 // The tests read autogear's Turkish; the English is tested by switching to it.
-Object.assign(globalThis, { GEARBOX_LANG: 'tr' })
+Object.assign(globalThis, { AUTOGEAR_LANG: 'tr' })
 setLang('tr')
 
 type Sent = { model: string; effort: unknown }
@@ -347,7 +347,7 @@ test('/gear tasarruf is drawn as a card of the session, the total, the models an
   await turnOn($, 't2', 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır', 'claude-opus-5-5', { read: 90_000, write: 8000, output: 3000 })
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...CARD, surface, viewport: { columns: 100, rows: 40 } })
-    for (const text of [/Bu oturum/, /Toplam/, /Model payı/, /Haiku %50/, /Opus %50/, /Döküm/, /Önbellek okuma/, /Seçici modeliyle/, /\/gear sifirla/]) {
+    for (const text of [/Bu oturum/, /Toplam/, /Model payı/, /Haiku %50/, /Opus %50/, /Döküm/, /Önbellek okuma/, /Seçici modeliyle/, /\/gear reset/]) {
       expect(await ui.find({ type: 'Text', text })).toBeDefined()
     }
     expect(await ui.find({ type: 'Box', borderStyle: 'round' })).toBeDefined()
@@ -641,4 +641,31 @@ test('/gear doctor says what to fix and how', async ($, on) => {
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))).toContain('`/gear on`')
   await $.command.run({ command: 'gear', args: 'off' })
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))).toContain('autogear kapalı')
+})
+
+test('/gear doctor names an environment variable that pins the effort or the helpers', async ($, on) => {
+  world(on)
+  mock.env(on, { CLAUDE_CODE_EFFORT_LEVEL: 'max', CLAUDE_CODE_SUBAGENT_MODEL: 'sonnet' })
+  const text = JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))
+  expect(text).toContain('CLAUDE_CODE_EFFORT_LEVEL=max')
+  expect(text).toContain('CLAUDE_CODE_SUBAGENT_MODEL=sonnet')
+})
+
+test('after a /clear the band still shows the state autogear is in', async ($, on) => {
+  world(on)
+  on('session.end', ($, e) => ({ sessionId: e.sessionId }))
+  // The cleared conversation's state starts afresh: its values read as their initials.
+  let isCleared = false
+  on('state.get', ($, e, next) => (isCleared && e.plugin === 'autogear' && (e.key === 'mode' || e.key === 'note') ? { value: e.key === 'mode' ? 'auto' : '', version: 0 } : next(e)))
+  const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
+  await $.command.run({ command: 'gear', args: 'shadow' })
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't1', 0, 'claude-opus-5-5', 'high')
+  await $.session.end({ reason: 'clear', sessionId: 'old-1', resume: { id: 'old-1' } })
+  isCleared = true
+  const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await band.find({ type: 'Text', text: /GÖLGE/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /AÇIK/ })).toBeUndefined()
+  expect(await band.find({ type: 'Text', text: /önerirdi/ })).toBeDefined()
+  await band.unmount()
 })

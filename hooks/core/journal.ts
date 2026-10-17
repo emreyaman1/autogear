@@ -211,7 +211,7 @@ export function journalText(entries: readonly Entry[]): string {
     L(`Spent ${usd(spent)}, ${usd(baseline)} on the picker's model.`, `Harcama ${usd(spent)}, seçici modeliyle ${usd(baseline)}.`),
     L(
       "If a decision was wrong, type `/gear wrong weak` (the model was too weak) or `/gear wrong strong` (stronger than needed); it marks the last message's decision.",
-      'Bir karar yanlışsa `/gear yanlis zayif` (model çok zayıftı) ya da `/gear yanlis fazla` (gereğinden güçlüydü) yazın; son mesajın kararını işaretler.',
+      'Bir karar yanlışsa `/gear wrong weak` (model çok zayıftı) ya da `/gear wrong strong` (gereğinden güçlüydü) yazın; son mesajın kararını işaretler.',
     ),
     L('The doubtful share is a floor: decisions that were wrong and that nobody noticed are not counted.', 'Şüpheli oranı alt sınırdır: yanlış olup kimsenin fark etmediği kararlar sayılmaz.'),
   ]

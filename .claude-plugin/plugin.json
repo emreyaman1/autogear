@@ -1,6 +1,6 @@
 {
   "name": "autogear",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Automatic gear shifting for Claude Code: picks the model and effort each message needs, never above your model picker, so your usage limits last longer.",
   "author": {
     "name": "Yunus Emre Yaman"
