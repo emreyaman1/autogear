@@ -219,6 +219,30 @@ What it shows, the unflattering part first:
 - The one failure was Sonnet with Opus as its advisor, on the misleading bug: it fixed the file the error pointed at, not the cause. gearbox sent that task to Sonnet too, since an error message in hand reads as a clear bug, and passed. One run, so this is luck as much as anything; the measurement does not show whether the advisor was consulted.
 - One run per cell on a small project: direction, not certainty. In an earlier run (0.7, six tasks) gearbox matched Opus · high on four tasks for $0.31 against $2.38.
 
+**A real project** (`--set sqlglot`): ten bugs fixed in [sqlglot](https://github.com/tobymao/sqlglot) after July 2026, a 100K-line SQL parser, each set up as the code stood before the fix and checked by the tests the fix added. One run each, Claude Code 2.1.299, 17 October 2026. gearbox 0.8.1 is the version that sent every hunt to Opus · high; 0.8.2 sends a located one to Sonnet · high.
+
+| Task | Kind | gearbox 0.8.2 | gearbox 0.8.1 | Sonnet · medium | Opus · high |
+|---|---|---|---|---|---|
+| sq-tsql-output | vaguely told bug | ✗ $1.28 Opus | ✗ $0.94 Opus | ✗ $0.28 | ✗ $1.38 |
+| sq-duckdb-sample | placed bug | $0.23 Sonnet | $0.22 Sonnet | $0.25 | $0.88 |
+| sq-snowflake-join-marker | feature | $0.55 Opus | ✗ $0.54 Opus | $0.22 | $0.69 |
+| sq-oracle-q-quote | feature | $0.28 Sonnet | $0.32 Sonnet | $0.41 | $1.05 |
+| sq-starrocks-like | misleading bug | $0.43 Opus | $0.40 Opus | $0.21 | $0.62 |
+| sq-mysql-charset-cast | vaguely told bug | $0.78 Opus | $0.80 Opus | $0.24 | $1.08 |
+| sq-duckdb-array-insert | bug whose cause hides | $0.22 Sonnet | $0.65 Opus | $0.16 | $0.62 |
+| sq-quoted-escapes | placed bug | ✗ $0.39 Sonnet | $0.42 Sonnet | $0.35 | $1.54 |
+| sq-nulls-order-alias | bug whose cause hides | $0.27 Sonnet | $0.74 Opus | $0.15 | $0.62 |
+| sq-duckdb-empty-regexp | placed bug | $0.48 Opus | $0.39 Opus | $0.22 | $0.52 |
+| **Total** | | **8/10, $4.90** | **8/10, $5.43** | **9/10, $2.49** | **9/10, $8.98** |
+
+What it shows, the unflattering part first:
+
+- **Sonnet · medium alone solved 9 of 10 for $2.49; Opus · high solved the same 9 for $8.98; gearbox 8 for about $5.** Over both sets, twenty tasks, Opus never solved one that Sonnet · medium failed: the one Sonnet failed (`sq-tsql-output`, a vague report whose quick fix breaks T-SQL's OUTPUT clause) every setup failed.
+- gearbox's two failures are tasks Sonnet · medium passed on its own, one on Sonnet and one on Opus: on one run that reads as noise, not as a model too weak.
+- **The hunt split held:** the two located hunts went to Sonnet under 0.8.2 and passed for $0.49, against $1.39 on Opus under 0.8.1.
+- gearbox sends work to Opus that Sonnet does as well here: the two vague reports, the misleading one and two others cost $3.52 on Opus against $1.17 for Sonnet · medium on the same tasks.
+- One run per cell. Three runs would cost about $65 more at list price.
+
 ## Project layout
 
 | Path | What it holds |

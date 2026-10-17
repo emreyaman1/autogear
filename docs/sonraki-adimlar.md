@@ -53,7 +53,7 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 | 9 | Dil ayarı ve İngilizce komutlar | Kullanıcı kararı |
 | 10 | Her cevabın altında italik model satırı | Kullanıcı |
 | 11 | Görünürlük ve resmî dizine başvuru | Kullanıcı + Claude |
-| 12 | Ölçümleri genişletmek | Kullanıcı + Claude |
+| 12 | Ölçümleri genişletmek (sqlglot ile bir tur yapıldı, 18 Ekim) | Kullanıcı + Claude |
 | 13 | Sonuçlardan öğrenmek | Claude |
 | 14 | context-mode ile birlikte denemek | Claude |
 | 15 | Model kimliklerini kendiliğinden güncellemek | Claude |
@@ -338,6 +338,23 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 - Optimizasyon hataları alınamadı: testleri duckdb ve pytz paketlerini istiyor; bunları kurmak ayrı bir indirme, sorulmadı.
 - Kıyaslanacak kollar: gearbox 0.8.2 (yeni hata avı kuralı), gearbox 0.8.1 (eski kural), hep Sonnet orta, hep Opus yüksek.
 - pytest ve datasette denenmedi: kurulumları paket indirmesi istiyor.
+
+**Bir tur yapıldı (17–18 Ekim 2026; harcama liste fiyatıyla yaklaşık $26,8):**
+
+| Düzen | Geçen | Maliyet |
+|---|---|---|
+| gearbox 0.8.2 (yeni hata avı kuralı) | 8/10 | $4,90 |
+| gearbox 0.8.1 (eski kural) | 8/10 | $5,43 |
+| Sonnet · medium | 9/10 | $2,49 |
+| Opus · high | 9/10 | $8,98 |
+
+- Opus high ilk denemede 4 görevden sonra kullanıcının 5 saatlik limitine takıldı; kalan 6 görev limit sıfırlanınca çalıştırıldı (6/6).
+- **Kesin sonuç (bu iki sette, 20 görev, her biri bir kez):** Opus, Sonnet medium'un çözemediği hiçbir görevi çözmedi. Sonnet medium'un kaldığı tek görevde (sq-tsql-output) bütün düzenler kaldı. Toplamda Sonnet medium 19/20, Opus high 19/20 (3,6 kat maliyet), gearbox 18/20 (Sonnet'in yaklaşık 2 katı maliyet). gearbox'ın kaldığı iki görev, Sonnet medium'un tek başına geçtiği görevler; tek çalıştırmada şans payı.
+- **Hata avı ayrımı (kullanıcının önerisi) doğrulandı:** iki yeri belli hata avı 0.8.2'de Sonnet'e gitti, ikisi de geçti, $0,49; 0.8.1'de Opus'ta $1,39.
+- **gearbox'ın pahalı kısmı:** Opus'a verdiği 5 görev (iki belirsiz rapor, yanıltıcı rapor, iki görev daha) $3,52; aynıları Sonnet medium'da $1,17 ve hepsi geçti (biri hariç: sq-tsql-output herkes kaldı).
+- Videodaki "belirsiz ve yanıltıcı hatada Opus gerekli" bulgusu burada çıkmadı: Sonnet medium iki yanıltıcı hatayı (küçük set ve sqlglot) ve belirsiz MySQL raporunu geçti.
+- **Açık karar (kullanıcıya):** 'tasarruf' profilinde zor işi (T3) ve belirsiz hata avını da Sonnet'e mi vermeli, Opus'u yalnızca T4, plan modu ve kullanıcı isteğine mi bırakmalı? Kanıt bu yönde ama her hücre tek çalıştırma; üç tur yaklaşık $65 daha.
+- sq-tsql-output dört düzende de kaldı; görev sağlam (belirsiz anlatım + kestirme düzeltme OUTPUT komutunu bozuyor).
 
 ### 13. Sonuçlardan öğrenmek
 

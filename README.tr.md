@@ -217,6 +217,30 @@ Gösterdiği, önce gearbox'ın aleyhine olan:
 - Tek başarısızlık Opus danışmanlı Sonnet'te, yanıltıcı hatada: hata mesajının gösterdiği dosyayı düzeltti, asıl sebebi değil. gearbox bu görevi de Sonnet'e verdi (elde hata mesajı olan bir hata net sayılıyor) ve geçti. Tek çalıştırma, yani şans payı büyük; ölçüm danışmana gerçekten sorulup sorulmadığını göstermiyor.
 - Her hücre bir kez, küçük bir projede: yön gösterir, kesin değildir. Daha önceki bir çalıştırmada (0.7, altı görev) gearbox dört görevde Opus · high ile aynı sonucu $2,38 yerine $0,31'e almıştı.
 
+**Gerçek bir proje** (`--set sqlglot`): 100 bin satırlık bir SQL ayrıştırıcısı olan [sqlglot](https://github.com/tobymao/sqlglot)'ta Temmuz 2026'dan sonra düzeltilmiş 10 hata. Her biri kod düzeltmeden önceki hâliyle kuruldu ve o düzeltmenin eklediği testlerle kontrol edildi. Her hücre bir kez, Claude Code 2.1.299, 17 Ekim 2026. gearbox 0.8.1 her hata avını Opus · high'a veren sürüm; 0.8.2 yeri belli olanı Sonnet · high'a veriyor.
+
+| Görev | Tür | gearbox 0.8.2 | gearbox 0.8.1 | Sonnet · medium | Opus · high |
+|---|---|---|---|---|---|
+| sq-tsql-output | belirsiz anlatılmış hata | ✗ $1,28 Opus | ✗ $0,94 Opus | ✗ $0,28 | ✗ $1,38 |
+| sq-duckdb-sample | yeri belli hata | $0,23 Sonnet | $0,22 Sonnet | $0,25 | $0,88 |
+| sq-snowflake-join-marker | yeni özellik | $0,55 Opus | ✗ $0,54 Opus | $0,22 | $0,69 |
+| sq-oracle-q-quote | yeni özellik | $0,28 Sonnet | $0,32 Sonnet | $0,41 | $1,05 |
+| sq-starrocks-like | yanıltıcı hata | $0,43 Opus | $0,40 Opus | $0,21 | $0,62 |
+| sq-mysql-charset-cast | belirsiz anlatılmış hata | $0,78 Opus | $0,80 Opus | $0,24 | $1,08 |
+| sq-duckdb-array-insert | sebebi saklı hata | $0,22 Sonnet | $0,65 Opus | $0,16 | $0,62 |
+| sq-quoted-escapes | yeri belli hata | ✗ $0,39 Sonnet | $0,42 Sonnet | $0,35 | $1,54 |
+| sq-nulls-order-alias | sebebi saklı hata | $0,27 Sonnet | $0,74 Opus | $0,15 | $0,62 |
+| sq-duckdb-empty-regexp | yeri belli hata | $0,48 Opus | $0,39 Opus | $0,22 | $0,52 |
+| **Toplam** | | **8/10, $4,90** | **8/10, $5,43** | **9/10, $2,49** | **9/10, $8,98** |
+
+Gösterdiği, önce gearbox'ın aleyhine olan:
+
+- **Tek başına Sonnet · medium 10 görevin 9'unu $2,49'a çözdü; Opus · high aynı 9'u $8,98'e; gearbox 8'ini yaklaşık $5'a.** İki sette, yirmi görevde Opus, Sonnet · medium'un çözemediği hiçbir görevi çözmedi: Sonnet'in kaldığı tek görevde (`sq-tsql-output`; belirsiz bir rapor, kestirme düzeltmesi T-SQL'in OUTPUT komutunu bozuyor) bütün düzenler kaldı.
+- gearbox'ın iki başarısızlığı, tek başına Sonnet · medium'un geçtiği görevler; biri Sonnet'te, biri Opus'ta. Tek çalıştırmada bu, zayıf model değil şans payı gibi okunuyor.
+- **Hata avı ayrımı tuttu:** iki yeri belli hata avı 0.8.2'de Sonnet'e gitti ve $0,49'a geçti; 0.8.1'de Opus'ta $1,39'du.
+- gearbox burada Sonnet'in de aynı iyi yaptığı işleri Opus'a veriyor: iki belirsiz rapor, yanıltıcı olan ve iki görev daha Opus'ta $3,52 tuttu; aynı görevler Sonnet · medium'da $1,17.
+- Her hücre bir kez. Üç tur, liste fiyatıyla yaklaşık $65 daha tutar.
+
 ## Proje yapısı
 
 | Yol | İçeriği |
