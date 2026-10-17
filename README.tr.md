@@ -171,6 +171,26 @@ Milyon token başına dolar. 100K tokendan uzun bir Haiku isteği beş kat tutar
 
 \* Zor bir işi (T3+) T0/T1'e ya da iki kademe aşağı koymak. Not: ayardan önce ayrılan kümenin hataları bir kez görüldü ve yeni kümedeki hatalar "emin değilse sor" eşiğini etkiledi; gerçek isabet bir miktar düşük olabilir. 0.6'nın sınırı burada bir mesaja mal oluyor ("bu import neden kullanılıyor?" artık T0 değil T1) ve aşağıdaki gerçek kullanım hatalarını önleyen de o.
 
+**Başka diller** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --languages`): aynı 143 etiketli mesaj sekiz dilde, her küme baştan sona tek dilde, etiketler aynı; kod ve hata çıktısı çevrilmedi. Çeviriler Claude'un; bir anadil konuşmacısı kontrol etmedi. gearbox çalıştığı gibi (0.9.1): kurallar; kurallar emin değilse ya da mesaj Türkçe veya İngilizce değilse Haiku, kuralın alt sınırına bağlı. 17 Ekim 2026, 851 Haiku sorusu, liste fiyatıyla $0,43.
+
+| Dil | Kurallar: ±1 kademe | Kurallar: ciddi hata* | gearbox: tam isabet | gearbox: ±1 kademe | gearbox: ciddi hata* | Haiku'ya sorulan |
+|---|---|---|---|---|---|---|
+| Türkçe | %97 | 4 | %92 | %100 | 0 | %16 |
+| İngilizce | %92 | 9 | %86 | %99 | 0 | %21 |
+| İspanyolca | %73 | 35 | %69 | %98 | 2 | %95 |
+| Almanca | %75 | 34 | %64 | %97 | 5 | %94 |
+| Fransızca | %77 | 30 | %61 | %94 | 7 | %94 |
+| Rusça | %67 | 47 | %68 | %100 | 0 | %97 |
+| Çince | %67 | 46 | %54 | %97 | 4 | %97 |
+| Japonca | %67 | 46 | %63 | %97 | 3 | %96 |
+
+Ne gösteriyor, önce aleyhte olanlar:
+
+- **Türkçe ve İngilizce dışında kurallar işlemiyor; gearbox orada Haiku demek:** mesajların %94–97'si Haiku'ya soruluyor. Her biri bir Haiku çağrısı (liste fiyatıyla yaklaşık $0,0005) ve onun beklemesi.
+- **Hedef (±1 kademe en az %90, ciddi hata en çok %2) Türkçe, İngilizce, Rusça ve İspanyolcada tutuyor; Japonca (143'te 3), Çince (4), Almanca (5) ve Fransızcada (7) ciddi hatada tutmuyor.** Hepsi kuralların emin olmadığı bir mesajda Haiku'nun cevabı ve daha önce görülen türlerden: soru gibi sorulan bir yarış durumu (çift tıklama iki sipariş açıyor, bir kupon iki kez kullanılıyor), ayrıntısız "hâlâ bozuk" şikâyeti, bir tasarım sorusu (veritabanı şeması, Redux mu Zustand mı), sıfırdan büyük bir iş iki kademe aşağıda (bir CRM, bir yönetim paneli). Haiku aynı mesajı dilden dile farklı değerlendiriyor: CRM yalnızca Almanca ve Fransızcada ciddi hata.
+- Tam isabet %86–92'den %54–69'a düşüyor, çoğu bir kademe aşağı: bu dillerde gearbox ucuz tarafa kayıyor.
+- Türkçe ve İngilizce kümelerde kuralların ayarlandığı 66 mesaj da var; o satırlar kuralları olduğundan iyi gösterir. Tek ölçüm; Haiku'nun cevapları çalıştırmadan çalıştırmaya değişir.
+
 **Gerçek kullanım**: gearbox'ın 11-16 Ekim 2026 arasında 11 oturumda verdiği 49 karar. Her biri, işin sonradan ne çıktığına bakılarak etiketlendi (tek bir kişinin yargısı, bir kurulun değil). gearbox'ın o gün seçtiği, ve aynı mesajların 0.6 ile yeniden oynatılması:
 
 | | Tam isabet | ±1 kademe | Ciddi hata* | Fazla düşük | Fazla yüksek |

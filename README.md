@@ -173,6 +173,26 @@ How the 143 labelled messages are routed, by the rules alone, with the picker on
 
 \* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower. The bound of 0.6 costs one message here ("bu import neden kullanılıyor?" is now T1, not T0) and is what keeps the real-use errors below from happening.
 
+**Other languages** (`tests/multilingual.test.ts`, `node eval/haiku.mjs --languages`): the same 143 labelled messages in eight languages, each set whole in one language, the labels unchanged; code and error output left as written. The translations are Claude's; no native speaker has checked them. gearbox as it runs (0.9.1): the rules, and Haiku where they are unsure or the message is in neither Turkish nor English, held to the rules' floor. 17 October 2026, 851 Haiku calls, $0.43 at list price.
+
+| Language | Rules: within 1 tier | Rules: severe* | gearbox: exact | gearbox: within 1 tier | gearbox: severe* | Asked Haiku |
+|---|---|---|---|---|---|---|
+| Turkish | 97% | 4 | 92% | 100% | 0 | 16% |
+| English | 92% | 9 | 86% | 99% | 0 | 21% |
+| Spanish | 73% | 35 | 69% | 98% | 2 | 95% |
+| German | 75% | 34 | 64% | 97% | 5 | 94% |
+| French | 77% | 30 | 61% | 94% | 7 | 94% |
+| Russian | 67% | 47 | 68% | 100% | 0 | 97% |
+| Chinese | 67% | 46 | 54% | 97% | 4 | 97% |
+| Japanese | 67% | 46 | 63% | 97% | 3 | 96% |
+
+What it shows, the unflattering part first:
+
+- **Outside Turkish and English the rules do not work, and gearbox is Haiku:** 94–97% of messages are asked, each a Haiku call (about $0.0005 at list price) and the wait for it.
+- **The goal (within one tier at least 90%, severe cases at most 2%) is met in Turkish, English, Russian and Spanish, and missed on severe cases in Japanese (3 of 143), Chinese (4), German (5) and French (7).** Every one of them is Haiku's answer on a message the rules were unsure of, and of the kinds seen before: a race condition asked as a question (a double click makes two orders, a coupon is used twice), a vague "still broken" report, a design question (a database schema, Redux or Zustand), a large build from scratch put two tiers low (a CRM, an admin dashboard). Haiku judges the same message differently from one language to the next: the CRM is a severe miss in German and French only.
+- Exact tiers fall from 86–92% to 54–69%, mostly a tier too low: in these languages gearbox leans cheap.
+- The Turkish and English sets hold the 66 messages the rules were tuned on, so those rows flatter the rules. One run; Haiku's answers vary from run to run.
+
 **Real use**: the 49 decisions gearbox made in 11 sessions between 11 and 16 October 2026, each labelled afterwards from what the work turned out to be (one reviewer's judgment, not a panel's). What gearbox chose then, and the same messages played again through 0.6:
 
 | | Exact | Within 1 tier | Severe* | Too low | Too high |
