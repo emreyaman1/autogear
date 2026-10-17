@@ -5,7 +5,6 @@ import { BADGE_COLORS, BADGE_HEIGHT, badgeWidth } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 
 // The tests read autogear's Turkish; the English is tested by switching to it.
-Object.assign(globalThis, { AUTOGEAR_LANG: 'tr' })
 setLang('tr')
 
 type Sent = { model: string; effort: unknown }
@@ -33,7 +32,7 @@ const ZERO = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, ca
 // the usage, classifier, tools, store, clock and screen the router touches.
 function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false, contextTokens = 2_000, rateLimits = [] }: WorldOptions = {}): World {
   const seen: World = { sent: [], prompts: [] }
-  mock.store(on)
+  mock.store(on, { settings: { lang: 'tr' } })
   mock.clock(on, { now: NOW })
   on('prompt.submit', ($, e) => {
     seen.prompts.push(e.text)

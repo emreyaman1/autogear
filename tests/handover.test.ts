@@ -5,7 +5,6 @@ import { cleanNote, handoverContext, isWorkDone } from '../hooks/core/handover'
 import { setLang } from '../hooks/core/text'
 
 // The tests read autogear's Turkish; the English is tested by switching to it.
-Object.assign(globalThis, { AUTOGEAR_LANG: 'tr' })
 setLang('tr')
 
 const NOW = Date.parse('2026-10-17T12:00:00Z')
@@ -30,7 +29,7 @@ type World = { forks: number; clears: number; opened: string[]; contexts: (reado
 // prompts with what they carried beside them.
 function world(engine: Engine, on: On, { contextTokens = 700_000 }: { contextTokens?: number } = {}): World {
   const seen: World = { forks: 0, clears: 0, opened: [], contexts: [] }
-  mock.store(on)
+  mock.store(on, { settings: { lang: 'tr' } })
   mock.clock(on, { now: NOW })
   on('prompt.submit', ($, e) => {
     seen.contexts.push(e.context)
