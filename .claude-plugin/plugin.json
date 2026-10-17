@@ -5,5 +5,21 @@
   "author": {
     "name": "Yunus Emre Yaman"
   },
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "homepage": "https://github.com/emreyaman1/autogear",
+  "repository": "https://github.com/emreyaman1/autogear",
+  "license": "MIT",
+  "keywords": [
+    "model-selection",
+    "effort",
+    "routing",
+    "cost",
+    "usage-limits",
+    "haiku",
+    "sonnet",
+    "opus"
+  ],
+  "supportUrl": "https://github.com/emreyaman1/autogear/issues",
+  "privacyPolicyUrl": "https://github.com/emreyaman1/autogear#privacy",
+  "documentationUrl": "https://github.com/emreyaman1/autogear#readme"
 }
