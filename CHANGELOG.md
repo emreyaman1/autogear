@@ -4,7 +4,7 @@ Each release, newest first. The evidence behind each change is in `docs/sonraki-
 
 ## 0.12.2 (18 October 2026)
 
-- Ready for the directory's checks: the README says which events autogear hooks, what each does, and that the one command it runs itself is `/clear`, on your press; the badge and mark names are plain functions, not getters; the language switch for the tests reads its global directly; an eval fixture names the variable it sets.
+- Ready for the directory's checks: the README says which events autogear hooks, what each does, and that the one command it runs itself is `/clear`, on your press; a listing icon, a gear with a gauge needle; the badge and mark names are plain functions, not getters; the language switch for the tests reads its global directly; an eval fixture names the variable it sets.
 
 ## 0.12.1 (18 October 2026)
 
