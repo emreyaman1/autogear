@@ -209,7 +209,7 @@ export const MIGRATION_I18N = new RegExp(
     '(?:^|[^a-z])(?:umzieh|umstell|portier|verschieb)',
     ' von [^.?!]{1,40} auf [^.?!]{1,40} um(?![a-z])',
     '(?:^|[^a-z])(?:deplace|passe|bascule|reecris|porte|convertis)[^.?!]{0,60}(?: de | d.)[^.?!]{1,40} vers ',
-    'перенес|мигрир|миграц|перепиш[^.?!]{0,50} с [^.?!]{1,40} на ',
+    'перенес|мигрир|миграц|перепи[сш][^.?!]{0,50} с [^.?!]{1,40} на ',
     '迁移|移植|重写|改写',
     '移行|書き直',
   ].join('|'),
@@ -250,9 +250,9 @@ export const TRIVIAL_I18N = [
 
 // Questions about code in view.
 export const QUESTION_I18N = [
-  'que hace', 'que es ', 'que significa', 'explica', 'resume', 'cuantos', 'cuantas', 'donde esta', 'cual es el archivo',
+  'que hace', 'que es ', 'que significa', 'explica', 'resume(?![a-z])', 'cuantos', 'cuantas', 'donde esta', 'cual es el archivo',
   'was macht', 'was ist', 'was bedeutet', 'erklar', 'zusammenfass', 'wie viele', 'wo ist', 'welche datei',
-  'que fait', 'qu est', 'que signifie', 'explique', 'resume', 'combien', 'ou est', 'quel fichier',
+  'que fait', 'qu est', 'que signifie', 'explique', 'resume(?![a-z])', 'combien', 'ou est', 'quel fichier',
   'что делает', 'что такое', 'что значит', 'объясни', 'кратко', 'сколько', 'где находится', 'какой файл',
   '是做什么', '做什么的', '是什么', '什么意思', '解释', '总结', '多少', '在哪', '哪个文件', '有哪些',
   '何をし', '何ですか', 'どういう', '説明', '要約', 'いくつ', 'どこ', 'どのファイル', 'ありますか',
@@ -320,7 +320,7 @@ export const MOVE_WHOLE = new RegExp(
     '(?:passe|migre|porte|bascule|convertis|deplace|reecris)[^.?!]{0,20}(?:tout|toute|tous|toutes|entier|entiere)',
     '(?:переведи|перенеси|перепиши|мигрируй|перейди|перевести|перенести|переписать|мигрировать|перейти|переехать)[^.?!]{0,30}(?:весь|вся|все|всё|целиком|полностью|проект)',
     '(?:upgrade)[^.?!]{0,25}(?:whole|entire|all (?:the|our|of)|everything)',
-    '(?:整个|全部|所有)[^。，]{0,25}(?:迁移|重写|移植|升级)',
+    '(?:整个|全部|所有)[^。，]{0,45}(?:迁移|重写|移植|升级)',
     '(?:整个|全部|所有)(?:前端|后端|项目|应用|产品|系统|代码库)[^。，]{0,25}(?:改成|换成|切换|转换)',
     '(?:全体|すべて|全て|丸ごと)[^。、]{0,30}(?:移行|書き直)',
     '(?:製品|プロジェクト|アプリ|システム|コード)全体[^。、]{0,40}(?:置き換|変え)',
@@ -399,8 +399,8 @@ export const ELUSIVE_MORE = [
   'jedes (?:zehnte|[0-9]+\.?) mal', 'nur auf (?:manchen|einigen)', 'auf manchen [^.?!]{0,15}geraten',
   'une fois sur (?:dix|[0-9]+)', 'sur certains (?:appareils|telephones)',
   'раз из десяти|один раз из|только на некоторых', 'на некоторых [а-я]*(?:телефон|устройств)',
-  '十次[^，。]{0,3}一次', '[0-9]+次[^，。]{0,3}一次', '部分[^，。]{0,6}(?:手机|设备|机型)',
-  '[0-9]+回に[0-9]+回', '十回に一度', '一部の(?:端末|機種|デバイス)',
+  '十次[^，。]{0,3}一次', '[0-9]+ ?次[^，。]{0,3}一次', '部分[^，。]{0,6}(?:手机|设备|机型)',
+  '[0-9]+ ?回に ?[0-9]+ ?回', '十回に一度', '一部の(?:端末|機種|デバイス)',
 ]
 
 // Slowness told by size or place: a bottleneck, millions of rows, minutes or hours.
@@ -438,5 +438,44 @@ export const REPEATED_MORE = [
   '(?:troisieme|quatrieme|cinquieme) (?:fois|tentative)', 'pour la (?:troisieme|quatrieme|cinquieme) fois',
   '(?:трет|четв[её]рт|пят)[а-я]* (?:попытк|раз)', 'в который раз',
   '第[三四五六七八九十]次(?:尝试|修|试|了)', '第 ?[3-9] ?次(?:尝试|修|试|了)',
-  '[3-9]回目[^。]{0,8}(?:お願い|依頼|試|修正|直)', '(?:三|四|五)回目[^。]{0,8}(?:お願い|依頼|試|修正|直)',
+  '[3-9] ?回目[^。]{0,8}(?:お願い|依頼|試|修正|直)', '(?:三|四|五)回目[^。]{0,8}(?:お願い|依頼|試|修正|直)',
+]
+
+// What to do first and what next: a plan of steps, said in each language.
+export const SEQUENCE = new RegExp(
+  [
+    '(?:^|[^a-z0-9])(?:first|then|after that|next)(?![a-z])',
+    '(?:^|[^a-z0-9])(?:once|sonra|ardindan|ilk olarak|once(?= )|asama asama)',
+    '(?:^|[^a-z0-9])(?:primero|luego|despues|despues de|por etapas|por fases)',
+    '(?:^|[^a-z0-9])(?:zuerst|erst|dann|danach|schrittweise|in schritten)',
+    '(?:^|[^a-z0-9])(?:d abord|puis|ensuite|etape par etape|par etapes)',
+    '(?:^|[^а-яё])(?:сначала|потом|затем|поэтапно|по этапам|по шагам|начни с)',
+    '先|然后|接着|分步骤|分批|逐步',
+    'まず|その後|次に|段階的|順番に|最初から',
+  ].join('|'),
+)
+
+// A hole in access control, a desync, a profiler named: hard whatever the rest says.
+export const HARD_MORE2 = [
+  'access control', 'authorization check', 'someone else.s (?:invoice|order|account|data)', 'other users.? (?:data|invoices|orders|accounts)', 'desync', 'out of sync',
+  'pprof', 'profiler', 'heap dump', 'flame ?graph', 'valgrind', 'strace', 'core dump', 'goroutine',
+  'yetki(?:siz| kontrol)', 'acik(?:lari)? kapat', 'baskasinin (?:fatura|siparis|hesab|veri)',
+  'control de acceso', 'desincroniz', 'ver (?:los )?(?:pedidos|facturas|datos) de (?:otros|otro)',
+  'zugriffskontrolle', 'berechtigungsprufung', 'fremde (?:rechnungen|daten|konten)', 'desynchron',
+  'controle d.acces', 'desynchronis', 'les (?:factures|commandes|donnees) d.autres',
+  'чужи[ех] (?:заказ|счет|данн)', 'проверк[аи] прав', 'рассинхрон', 'десинхрон',
+  '别人的(?:订单|账单|数据)', '越权', '权限校验', '不同步', '同步问题',
+  '他人の(?:注文|請求書|データ)', '権限チェック', '認可', '同期(?:が)?ずれ',
+]
+
+// "tried it three times": a count of failed tries.
+export const REPEATED_MORE2 = [
+  'tried (?:two|three|four|five|[0-9]+) times', '(?:three|four|five|[0-9]+) times (?:already|now)',
+  '(?:iki|uc|dort|bes|[0-9]+) kez (?:denedik|denendi|duzelt)',
+  '(?:intentamos|probamos|intentado|probado|arreglar|arreglado|corregido|corregir)[^.?!]{0,30}(?:dos|tres|cuatro|cinco|[0-9]+) veces',
+  '(?:dritte[nr]?|vierte[nr]?|funfte[nr]?) (?:versuch|mal)', 'schon (?:zwei|drei|vier|funf|[0-9]+) ?mal (?:versucht|probiert|repariert)',
+  '(?:essaye|tente|corrige)[^.?!]{0,20}(?:deux|trois|quatre|cinq|[0-9]+) fois',
+  '(?:два|три|четыре|пять|[0-9]+) раз[а]? (?:пытал|правил|исправля|чини)',
+  '(?:试了|修了|改了)(?:两|三|四|五|[0-9]+) ?(?:次|遍)',
+  '(?:二|三|四|五|[0-9]+) ?回(?:修正|試し|直し|やって)',
 ]

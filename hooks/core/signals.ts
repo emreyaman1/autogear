@@ -142,6 +142,7 @@ const HARD = cues([
   'guvenli[kg]?', 'security', 'zafiyet', 'vulnerab', 'injection', 'xss', 'csrf',
   ...words.HARD_I18N,
   ...words.HARD_MORE,
+  ...words.HARD_MORE2,
   ...words.SLOW_I18N,
   ...words.CAUSE_I18N,
   ...ELUSIVE_WORDS,
@@ -206,6 +207,7 @@ const REPEATED_FAILURE = cues([
   'for [0-9]+ (?:days?|hours?|weeks?|months?)', 'every attempt', 'each attempt',
   ...words.REPEATED_FAILURE_I18N,
   ...words.REPEATED_MORE,
+  ...words.REPEATED_MORE2,
 ])
 
 const SCOPE = cues([
@@ -353,6 +355,16 @@ const LIST_ITEM = /^\s*(?:\d+[.)]|[-*•])\s+\S/gm
 
 // Past this many characters a prompt describes work rather than names a small change.
 const MID_LENGTH = 300
+
+// A description of work: a few sentences, long enough to say what is wrong and what is wanted.
+const DESCRIBED_LENGTH = 160
+
+// A chore ("commit and push", "fix the typo") is asked for in a few words.
+const CHORE_LENGTH = 100
+const SENTENCE_END = /[.!?](?:\s|$)|[。！？]/g
+
+// A count of things: "60 screens", "50 windows", "12 files". Two digits or more, not a year or a port.
+const SCALE_NUMBER = /(?:^|[^0-9a-z.:])(?:[1-9][0-9]|[1-9][0-9]{2})(?![0-9:.a-z])/
 
 const QUESTION_START = /^(?:ne|neden|nasil|hangi|nerede|kim|kac|what|why|how|which|where|who|is|are|can|does|do)(?![a-z])/
 
@@ -628,7 +640,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
 
   // T0: questions about code in view, and chores. A chore is asked for in a
   // few words: "commit" or "typo" inside a long description is part of it.
-  if (isShort && trivial.length > 0 && (feature.length === 0 || adds.length === 0)) {
+  if (length <= CHORE_LENGTH && trivial.length > 0 && (feature.length === 0 || adds.length === 0)) {
     return rule(0, 'high', [`basit iş: ${quote(trivial)}`], 'chore')
   }
   if (isShort && LIST.test(rest) && INFO.test(rest) && feature.length === 0) {
@@ -636,6 +648,16 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   }
   if (isShort && question.length > 0 && adds.length === 0) {
     return rule(0, 'high', [`soru: ${quote(question)}`], 'question')
+  }
+
+  // A long account of several sentences that gives a number of things (screens,
+  // files, devices) or says what to do first and what next is a big, many-sided
+  // job in any language, whatever its words. The rules are not sure of it.
+  const sentences = raw.match(SENTENCE_END)?.length ?? 0
+  const isCounted = SCALE_NUMBER.test(rest)
+  const isSequenced = words.SEQUENCE.test(rest)
+  if (length > DESCRIBED_LENGTH && sentences >= 2 && ((isCounted && isSequenced) || (sentences >= 3 && (length > MID_LENGTH || isCounted || isSequenced)))) {
+    return rule(3, 'low', ['uzun, çok cümleli iş tarifi'], 'work')
   }
 
   // T2: features, conversions, wide requests.
