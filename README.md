@@ -386,7 +386,7 @@ What goes to a model, always through Claude Code itself and your own account, ne
 - **Haiku, when the rules cannot tell.** The first 4,000 characters of the message (and the tier of the one before it) are sent with a short instruction to ask which tier the work is. It is one small request, about $0.0002; `/gear ask off` stops it, and then unsure messages are read by the rules alone.
 - **The hand-over note.** When a large conversation has just finished a piece of work, autogear asks the model for an eight-line summary of that conversation, from the same cache. It is shown to you and sent anywhere only if you press "clean conversation", and then to the new conversation alone. `/gear band off` stops the offer.
 
-The measurement scripts in `eval/` and `scripts/` run only when you run them; they call real models and say what they will spend first.
+The measurement scripts in `eval/` and `scripts/` run only when you run them; they call real models and say what they will spend first. `node eval/external.mjs` downloads the public benchmark texts it measures on, from Hugging Face (SWE-bench Verified) and GitHub (Terminal-Bench), into `eval/.work`; it sends nothing but the requests for them.
 
 ## License
 

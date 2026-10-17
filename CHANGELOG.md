@@ -7,7 +7,7 @@ Each release, newest first. The evidence behind each change is in `docs/sonraki-
 - After a `/clear` the state row showed autogear as on whatever its state; it now shows the state autogear is in.
 - `/gear doctor` now sees `CLAUDE_CODE_EFFORT_LEVEL` and `CLAUDE_CODE_SUBAGENT_MODEL`; before, that check never ran.
 - The Turkish texts name the English commands (`/gear wrong`, `/gear reset`); an effort asked for in words shows in English in `/gear`.
-- README: the Turkish examples in the English README are in English, the measurements say which version they were taken on, the clean-conversation press is tried, and the privacy section names the two environment variables `/gear doctor` reads.
+- README: the Turkish examples in the English README are in English, the measurements say which version they were taken on, the clean-conversation press is tried, and the privacy section names the two environment variables `/gear doctor` reads and what `eval/external.mjs` downloads.
 
 ## 0.12.0 (18 October 2026)
 

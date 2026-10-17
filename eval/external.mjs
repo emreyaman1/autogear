@@ -36,7 +36,7 @@ const TERMINAL_BENCH = 'harbor-framework/terminal-bench-1'
 const withHaiku = process.argv.includes('--haiku')
 
 async function getJson(url) {
-  const response = await fetch(url, { headers: { 'user-agent': 'gearbox-eval', accept: 'application/json' } })
+  const response = await fetch(url, { headers: { 'user-agent': 'autogear-eval', accept: 'application/json' } })
   if (!response.ok) {
     throw new Error(`${url}: HTTP ${response.status}`)
   }
@@ -45,7 +45,7 @@ async function getJson(url) {
 }
 
 async function getText(url) {
-  const response = await fetch(url, { headers: { 'user-agent': 'gearbox-eval' } })
+  const response = await fetch(url, { headers: { 'user-agent': 'autogear-eval' } })
   if (!response.ok) {
     throw new Error(`${url}: HTTP ${response.status}`)
   }

@@ -1,4 +1,4 @@
-"""Renders demo.html to autogear-demo.gif (for the README) and autogear-demo.mp4.
+"""Renders demo.html to out/demo.gif and out/demo.mp4; the README shows a copy of the GIF.
 
   python docs/demo/render.py            all frames, then the GIF and the MP4
   python docs/demo/render.py 1.5 7 18   only these moments, as PNGs, to look at
@@ -42,8 +42,8 @@ def main():
     pattern = str(frames / '%04d.png')
     palette = str(frames / 'palette.png')
     subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', pattern, '-vf', 'scale=960:-1:flags=lanczos,palettegen=stats_mode=diff', palette], check=True)
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', pattern, '-i', palette, '-lavfi', 'scale=960:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=4', str(OUT / 'autogear-demo.gif')], check=True)
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', pattern, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', str(OUT / 'autogear-demo.mp4')], check=True)
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', pattern, '-i', palette, '-lavfi', 'scale=960:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=4', str(OUT / 'demo.gif')], check=True)
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-framerate', str(FPS), '-i', pattern, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', str(OUT / 'demo.mp4')], check=True)
     print('frames', total, 'in', frames)
 
 

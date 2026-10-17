@@ -386,7 +386,7 @@ Bir modele giden şeyler, hep Claude Code'un kendisi ve senin hesabınla, hiçbi
 - **Kurallar emin olamayınca Haiku.** Mesajın ilk 4.000 karakteri (ve bir öncekinin kademesi), işin hangi kademede olduğunu soran kısa bir yönergeyle gönderilir. Küçük bir istektir, yaklaşık $0,0002; `/gear ask off` durdurur, o zaman emin olunamayan mesajları yalnızca kurallar okur.
 - **Devir notu.** Büyük bir sohbet bir işi bitirince autogear, aynı önbellekten, modelden o sohbetin sekiz satırlık özetini ister. Sana gösterilir; "temiz sohbet"e basmazsan hiçbir yere gitmez, basarsan yalnızca yeni sohbete gider. `/gear band off` öneriyi durdurur.
 
-`eval/` ve `scripts/` altındaki ölçüm betikleri yalnızca sen çalıştırınca çalışır; gerçek modelleri çağırır ve önce ne harcayacağını söyler.
+`eval/` ve `scripts/` altındaki ölçüm betikleri yalnızca sen çalıştırınca çalışır; gerçek modelleri çağırır ve önce ne harcayacağını söyler. `node eval/external.mjs`, ölçtüğü herkese açık test metinlerini Hugging Face'ten (SWE-bench Verified) ve GitHub'dan (Terminal-Bench) `eval/.work` altına indirir; bu indirme isteklerinden başka bir şey göndermez.
 
 ## Lisans
 
