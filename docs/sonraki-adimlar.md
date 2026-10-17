@@ -353,7 +353,7 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 - **Hata avı ayrımı (kullanıcının önerisi) doğrulandı:** iki yeri belli hata avı 0.8.2'de Sonnet'e gitti, ikisi de geçti, $0,49; 0.8.1'de Opus'ta $1,39.
 - **gearbox'ın pahalı kısmı:** Opus'a verdiği 5 görev (iki belirsiz rapor, yanıltıcı rapor, iki görev daha) $3,52; aynıları Sonnet medium'da $1,17 ve hepsi geçti (biri hariç: sq-tsql-output herkes kaldı).
 - Videodaki "belirsiz ve yanıltıcı hatada Opus gerekli" bulgusu burada çıkmadı: Sonnet medium iki yanıltıcı hatayı (küçük set ve sqlglot) ve belirsiz MySQL raporunu geçti.
-- **Açık karar (kullanıcıya):** 'tasarruf' profilinde zor işi (T3) ve belirsiz hata avını da Sonnet'e mi vermeli, Opus'u yalnızca T4, plan modu ve kullanıcı isteğine mi bırakmalı? Kanıt bu yönde ama her hücre tek çalıştırma; üç tur yaklaşık $65 daha.
+- **Karar (kullanıcı, 18 Ekim 2026; 0.9.0):** 'tasarruf' profilinde zor iş (T3) ve belirsiz hata avı da Sonnet high'a gidiyor. Opus yalnızca kritik işte (T4), plan modunda ve kullanıcı istediğinde (`+opus`, "opus ile yap"). Kullanıcının sözü: "in the tasarruf profile send T3 and vague hunts to Sonnet too; keep Opus for T4, plan mode and when I ask for it". 'dengeli' ve 'kalite' değişmedi (T3 Opus high). 143 etiketli mesajda T3'teki 26 mesaj Opus medium'dan Sonnet high'a geçti. Her hücre tek çalıştırmaydı; üç tur (yaklaşık $65) ölçülmedi.
 - sq-tsql-output dört düzende de kaldı; görev sağlam (belirsiz anlatım + kestirme düzeltme OUTPUT komutunu bozuyor).
 
 ### 13. Sonuçlardan öğrenmek

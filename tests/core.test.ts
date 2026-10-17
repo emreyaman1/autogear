@@ -113,15 +113,15 @@ describe('decide', () => {
   const base = { source: 'rules', reasons: [], profile: 'tasarruf', pace: { level: 'normal' }, allowHaiku: true } as const
 
   test('never above the picker', () => {
-    const decision = decide({ ...base, tier: 3, ceiling: { family: 'sonnet', effort: 'high' } })
+    const decision = decide({ ...base, tier: 4, ceiling: { family: 'sonnet', effort: 'high' } })
     expect(decision.family).toBe('sonnet')
     expect(decision.effort).toBe('high')
     expect(decision.isClamped).toBe(true)
   })
 
   test('what the picker cut is kept beside what it allows, and nothing when it cut nothing', () => {
-    expect(decide({ ...base, tier: 3, ceiling: { family: 'sonnet', effort: 'high' } }).wanted).toEqual({ family: 'opus', effort: 'medium' })
-    expect(decide({ ...base, tier: 3, ceiling: { family: 'sonnet', effort: 'high' }, hunt: 'vague' }).wanted).toEqual({ family: 'opus', effort: 'high' })
+    expect(decide({ ...base, tier: 4, ceiling: { family: 'sonnet', effort: 'high' } }).wanted).toEqual({ family: 'opus', effort: 'high' })
+    expect(decide({ ...base, profile: 'dengeli', tier: 3, ceiling: { family: 'sonnet', effort: 'high' }, hunt: 'vague' }).wanted).toEqual({ family: 'opus', effort: 'high' })
     expect(decide({ ...base, tier: 4, ceiling: { family: 'opus', effort: 'medium' } }).wanted).toEqual({ family: 'opus', effort: 'high' })
     expect(decide({ ...base, tier: 3, ceiling: { family: 'opus', effort: 'high' } }).wanted).toBeUndefined()
   })
@@ -135,6 +135,7 @@ describe('decide', () => {
   test('a large context keeps the model on a one-tier step and moves the effort', () => {
     const decision = decide({
       ...base,
+      profile: 'dengeli',
       tier: 3,
       ceiling: { family: 'opus', effort: 'max' },
       previous: { family: 'sonnet', tier: 2 },
@@ -158,16 +159,26 @@ describe('decide', () => {
     }
   })
 
-  test('a vague hunt runs on Opus at high; under a Sonnet picker more effort, never above the picker', () => {
+  test('in tasarruf hard work and a vague hunt run on Sonnet at high; Opus is for critical work', () => {
     const ceiling = { family: 'opus', effort: 'max' } as const
-    expect(decide({ ...base, tier: 3, ceiling })).toMatchObject({ family: 'opus', effort: 'medium' })
-    const hunt = decide({ ...base, tier: 3, ceiling, hunt: 'vague' })
+    expect(decide({ ...base, tier: 3, ceiling })).toMatchObject({ family: 'sonnet', effort: 'high' })
+    expect(decide({ ...base, tier: 3, ceiling, hunt: 'vague' })).toMatchObject({ family: 'sonnet', effort: 'high', hunt: 'vague' })
+    expect(decide({ ...base, tier: 4, ceiling })).toMatchObject({ family: 'opus', effort: 'high' })
+    // A model the person names still wins.
+    expect(decide({ ...base, tier: 3, ceiling, override: { family: 'opus' } }).family).toBe('opus')
+  })
+
+  test('in dengeli a vague hunt runs on Opus at high; under a Sonnet picker more effort, never above the picker', () => {
+    const ceiling = { family: 'opus', effort: 'max' } as const
+    const dengeli = { ...base, profile: 'dengeli' } as const
+    expect(decide({ ...dengeli, tier: 3, ceiling })).toMatchObject({ family: 'opus', effort: 'high' })
+    const hunt = decide({ ...dengeli, tier: 3, ceiling, hunt: 'vague' })
     expect(hunt).toMatchObject({ family: 'opus', effort: 'high', hunt: 'vague' })
-    expect(hunt.reasons.at(-1)).toBe('hata avı: efor high')
-    expect(decide({ ...base, tier: 3, ceiling: { family: 'sonnet', effort: 'max' }, hunt: 'vague' })).toMatchObject({ family: 'sonnet', effort: 'xhigh' })
-    expect(decide({ ...base, tier: 3, ceiling: { family: 'opus', effort: 'medium' }, hunt: 'vague' }).effort).toBe('medium')
+    expect(decide({ ...base, tier: 2, ceiling, hunt: 'vague' }).reasons.at(-1)).toBe('hata avı: efor high')
+    expect(decide({ ...dengeli, tier: 3, ceiling: { family: 'sonnet', effort: 'max' }, hunt: 'vague' })).toMatchObject({ family: 'sonnet', effort: 'xhigh' })
+    expect(decide({ ...dengeli, tier: 3, ceiling: { family: 'opus', effort: 'medium' }, hunt: 'vague' }).effort).toBe('medium')
     // The person's own effort outranks it.
-    expect(decide({ ...base, tier: 3, ceiling, hunt: 'vague', override: { effort: 'low' } }).effort).toBe('low')
+    expect(decide({ ...dengeli, tier: 3, ceiling, hunt: 'vague', override: { effort: 'low' } }).effort).toBe('low')
   })
 
   test('a located hunt runs on Sonnet at high, xhigh when critical; a named model or plan mode outranks it', () => {
@@ -228,8 +239,9 @@ describe('decide', () => {
   test('room left before a reset lifts the effort of hard work only, and never to max', () => {
     const surplus = { level: 'surplus', reason: 'x' } as const
     const ceiling = { family: 'opus', effort: 'max' } as const
+    // Sonnet at high on hard work, one step more.
     const hard = decide({ ...base, tier: 3, ceiling, pace: surplus })
-    expect(hard.effort).toBe('high')
+    expect(hard).toMatchObject({ family: 'sonnet', effort: 'xhigh' })
     const standard = decide({ ...base, tier: 2, ceiling, pace: surplus })
     expect(standard.effort).toBe(decide({ ...base, tier: 2, ceiling }).effort)
     // dengeli's critical tier runs Opus at xhigh: the room left takes it no further.

@@ -87,7 +87,7 @@ test('the rules ask Haiku when they cannot tell', async ($, on) => {
   const { sent } = world(on, { classifierReply: 'T3' })
   await say($, 'şu fonksiyonu düzelt')
   await step($, 't1')
-  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'medium' })
+  expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
 })
 
 test('every request of a turn goes out on the same model', async ($, on) => {
@@ -151,17 +151,16 @@ test('a turn that ends with failing tests hands the next one a stronger model', 
   expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'medium' })
 })
 
-test('a bug told without detail goes to Opus at high, and a go-ahead in its middle keeps it there', async ($, on) => {
+test('a bug told without detail goes to Sonnet at high in tasarruf, and a go-ahead in its middle keeps it there', async ($, on) => {
   const { sent } = world(on)
   await say($, 'bu çalışmıyor, düzelt')
   await step($, 't1', 0, 'claude-opus-5-5', 'max')
-  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
-  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
+  expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
+  const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-sonnet-5-5', ...ZERO } })
   expect(done.text).toContain('belirsiz anlatılmış hata')
-  expect(done.text).toContain('hata avı: efor high')
   await say($, 'evet, devam et')
   await step($, 't2', 0, 'claude-opus-5-5', 'max')
-  expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
+  expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
 })
 
 test('a bug whose cause hides but is told plainly goes to Sonnet at high', async ($, on) => {
@@ -173,18 +172,18 @@ test('a bug whose cause hides but is told plainly goes to Sonnet at high', async
   expect(done.text).toContain('yeri belli hata avı: Sonnet')
 })
 
-test('a nearly full window keeps hard work on Opus and warns under the answer and in the band', async ($, on) => {
+test('a nearly full window keeps critical work on Opus and warns under the answer and in the band', async ($, on) => {
   const resetsAt = new Date(NOW + 2 * 3_600_000).toISOString()
   const { sent } = world(on, { rateLimits: [{ kind: 'five_hour', percentUsed: 92, resetsAt }] })
   const BAND = { plugin: 'gearbox', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
-  await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
+  await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
-  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'medium' })
+  expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
   const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
-  expect(done.text).toContain('⚠ 5 saatlik limit %92: bu iş Opus 5.5 · medium ile yapılıyor, limit dolabilir')
+  expect(done.text).toContain('⚠ 5 saatlik limit %92: bu iş Opus 5.5 · high ile yapılıyor, limit dolabilir')
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
-    expect(await ui.find({ type: 'Text', text: /5 saatlik limit %92: bu iş Opus · medium ile yapılıyor/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /5 saatlik limit %92: bu iş Opus · high ile yapılıyor/ })).toBeDefined()
     await ui.unmount()
   }
   // Off, gearbox reads no windows, and the band says nothing of them.
@@ -492,12 +491,12 @@ test('in shadow mode gearbox chooses and writes it down, and every request goes 
 test('in shadow mode under a Sonnet picker the log keeps both what gearbox wanted and what the picker allows', async ($, on) => {
   world(on)
   await $.command.run({ command: 'gear', args: 'golge' })
-  await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
+  await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
   await step($, 't1', 0, 'claude-sonnet-5-5', 'high')
   const done = await $.turn.complete({ turnId: 't1', answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-sonnet-5-5', ...ZERO } })
-  expect(done.text).toContain('gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium')
+  expect(done.text).toContain('gölge: Sonnet · high · T4 kritik önerirdi, tavan olmasa Opus · high')
   const log = JSON.stringify(await $.command.run({ command: 'gear', args: 'kayit' }))
-  expect(log).toContain('Sonnet · high (tavansız Opus · medium)')
+  expect(log).toContain('Sonnet · high (tavansız Opus · high)')
   expect(log).toContain('Seçici tavanı yüzünden kırpılan: 1, bunların 1 tanesinde daha güçlü bir model istenmişti')
 })
 

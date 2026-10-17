@@ -25,21 +25,25 @@ const row = (
   fable: Effort,
 ): TierSpec => ({ label, prefer, effort: { haiku, sonnet, opus, fable } })
 
-// tasarruf fits Pro's tight windows: Opus only for hard work, at its default
-// effort; dengeli and kalite spend more for Max plans.
+// tasarruf fits Pro's tight windows: Opus only for critical work, plan mode
+// (policy.ts) and when the person asks; dengeli and kalite spend more for Max
+// plans.
 //
 // Clearly described routine and standard work runs on Sonnet at medium in
 // every profile: in the measurements behind this table Sonnet medium did that
 // work as well as Opus high for a fraction of the cost, and raising Sonnet's
-// effort on it did not help. No tier defaults to max; only the person asks
-// for it (+max, "max ile"). A hunt (policy.ts) runs at high at least.
+// effort on it did not help. In tasarruf hard work runs on Sonnet at high too:
+// in gearbox's own comparison (twenty tasks, two of them sets, one run each)
+// Opus solved none that Sonnet at medium failed, at 3.6 times the cost (the
+// person's call, 18 October 2026). No tier defaults to max; only the person
+// asks for it (+max, "max ile"). A hunt (policy.ts) runs at high at least.
 export const PROFILES: Record<ProfileId, readonly TierSpec[]> = {
   //       label        prefer     haiku     sonnet    opus      fable
   tasarruf: [
     row('önemsiz', 'haiku', 'low', 'low', 'low', 'low'),
     row('rutin', 'sonnet', 'medium', 'medium', 'low', 'low'),
     row('standart', 'sonnet', 'high', 'medium', 'medium', 'low'),
-    row('zor', 'opus', 'xhigh', 'xhigh', 'medium', 'medium'),
+    row('zor', 'sonnet', 'xhigh', 'high', 'medium', 'medium'),
     row('kritik', 'opus', 'xhigh', 'xhigh', 'high', 'medium'),
   ],
   dengeli: [

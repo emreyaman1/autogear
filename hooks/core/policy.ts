@@ -63,11 +63,11 @@ export const STICKY_CONTEXT_TOKENS = 40_000
 const SURPLUS_TIER = 3
 const SURPLUS_TOP: Effort = 'xhigh'
 
-// A vague hunt runs on its tier's model (Opus at T3) at high at least: a bug
-// told without detail went 0 of 2 on Sonnet at medium in the public
-// measurement. A located one runs on Sonnet at high, xhigh at T4: in our own
-// comparison Sonnet at medium already passed every such task that Opus at high
-// did (the person's call, 17 October 2026, to be checked on harder tasks).
+// A vague hunt runs on its tier's model at high at least: Sonnet in tasarruf
+// (in our own comparison Sonnet at medium passed the vague reports Opus did),
+// Opus in dengeli and kalite. A located one runs on Sonnet at high, xhigh at
+// T4, in every profile: Sonnet passed every such task that Opus at high did
+// (the person's calls, 17 and 18 October 2026).
 const HUNT_EFFORT: Effort = 'high'
 const LOCATED_EFFORT = (tier: Tier): Effort => (tier >= 4 ? 'xhigh' : 'high')
 
@@ -96,6 +96,8 @@ export function decide(input: PolicyInput): Decision {
   const isLocated = input.hunt === 'located' && !isPlanning && override?.family === undefined && override?.tier === undefined
   if (isLocated && familyRank(family) > familyRank('sonnet')) {
     family = 'sonnet'
+  }
+  if (isLocated && family === 'sonnet') {
     reasons.push('yeri belli hata avı: Sonnet')
   }
   const isDeliberate = override !== undefined || input.source === 'escalate' || isPlanning

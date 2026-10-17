@@ -2,13 +2,13 @@
 
 [English](README.md) · [Türkçe](README.tr.md)
 
-Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer, and hard work still goes to the strong model.
+Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer: in its own measurements the strong model solved nothing the cheaper one could not, so Opus is kept for critical work, plan mode and when you ask for it.
 
-> Status: 0.8.2. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.9.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## What you get
 
-- **The right model per message.** "What does this function do" runs on Haiku · low, a clear one-place change on Sonnet · medium, an unclear bug or an architecture question on Opus.
+- **The right model per message.** "What does this function do" runs on Haiku · low, a clear one-place change on Sonnet · medium, an unclear bug or an architecture question on Sonnet · high, long many-sided work and plan mode on Opus.
 - **Nothing above your picker.** Set the picker to your strongest model once; gearbox chooses at or below it.
 - **A state row.** A row above the prompt shows whether gearbox is on, in shadow mode or off, with buttons named for what they do.
 - **Every answer explains itself.** The line under it names the model and effort that answered, the tier and why, and what the turn cost against the picker's model:
@@ -97,12 +97,12 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
 | T0 trivial | "what does this function do", commit message, rename | Haiku · low |
 | T1 routine | clear one-place change | Sonnet · medium |
 | T2 standard | feature, tests for it, debugging with the error in hand | Sonnet · medium |
-| T3 hard | architecture, performance, security, a choice between options | Opus · medium |
-| T3 vague hunt | a bug told without detail ("this doesn't work, fix it"), with no error, file, number or moment, and no screenshot | Opus · high |
+| T3 hard | architecture, performance, security, a choice between options | Sonnet · high |
+| T3 vague hunt | a bug told without detail ("this doesn't work, fix it"), with no error, file, number or moment, and no screenshot | Sonnet · high (Opus · high in `dengeli` and `kalite`) |
 | T3 located hunt | a bug told plainly whose cause hides (it comes and goes, it shows far from where it starts), tests written to catch bugs nobody has found yet | Sonnet · high (xhigh at T4) |
 | T4 critical | long multi-step work, repeated failure | Opus · high |
 
-Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced) and `kalite` (quality) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a vague hunt on Opus · high, a located one on Sonnet · high, and no tier runs at max unless you ask for it (`+max`, "max ile"). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that gearbox's own comparison is to check. In that comparison (Measurements) Sonnet · medium passed every hunt Opus · high passed, which is why a located hunt now goes to Sonnet at more effort; the vague kind stays on Opus until harder tasks say otherwise.
+Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced) and `kalite` (quality) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a located hunt on Sonnet · high, and no tier runs at max unless you ask for it (`+max`, "max ile"). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that gearbox's own comparison is to check. In that comparison (Measurements) Sonnet · medium passed every hunt Opus · high passed, which is why a located hunt now goes to Sonnet at more effort; In `tasarruf` hard work and a vague hunt now run on Sonnet · high as well: over twenty tasks, two sets, Opus solved none that Sonnet · medium failed, at 3.6 times the cost. `dengeli` and `kalite` keep Opus for hard work.
 
 A bug report counts as clear when it holds the error, a file, code, a number, the moment it happens ("when I click...") or what should happen instead; a screenshot beside it counts too.
 
@@ -169,7 +169,7 @@ Dollars per million tokens. A Haiku prompt over 100K tokens costs five times as 
 | **Rules, Haiku when unsure, held to the rules' signs (0.6)** | **88%** | **100%** | **0** | **19%** |
 | Always Haiku, take the higher | 74% | 96% | 0 | 100% |
 
-How the 143 labelled messages are routed, by the rules alone, with the picker on Opus · high (0.8, `tasarruf`; `claude plugin test .` prints it as `EVAL route`): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Opus · medium 26, T3 located hunt Sonnet · high 10, T4 Opus · high 13. Until 0.7 the 33 standard ones ran on Sonnet · high and the 10 hunts on Opus · medium; the tiers themselves did not change.
+How the 143 labelled messages are routed, by the rules alone, with the picker on Opus · high (0.8, `tasarruf`; `claude plugin test .` prints it as `EVAL route`): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Sonnet · high 26, T3 located hunt Sonnet · high 10, T4 Opus · high 13. Until 0.7 the 33 standard ones ran on Sonnet · high and the 10 hunts on Opus · medium; the tiers themselves did not change.
 
 \* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower. The bound of 0.6 costs one message here ("bu import neden kullanılıyor?" is now T1, not T0) and is what keeps the real-use errors below from happening.
 
@@ -321,6 +321,7 @@ Restart the app and open a new chat.
 - [x] English README, MIT license, published on GitHub
 - [x] Shadow mode, external benchmarks and a harvest of real decisions, so a new version is judged before it routes anyone's work (0.7)
 - [x] Rate-limit windows warn instead of lowering the choice; the effort table retuned from measurements (Sonnet · medium for clear work, hunts at high, no max unasked); a state row that shows on, shadow and off apart; the shadow log keeps what the picker cut; plan mode goes to Opus (0.8)
+- [x] Measured against five setups on twenty tasks, ten of them real sqlglot bugs; in `tasarruf` hard work moves to Sonnet · high, Opus kept for critical work, plan mode and when asked (0.9)
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
 - [x] Decision log with your marks, to see where the rules go wrong
 - [x] Review of real use: system notes, the bound on Haiku, the hold on work in hand, models named in words (0.6)
