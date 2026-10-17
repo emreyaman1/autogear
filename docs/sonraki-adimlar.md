@@ -352,6 +352,7 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
   - İngilizce ürün (adım 9);
   - gizlilik açıklaması: ne kaydediliyor, Haiku'ya ne gidiyor;
   - README'de "early access" yerine Mods'un yayında olduğu (1 Ekim 2026).
+- **Başvuru öncesi hazırlık (18 Ekim 2026, yapıldı):** README'ler (İngilizce ve Türkçe) "Gizlilik" bölümü aldı (ne saklanıyor: ayarlar, son 200 kararın ilk 100 karakteri, toplamlar; ne modele gidiyor: emin olunamayan mesajın ilk 4.000 karakteri Haiku'ya, devir notu için sohbetin özeti; gearbox'ın kendi ağ isteği yok, kodda doğrulandı). "early access" ifadesi "Mod" oldu. `CHANGELOG.md` (sürüm notları) ve `.github/ISSUE_TEMPLATE/` (hata kaydı ve yanlış seçim şablonları) eklendi. İngilizce ürün (adım 9) da tamam. **Başvurudan önce kalanlar, kullanıcının işi:** isim kararı, 20–30 saniyelik demo görüntüsü, başvuru formunun kendisi (clau.de/plugin-directory-submission). Ayrıca Anthropic'in "kalite ve güvenlik standartları" yayımlanmadığı için formda ne sorulduğu görülmeden eksik kalıp kalmadığı bilinmiyor.
 - **Diğer öneriler:**
   - kıyas tablosu (adım 4);
   - 20–30 saniyelik demo görüntüsü;

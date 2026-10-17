@@ -1,0 +1,34 @@
+name: Wrong model or effort for a message
+description: The rules read a message at the wrong tier
+labels: [classifier]
+body:
+  - type: textarea
+    id: message
+    attributes:
+      label: The message
+      description: The text, or a rewrite of it that behaves the same. Leave out anything private.
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Language of the message
+    validations:
+      required: true
+  - type: dropdown
+    id: tier
+    attributes:
+      label: What it should have been
+      options:
+        - T0 trivial (Haiku)
+        - T1 routine (Sonnet, medium)
+        - T2 standard (Sonnet, medium)
+        - T3 hard (Sonnet, high)
+        - T4 critical (Opus)
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: What gearbox chose
+      description: The line under the answer, or the row from /gear log.

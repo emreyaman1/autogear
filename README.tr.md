@@ -4,17 +4,17 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer: kendi ölçümlerinde güçlü model, ucuzunun çözemediği hiçbir işi çözmedi; bu yüzden Opus kritik işe, plan moduna ve senin istediğin duruma ayrılır.
 
-> Durum: 0.11.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.12.0. Claude Code için bir Mod; eklenti API'sinin function hooks'una dayanır, o API Claude Code sürümleri arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var. Sürüm notları: [CHANGELOG.md](CHANGELOG.md). Neyi sakladığı ve neyi gönderdiği: [Gizlilik](#gizlilik).
 
 ## Ne sağlar
 
 - **Mesaj başına doğru model.** "Bu fonksiyon ne yapıyor" Haiku · low ile, net ve tek yerlik bir değişiklik Sonnet · medium ile, belirsiz bir hata ya da mimari sorusu Sonnet · high ile, çok parçalı uzun iş ve plan modu Opus ile çalışır.
 - **Seçicinin üstüne çıkmaz.** Seçiciyi bir kez en güçlü modeline getirirsin; gearbox ona eşit ya da altında seçer.
 - **Bir durum satırı.** İstem kutusunun üstündeki satır gearbox'ın açık mı, gölgede mi, kapalı mı olduğunu gösterir; yanındaki düğmelerin üstünde ne yaptıkları yazar.
-- **Her cevap kendini açıklar.** Altındaki satır cevap veren model ve eforu, kademeyi ve nedenini, bir de turun seçici modeline göre ne tuttuğunu söyler:
+- **Her cevap kimin verdiğini söyler.** Altındaki tek italik satır cevabı veren modeli ve eforu, yardımcılar çalıştıysa onların modelini yazar (gearbox açıkken, gölgedeyken ve kapalıyken de). Gerekçeler ve para tek komut ötede:
 
   ```
-  ⚙ Haiku 5.5 · low · T0 önemsiz (kural: soru: "ne yapiyor") · önbellek 0 okundu / 100.0K yazıldı · $0,013 (seçici modeliyle $0,020)
+  Opus 5.5 · efor medium · yardımcılar: Sonnet 5.5
   ```
 - **Tasarruf sayacı.** Sağ alttaki durum yazısında oturumun tasarrufu görünür, ayrıntı için `/gear savings` bir kart çizer.
 
@@ -359,6 +359,21 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] Senin işaretlerinle karar günlüğü, kuralların nerede yanıldığını görmek için
 - [x] Gerçek kullanımın incelenmesi: sistem notları, Haiku'ya sınır, süren işin tutulması, yazıyla istenen model (0.6)
 - [ ] Bu düzeltmelerden öğrenme
+
+## Gizlilik
+
+gearbox'ın sunucusu yoktur ve kendi başına hiçbir ağ isteği yapmaz. Sakladığı her şey makinende, Claude Code'un her eklentiye verdiği depoda durur:
+
+- ayarların (mod, profil, dil, anahtarlar);
+- karar günlüğü: son 200 mesajın her biri için ilk 100 karakteri, kademe, model ve efor, gerekçeler, maliyet; `/gear reset` siler;
+- tasarruf toplamları ve "temiz sohbet"e bastığın devir notu (bir sonrakiyle değişir).
+
+Bir modele giden şeyler, hep Claude Code'un kendisi ve senin hesabınla, hiçbir zaman üçüncü bir tarafa değil:
+
+- **Kurallar emin olamayınca Haiku.** Mesajın ilk 4.000 karakteri (ve bir öncekinin kademesi), işin hangi kademede olduğunu soran kısa bir yönergeyle gönderilir. Küçük bir istektir, yaklaşık $0,0002; `/gear ask off` durdurur, o zaman emin olunamayan mesajları yalnızca kurallar okur.
+- **Devir notu.** Büyük bir sohbet bir işi bitirince gearbox, aynı önbellekten, modelden o sohbetin sekiz satırlık özetini ister. Sana gösterilir; "temiz sohbet"e basmazsan hiçbir yere gitmez, basarsan yalnızca yeni sohbete gider. `/gear band off` öneriyi durdurur.
+
+`eval/` ve `scripts/` altındaki ölçüm betikleri yalnızca sen çalıştırınca çalışır; gerçek modelleri çağırır ve önce ne harcayacağını söyler.
 
 ## Lisans
 

@@ -4,17 +4,17 @@
 
 Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer: in its own measurements the strong model solved nothing the cheaper one could not, so Opus is kept for critical work, plan mode and when you ask for it.
 
-> Status: 0.11.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.12.0. A Claude Code Mod, built on the plugin API's function hooks, which can change between Claude Code releases. The safety nets below exist for that reason. Release notes: [CHANGELOG.md](CHANGELOG.md). What it keeps and what it sends: [Privacy](#privacy).
 
 ## What you get
 
 - **The right model per message.** "What does this function do" runs on Haiku · low, a clear one-place change on Sonnet · medium, an unclear bug or an architecture question on Sonnet · high, long many-sided work and plan mode on Opus.
 - **Nothing above your picker.** Set the picker to your strongest model once; gearbox chooses at or below it.
 - **A state row.** A row above the prompt shows whether gearbox is on, in shadow mode or off, with buttons named for what they do.
-- **Every answer explains itself.** The line under it names the model and effort that answered, the tier and why, and what the turn cost against the picker's model:
+- **Every answer says who gave it.** One italic line under it names the model and effort that answered, and the helpers' models when helpers ran (with gearbox on, in shadow or off). The reasons and the money are one command away:
 
   ```
-  ⚙ Haiku 5.5 · low · T0 önemsiz (kural: soru: "ne yapiyor") · önbellek 0 okundu / 100.0K yazıldı · $0,013 (seçici modeliyle $0,020)
+  Opus 5.5 · effort medium · helpers: Sonnet 5.5
   ```
 - **A savings counter.** The status text at the bottom right carries the session's saving, and `/gear savings` draws a card with the details.
 
@@ -359,6 +359,21 @@ Restart the app and open a new chat.
 - [x] Decision log with your marks, to see where the rules go wrong
 - [x] Review of real use: system notes, the bound on Haiku, the hold on work in hand, models named in words (0.6)
 - [ ] Learning from those corrections
+
+## Privacy
+
+gearbox has no server and makes no network request of its own. Everything it keeps stays in the plugin's store on your machine, the place Claude Code gives every plugin:
+
+- your settings (mode, profile, language, the switches);
+- the decision log: for each of the last 200 messages its first 100 characters, the tier, the model and effort, the reasons, the cost; `/gear reset` clears it;
+- the savings totals, and the hand-over note you pressed "clean conversation" for (it is replaced by the next one).
+
+What goes to a model, always through Claude Code itself and your own account, never to a third party:
+
+- **Haiku, when the rules cannot tell.** The first 4,000 characters of the message (and the tier of the one before it) are sent with a short instruction to ask which tier the work is. It is one small request, about $0.0002; `/gear ask off` stops it, and then unsure messages are read by the rules alone.
+- **The hand-over note.** When a large conversation has just finished a piece of work, gearbox asks the model for an eight-line summary of that conversation, from the same cache. It is shown to you and sent anywhere only if you press "clean conversation", and then to the new conversation alone. `/gear band off` stops the offer.
+
+The measurement scripts in `eval/` and `scripts/` run only when you run them; they call real models and say what they will spend first.
 
 ## License
 

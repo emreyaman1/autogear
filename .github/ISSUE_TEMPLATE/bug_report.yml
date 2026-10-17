@@ -1,0 +1,29 @@
+name: Bug report
+description: gearbox chose badly, did not load, or stopped itself
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected and what you saw.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: gearbox (see /gear doctor) and Claude Code (`claude --version`).
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of /gear doctor
+      render: text
+  - type: textarea
+    id: log
+    attributes:
+      label: The decision from /gear log
+      description: The row for the message, if it was a wrong choice. The log holds the first 100 characters of your messages; remove what you do not want to share.
+      render: text
