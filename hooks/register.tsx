@@ -12,6 +12,7 @@ import type {
 } from 'claude-code'
 
 import { savingsCard, type LimitRow } from './card'
+import { cleanNote, dayOf, handoverContext, HANDOVER_TOKENS, isWorkDone, notePrompt, resumeLine } from './core/handover'
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
 import { addEntry, flagLast, journalText, markLast, MARK_NAMES, readJournal, snippet, type Mark } from './core/journal'
 import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort, type Family } from './core/models'
@@ -115,6 +116,16 @@ type State = {
   // The tier of the work in hand, which a question or a remark in its middle
   // does not drop far below.
   task: Task
+  // A commit, a push or a passing test run in this turn of the main thread.
+  isWorkDone: boolean
+  // A hand-over note is being written.
+  isForking: boolean
+  // The session the note was written in, for its resume line.
+  noteSession: string | undefined
+  // The note on its way to the clean conversation, from the press of "temiz
+  // sohbet" until the first prompt after the /clear carries it. Kept in the
+  // module, which a /clear does not reload.
+  handover: { note: string; oldSessionId: string; isCleared: boolean } | undefined
 }
 
 const modeAtom = atom({ plugin: 'gearbox', key: 'mode' } as const, 'auto')
@@ -129,6 +140,16 @@ const noteAtom = atom({ plugin: 'gearbox', key: 'note' } as const, '')
 // Plan mode set in the middle of a turn counts from the next turn: a turn
 // keeps its one model.
 const planningAtom = atom({ plugin: 'gearbox', key: 'planning' } as const, false)
+
+// The hand-over note the band offers; '' when none. Its size, and whether the
+// /clear has run and the note waits for the first prompt.
+const handoverAtom = atom({ plugin: 'gearbox', key: 'handover' } as const, '')
+
+const handoverSizeAtom = atom({ plugin: 'gearbox', key: 'handoverTokens' } as const, 0)
+
+const handoverArmedAtom = atom({ plugin: 'gearbox', key: 'handoverArmed' } as const, false)
+
+const HANDOVER_PANE = 'gearbox-handover'
 
 const kilo = (tokens: number): string => (tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}K` : String(tokens))
 
@@ -622,6 +643,95 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
   return { text: `${name} · profil ${changed.profile}` }
 }
 
+// A turn of the main thread ended. If it finished a piece of work and the
+// conversation is large, a hand-over note is written for the band to offer.
+// Nothing more: the conversation is cleared only on the person's press.
+function noticeFinishedWork($: EngineInterface, state: State, answered: Family | undefined): void {
+  const isWorkDone = state.isWorkDone
+  state.isWorkDone = false
+  if (!isWorkDone || state.settings.mode === 'pin' || !state.settings.band || state.isForking || state.handover !== undefined) {
+    return
+  }
+  // Not awaited: the turn ends now, the note is ready a little later.
+  void writeHandover($, state, answered)
+}
+
+async function writeHandover($: EngineInterface, state: State, answered: Family | undefined): Promise<void> {
+  state.isForking = true
+  try {
+    const usage = await readUsage($)
+    const tokens = usage?.context.tokens ?? 0
+    if (tokens < HANDOVER_TOKENS) {
+      return
+    }
+    const reply = await $.model.fork({ prompt: notePrompt(dayOf(await $.clock.now())) })
+    if (!reply.isAnswered) {
+      return
+    }
+    // The note is gearbox's own spending, counted against what it saves.
+    state.overhead += costOf(answered ?? 'opus', readTokens(reply.usage ?? {}))
+    const note = cleanNote(reply.text)
+    if (note === '') {
+      return
+    }
+    state.noteSession = await $.session.id()
+    await update($, handoverSizeAtom, () => tokens)
+    await update($, handoverAtom, () => note)
+  } catch {
+    // An offer only: no note, no offer.
+  } finally {
+    state.isForking = false
+  }
+}
+
+async function dropHandoverOffer($: EngineInterface): Promise<void> {
+  await update($, handoverAtom, () => '')
+  await update($, handoverArmedAtom, () => false)
+}
+
+// "temiz sohbet": the note is kept, /clear runs, and the first prompt after
+// it carries the note.
+async function startCleanConversation($: EngineInterface, state: State): Promise<void> {
+  const note = await read($, handoverAtom)
+  if (note === '' || state.handover !== undefined) {
+    return
+  }
+  state.handover = { note, oldSessionId: state.noteSession ?? (await $.session.id()), isCleared: false }
+  try {
+    await $.store.set('handover', { note, oldSessionId: state.handover.oldSessionId })
+    await $.command.run({ command: 'clear' })
+  } catch {
+    // Whether the conversation was cleared is what session.end said.
+  }
+  if (state.handover?.isCleared !== true) {
+    state.handover = undefined
+    $.ui.toast('gearbox: sohbet temizlenemedi; her şey olduğu gibi duruyor.', { timeoutMs: 10000 })
+
+    return
+  }
+  // A clean conversation may start with a fresh state: the band is told again.
+  await update($, handoverAtom, () => note)
+  await update($, handoverArmedAtom, () => true)
+  $.ui.toast('Temiz sohbet: devir notu ilk mesajınla birlikte gidecek.', { timeoutMs: 10000 })
+}
+
+// The note for the first prompt of the clean conversation, once.
+async function takeHandover($: EngineInterface, state: State): Promise<string | undefined> {
+  const handover = state.handover
+  if (handover?.isCleared !== true) {
+    // The person wrote on: an offer made before is for work already moved past.
+    if ((await read($, handoverAtom)) !== '') {
+      await dropHandoverOffer($)
+    }
+
+    return undefined
+  }
+  state.handover = undefined
+  await dropHandoverOffer($)
+
+  return handoverContext(handover.note, handover.oldSessionId)
+}
+
 export const register: Register = on => {
   const state: State = {
     settings: DEFAULTS,
@@ -640,6 +750,10 @@ export const register: Register = on => {
     lastAnswered: undefined,
     overhead: 0,
     task: undefined,
+    isWorkDone: false,
+    isForking: false,
+    noteSession: undefined,
+    handover: undefined,
   }
 
   on('session.start', async ($, e, next) => {
@@ -648,23 +762,41 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('prompt.submit', ($, e, next) => {
+  on('prompt.submit', async ($, e, next) => {
     if (!USER_ORIGINS.has(e.origin.kind)) {
       return next(e)
     }
+    // The first prompt after "temiz sohbet" carries the hand-over note, unseen.
+    const handed = e.command === undefined ? await takeHandover($, state) : undefined
+    const sent = handed === undefined ? e : { ...e, context: [...(e.context ?? []), handed] }
     const said = withoutNotes(e.text)
     if (said === '') {
       // Nothing the person wrote (a bare attachment, or only a note): the turn
       // carries on with the last choice.
       state.pending = undefined
 
-      return next(e)
+      return next(sent)
     }
     const parsed = parseOverrides(said)
     state.pending = { text: parsed.text, rule: readPrompt(state, parsed, (e.attachments?.length ?? 0) > 0) }
 
     // The text the model gets is the person's, with any leading +token taken off.
-    return parsed.tokens.length === 0 ? next(e) : next({ ...e, text: withoutTokens(e.text, said, parsed.text) })
+    return parsed.tokens.length === 0 ? next(sent) : next({ ...sent, text: withoutTokens(e.text, said, parsed.text) })
+  }).catch(($, e, next) => next(e))
+
+  // A /clear: the one gearbox ran on the person's press, or theirs, after
+  // which an offer for the old conversation no longer stands.
+  on('session.end', async ($, e, next) => {
+    if (e.reason === 'clear') {
+      state.isWorkDone = false
+      if (state.handover !== undefined && !state.handover.isCleared) {
+        state.handover = { ...state.handover, oldSessionId: e.resume.id, isCleared: true }
+      } else {
+        await dropHandoverOffer($)
+      }
+    }
+
+    return next(e)
   }).catch(($, e, next) => next(e))
 
   // Every request of a turn goes out on the turn's one model: a switch inside
@@ -748,12 +880,18 @@ export const register: Register = on => {
     if (e.agentId === undefined && CHECK_COMMAND.test(e.command)) {
       state.lastCheckFailed = ran.isError === true
     }
+    if (e.agentId === undefined && isWorkDone(e.command, ran.isError === true)) {
+      state.isWorkDone = true
+    }
 
     return ran
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
+    if (e.agentId === undefined) {
+      noticeFinishedWork($, state, familyOf(e.usage?.model))
+    }
     const decision = e.agentId === undefined ? state.decisions.get(e.turnId) : undefined
     if (decision === undefined) {
       return result
@@ -786,11 +924,18 @@ export const register: Register = on => {
     const actions = MODE_ACTIONS.filter(action => action.mode !== mode)
     // Stood down, "aç" tries again.
     const label = (action: (typeof MODE_ACTIONS)[number]): string => (mode === 'down' && action.mode === 'auto' ? 'yeniden dene' : action.label)
+    // A second line while a hand-over note is offered or on its way.
+    const handover = await read($, handoverAtom)
+    const isArmed = await read($, handoverArmedAtom)
+    const offer =
+      handover === '' ? undefined
+      : isArmed ? '⚙ temiz sohbet · devir notu ilk mesajınla gidecek'
+      : `⚙ Sohbet ${Math.round((await read($, handoverSizeAtom)) / 1000)} bin token · devir notu hazır`
+    const showNote = () => $.ui.open({ id: HANDOVER_PANE, title: 'Devir notu' })
 
     if (e.surface === 'terminal') {
       const { Box, Button, Text } = $.ui.resolve(e)
-
-      return (
+      const row = (
         <Box>
           <Text dimColor>⚙ gearbox </Text>
           <Text backgroundColor={BADGE_COLORS[mode]} color="#ffffff" bold>
@@ -803,10 +948,23 @@ export const register: Register = on => {
           ))}
         </Box>
       )
+      if (offer === undefined) {
+        return row
+      }
+
+      return (
+        <Box flexDirection="column">
+          {row}
+          <Box>
+            <Text dimColor>{offer} </Text>
+            {!isArmed && <Button key="handover-clear" label="temiz sohbet" onPress={() => startCleanConversation($, state)} />}
+            <Button key="handover-show" dimColor label="notu gör" onPress={showNote} />
+          </Box>
+        </Box>
+      )
     }
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
-
-    return (
+    const row = (
       <Box alignItems="center" columnGap={1}>
         <Text dimColor>⚙ gearbox</Text>
         <Box flexShrink={0}>
@@ -817,6 +975,37 @@ export const register: Register = on => {
         {actions.map(action => (
           <Button key={action.key} dimColor label={label(action)} onPress={() => switchMode($, state, action.mode)} />
         ))}
+      </Box>
+    )
+    if (offer === undefined) {
+      return row
+    }
+
+    return (
+      <Box flexDirection="column">
+        {row}
+        <Box alignItems="center" columnGap={1}>
+          <Text dimColor>{offer}</Text>
+          {!isArmed && <Button key="handover-clear" label="temiz sohbet" onPress={() => startCleanConversation($, state)} />}
+          <Button key="handover-show" dimColor label="notu gör" onPress={showNote} />
+        </Box>
+      </Box>
+    )
+  })
+
+  // The hand-over note in full, opened only by the person's "notu gör".
+  on('ui.render', { component: 'Pane', requestId: HANDOVER_PANE }, async ($, e) => {
+    const { Box, Button, Text } = $.ui.resolve(e)
+    const note = await read($, handoverAtom)
+    const from = state.handover?.oldSessionId ?? state.noteSession
+    const lines = note === '' ? ['Şu an devir notu yok.'] : [...note.split('\n'),...(from === undefined ? [] : [resumeLine(from)])]
+
+    return (
+      <Box flexDirection="column">
+        {lines.map((line, index) => (
+          <Text key={`line-${index}`}>{line}</Text>
+        ))}
+        <Button key="handover-close" dimColor label="kapat" onPress={() => $.ui.close({ id: HANDOVER_PANE })} />
       </Box>
     )
   })

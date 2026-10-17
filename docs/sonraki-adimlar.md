@@ -63,6 +63,7 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 | 14 | context-mode ile birlikte denemek | Claude |
 | 15 | Model kimliklerini kendiliğinden güncellemek | Claude |
 | 16 | `/gear doctor` komutu | Claude |
+| 17 | Büyük sohbetten temiz sohbete geçmek (ilk sürüm yapıldı, 17 Ekim; commit edildi, sürüm numarası artmadı, gerçek sohbette denenmedi) | Kullanıcı |
 
 ## Adımlar
 
@@ -392,6 +393,58 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
   - sürüm uyumlu mu;
   - son kararlar gerçekten uygulanmış mı.
 - **Örnek:** Adityaraj0421/gearbox'un doktor komutu 11 yaygın sorunu kontrol ediyor. 16 Ekim'deki karışıklık (opusplan + gölge mod + max efor + kapalı sanılan düğme) tam bu komutun yakalayacağı türden.
+
+### 17. Büyük sohbetten temiz sohbete geçmek (kullanıcı isteği, 17 Ekim 2026)
+
+**Fikir (kullanıcı):** Bir sohbette birkaç geliştirme yapılınca bağlam (konuşmanın modele gönderilen tamamı) şişiyor, örneğin 700 bin token. Her işten sonra commit ve push alındığına göre iş yeni, boş bir sohbette sürebilir. gearbox bunu fark edip kendisi yapsın.
+
+**Doğru olan, düzeltilen:** Claude her mesajda projeyi baştan taramaz. Ama her adımda (her araç çağrısında) konuşmanın tamamını, daha önce okunan dosyalar ve komut çıktılarıyla birlikte, modele yeniden gönderir. Önbellek bunu ucuzlatır, ortadan kaldırmaz:
+- Opus 5.5'te önbellekten okuma milyon token başına $0,20 (liste fiyatı, `hooks/core/prices.ts`). 700 bin tokenlık sohbette her adım yaklaşık $0,14; 20 adımlık bir mesaj yalnızca eskiyi yeniden okumak için yaklaşık $2,80. 30 bin tokenla başlayan temiz sohbette aynı 20 adım yaklaşık $0,12.
+- Önbellek bir saat kullanılmazsa söner (abonelikte; bkz. "gearbox ve önbellek"); o zaman 700 bin token bir kez tam yazılır, Opus'ta $3,50–5,60.
+- Abonelikte bu para değil, limit olarak düşer. Çok uzun bağlamda modelin dikkatinin dağıldığı da söylenir; ölçülmedi.
+
+**Mod API'si ne izin veriyor** (Claude Code 2.1.299'un kendi tür dosyasından, 17 Ekim 2026; hiçbiri denenmedi):
+- Bağlamın doluluğunu okumak: `$.session.usage()` → `context`, durum satırındaki rakamlar. Ücretsiz.
+- Konuşmayı sıkıştırmak: `$.session.compact({ instructions })`, `/compact` ile aynı çağrı, turlar arasında.
+- Bir eğik çizgi komutunu kişi yazmış gibi çalıştırmak: `$.command.run({ command })`, oturum boşta olunca. `/clear` için kabul edilip edilmediği denenmeli.
+- İstem göndermek ya da önermek: `$.prompt.submit`, istem kutusuna yazmak `$.prompt.fill`, Tab ile alınan öneri `$.prompt.suggest`. Bir sonraki isteme ek bilgi: `prompt.submit` kancasında `context`.
+- Konuşmanın özetini çıkarmak: `$.model.fork({ prompt })`; aynı konuşmanın önbelleğinden okur.
+- **Yok:** yeni, ayrı bir oturum açmak (masaüstü uygulamasının kenar çubuğunda yeni satır). `/clear` aynı süreçte yeni bir oturum kimliğiyle sürer ve ondan sonra `session.start` çalışmaz.
+
+**Önerilen tasarım (araştırmadaki hâli; yapılan sürüm aşağıda):**
+1. **Ne zaman:** bağlam bir eşiği geçmiş (ör. 150 bin token; ölçerek seçilir), bir iş bitmiş (commit ya da push başarıyla çalışmış, testler geçmiş) ve yeni mesaj henüz yazılmamış.
+2. **Kendiliğinden değil, sorarak:** üstteki bantta ya da istem kutusunda öneri: "Bu sohbet 700 bin token. Temiz sohbete geçilsin mi?" Onaysız bağlam silinmez.
+3. **Devir notu:** `$.model.fork` ile kısa bir not yazdırılır: proje, ne yapıldı, son commit, açık işler, kullanıcının kuralları. Aynı modelin önbelleğinden okuduğu için 700 bin tokenda yaklaşık $0,14.
+4. **Geçiş:** not saklanır (gearbox'ın deposu `$.store` ya da proje içinde bir dosya), `/clear` çalışır, not yeni sohbetin ilk mesajına `context` olarak eklenir.
+5. **Daha basit seçenek:** `/clear` yerine `$.session.compact({ instructions })`. Claude Code'un kendi özeti; yeni ayar gerektirmez. Ama özet ayrıntı atabilir ve konuşma aynı oturumda kalır. Claude Code bağlam dolmaya yaklaşınca kendisi de sıkıştırıyor; 1 milyonluk pencerede 700 binde henüz değil.
+6. **gearbox'ın önbellek kuralıyla bağı:** temiz sohbet 40 bin tokenın altında başlar, model yine serbestçe değişebilir (0.9.1 kuralı).
+
+**Denendi (17 Ekim 2026, Claude Code 2.1.299, Haiku ile, toplam yarım sentten az):**
+- **Bir eklenti `/clear` çalıştırabiliyor.** Deneme eklentisi ilk tur bitince `$.command.run({ command: 'clear' })` çağırdı: kabul edildi, `session.end` "clear" nedeniyle çalıştı, konuşma yeni kimlikle sürdü ve model ilk mesajdaki kelimeyi bilmedi.
+- **Eski sohbet silinmiyor.** Kaydı (`~/.claude/projects/.../<eski kimlik>.jsonl`) yerinde kaldı; `claude --resume <eski kimlik>` ile açılınca kelimeyi hatırladı. `session.end` eski kimliği `resume` alanında veriyor; gearbox bunu devir notuna yazabilir.
+- **Temizlenmiş sohbet sıfır değil:** sistem istemi ve araçlarla yaklaşık 15 bin token.
+- **Masaüstü uygulaması:** her oturumun kaydında `cliSessionId` ve 9 oturumda `priorCliSessionIds` (önceki kimlikler) var; uygulama zinciri tutuyor. Uygulamanın kendi kodunda (`app.asar`, 2.42304) `/clear` için ayrı bir yol var: temizlenen konuşmanın kimliğini `preClearCliSessionId` olarak saklıyor, arayüze `hasPreClearSession` diye bildiriyor. Yani uygulama temizlenmiş konuşmanın izini tutuyor; ekranda eski mesajların kalıp kalmadığı ve geri dönüş düğmesi olup olmadığı gerçek bir masaüstü sohbetinde denenmedi.
+- **Kendi paneli:** `$.ui.open` ile bir panel (Pane) açılabiliyor. Masaüstünde (deneme eklentisi `panel-test`, örnek devir notuyla) `placement: dock` geldi ve panel sağ sütunun **tamamını** kapladı; "Ortam / Bağlam / Değişiklikler" kutuları kayboldu, panelin kapatma ve büyütme düğmesi var. Kullanıcı bunu istemiyor: gearbox o kutuların yanında küçük bir kutu olmalı. API'de buna yer yok: `Pane` için yalnızca `rows` (istem üstünde) ve `columns` (dokta genişlik) isteniyor; sağ sütundaki kutular uygulamanın kendi parçası, eklentiye açık bir bileşen yok (2.1.299'un tür dosyası: bileşenler `AbovePrompt`, `Pane`, transkript satırları). Deneme eklentisi silindi.
+- **Karar (kullanıcı, 17 Ekim 2026):** bant yolu. "Önerdiğin şekilde olsun; frontendini sonra geliştiririz, şimdilik çalışsın yeterli."
+- **Bugün yapılabilen:** devir notu gearbox'ın zaten çizdiği istem üstü bandında tek satır ("Sohbet 700 bin token · devir notu hazır · [temiz sohbet] [notu gör]"); tam not yalnızca kullanıcı "notu gör"e basınca panelde açılır, işi bitince kapatılır. Sağ sütunda kutu için Anthropic'e istek yazılabilir (eklentilere kenar çubuğu kutusu).
+
+**Yapıldı (ilk sürüm, 17 Ekim 2026; görünüş sonra iyileştirilecek):** `hooks/core/handover.ts` (kurallar ve metinler), `hooks/register.tsx` (bağlantılar), `tests/handover.test.ts` (13 test). 2.1.299 ile bütün testler geçiyor (134).
+- **Ne zaman:** ana sohbette bir tur biter, o turda Bash'te başarılı bir `git commit`/`git push` ya da geçen bir test çalıştırması (`npm test`, `pytest`, `claude plugin test` gibi; yalnızca test dosyasını okumak sayılmaz) olmuşsa, ve bağlam 150 bin tokenı geçmişse. Eşik `HANDOVER_TOKENS`: 150 binde Opus'ta her adım yaklaşık $0,03, temiz sohbette yaklaşık $0,005; 20 adımlık bir mesajda yaklaşık $0,50 kalır, notun kendi maliyetinin on katı. Ölçülmedi, başlangıç değeri.
+- **Ne zaman değil:** gearbox kapalıyken (`/gear sabitle`) ya da bant kapalıyken (`/gear bant kapa`) not yazılmaz; yardımcıların (alt ajanların) komutları sayılmaz; aynı anda ikinci not yazılmaz.
+- **Not:** tur bitince, turu bekletmeden `$.model.fork` ile yazılır (en fazla 8 satır istenir, 12 satırda kesilir, kod bloğu işaretleri atılır). Satırlar: Devir notu (proje, tarih) / Proje (klasör, dal, son commit) / Yapılan / Açık / Kurallar / Oku. Bilmediğini uydurmaması söylenir. Maliyeti gearbox'ın kendi harcaması sayılır (tasarruf hesabında aleyhine).
+- **Bant:** gearbox'ın satırının altında ikinci satır: "⚙ Sohbet 700 bin token · devir notu hazır · [temiz sohbet] [notu gör]". Kullanıcı başka bir mesaj yazarsa öneri kalkar (not artık eski kalır); bir sonraki biten işte yenisi yazılır.
+- **Kendiliğinden hiçbir şey yapılmaz:** sohbet yalnızca "temiz sohbet"e basınca temizlenir, panel yalnızca "notu gör"e basınca açılır. Panelde not, eski sohbete dönüş satırı ve "kapat" düğmesi var.
+- **"temiz sohbet":** not gearbox'ın deposuna (`$.store`, anahtar `handover`) da yazılır, `$.command.run({ command: 'clear' })` çalışır, `session.end` "clear" ile eski sohbetin kimliğini verir. Bant "devir notu ilk mesajınla gidecek" der. Kullanıcının ilk mesajına not, görünmeden (`context`), "Eski sohbet: claude --resume <eski kimlik>" satırıyla eklenir; yalnızca bir kez. Temizleme olmazsa bildirim çıkar, hiçbir şey değişmez.
+- **Kullanıcının kendi `/clear`'ı:** not eklenmez, öneri kalkar.
+
+**Masaüstü uygulamasında temizleme sonrası (açık soru, kısmen bakıldı):** uygulamanın kodunda (`app.asar`, 2.42304) kendi temizleme yolu var: temizlenen konuşmanın kimliğini `preClearCliSessionId` olarak tutuyor ve arayüze açık bir `resumePreClearSession` ("temizlemeden önceki sohbete dön") işlemi var. Ama bu yol uygulamanın kendi temizlemesi için. gearbox'ın temizlemesi uygulamanın içinden değil Claude Code'un içinden çalışıyor; uygulama yeni kimliği görünce eski kimliği zincire (`priorCliSessionIds`) ekliyor gibi görünüyor, ama eski mesajların ekranda kalıp kalmadığı, geri dönüş düğmesinin çıkıp çıkmadığı gerçek bir masaüstü sohbetinde **denenmedi**. Kesin olan: eski sohbet diskte kalıyor ve `claude --resume <eski kimlik>` ile açılıyor (yukarıda denendi); not bu satırı taşıyor.
+
+**Kalan:**
+- **Gerçek bir sohbette denemek:** büyük bir masaüstü sohbetinde commit sonrası bant satırı çıkıyor mu, `$.model.fork` turdan sonra sorunsuz çalışıyor mu, düğmeden `/clear` kabul ediliyor mu, ilk mesaja not gidiyor mu. Testler motorun yerine geçen sahte parçalarla çalışıyor; gerçek motorla denenmedi. Bunun için gearbox'ın sürüm numarası artırılıp kullanıcının kurulu kopyası güncellenmeli (bu sürümde artırılmadı).
+- Masaüstünde temizleme sonrası eski mesajlar ve geri dönüş (yukarıda).
+- Not eksik kalırsa yeni sohbet önemli bir kararı bilmez. Kalıcı bellek CLAUDE.md ve bu gibi plan dosyaları; not "Oku" satırında onlara işaret ediyor.
+- **Ölç:** aynı beş geliştirme işi tek sohbette ve her işten sonra temizlenerek; maliyet, limit ve sonuç kıyası. Eşik (150 bin) buna göre ayarlanır.
+- Görünüş: bant satırı ve panel sade; kullanıcı "frontendini sonra geliştiririz" dedi.
 
 ## Yapmamaya karar verilenler
 
