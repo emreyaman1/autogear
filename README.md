@@ -4,7 +4,7 @@
 
 Automatic gear shifting for Claude Code. For every message gearbox picks the model (Haiku, Sonnet or Opus) and the effort the work needs, never above what the model picker (bottom right) holds, and keeps count of what that saved. Your usage limits last longer: in its own measurements the strong model solved nothing the cheaper one could not, so Opus is kept for critical work, plan mode and when you ask for it.
 
-> Status: 0.9.1. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
+> Status: 0.10.0. Built on Claude Code's **early access** plugin API (function hooks), which can change between releases. The safety nets below exist for that reason.
 
 ## What you get
 
@@ -49,6 +49,8 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 **Shadow mode.** `/gear golge` lets gearbox choose without applying the choice: every request goes out as the picker says, and gearbox writes what it would have picked under each answer (`⚙ gölge: Haiku · low · T0 önerirdi · cevap: Opus 5.5`) and in its log. The picker is the ceiling here too; when it cut the choice, both are written: `⚙ gölge: Sonnet · high · T3 zor önerirdi, tavan olmasa Opus · medium`, so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear yanlis` still marks its choices. `/gear oto` turns routing back on.
 
 **Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. gearbox sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") counts as hard work (T3). The line under the answer and the log say `plan modu`.
+
+**A clean conversation (0.10, first version).** Every step of a turn sends the whole conversation again, so a large one costs more on every message. When the conversation is past 150K tokens and a piece of work has just finished (a commit or push, or a passing test run), the row above the prompt offers a clean one: `⚙ Sohbet 180 bin token · devir notu hazır` with **temiz sohbet** and **notu gör**. gearbox has the model write a short hand-over note (project, last commit, what was done, what is open, your rules, what to read); **notu gör** shows it, **temiz sohbet** runs `/clear` and sends the note, unseen, with your next message. Nothing is cleared unless you press it, and the old conversation stays on disk: the note ends with the `claude --resume` line that opens it again. Not yet tried in a real conversation.
 
 **Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). Writing `ultrathink` means T4.
 

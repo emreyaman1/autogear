@@ -63,7 +63,7 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 | 14 | context-mode ile birlikte denemek | Claude |
 | 15 | Model kimliklerini kendiliğinden güncellemek | Claude |
 | 16 | `/gear doctor` komutu | Claude |
-| 17 | Büyük sohbetten temiz sohbete geçmek (ilk sürüm yapıldı, 17 Ekim; commit edildi, sürüm numarası artmadı, gerçek sohbette denenmedi) | Kullanıcı |
+| 17 | Büyük sohbetten temiz sohbete geçmek (ilk sürüm 0.10.0, 17 Ekim; gerçek sohbette deneniyor) | Kullanıcı |
 
 ## Adımlar
 
@@ -442,7 +442,7 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 **Masaüstü uygulamasında temizleme sonrası (açık soru, kısmen bakıldı):** uygulamanın kodunda (`app.asar`, 2.42304) kendi temizleme yolu var: temizlenen konuşmanın kimliğini `preClearCliSessionId` olarak tutuyor ve arayüze açık bir `resumePreClearSession` ("temizlemeden önceki sohbete dön") işlemi var. Ama bu yol uygulamanın kendi temizlemesi için. gearbox'ın temizlemesi uygulamanın içinden değil Claude Code'un içinden çalışıyor; uygulama yeni kimliği görünce eski kimliği zincire (`priorCliSessionIds`) ekliyor gibi görünüyor, ama eski mesajların ekranda kalıp kalmadığı, geri dönüş düğmesinin çıkıp çıkmadığı gerçek bir masaüstü sohbetinde **denenmedi**. Kesin olan: eski sohbet diskte kalıyor ve `claude --resume <eski kimlik>` ile açılıyor (yukarıda denendi); not bu satırı taşıyor.
 
 **Kalan:**
-- **Gerçek bir sohbette denemek:** büyük bir masaüstü sohbetinde commit sonrası bant satırı çıkıyor mu, `$.model.fork` turdan sonra sorunsuz çalışıyor mu, düğmeden `/clear` kabul ediliyor mu, ilk mesaja not gidiyor mu. Testler motorun yerine geçen sahte parçalarla çalışıyor; gerçek motorla denenmedi. Bunun için gearbox'ın sürüm numarası artırılıp kullanıcının kurulu kopyası güncellenmeli (bu sürümde artırılmadı).
+- **Gerçek bir sohbette denemek:** büyük bir masaüstü sohbetinde commit sonrası bant satırı çıkıyor mu, `$.model.fork` turdan sonra sorunsuz çalışıyor mu, düğmeden `/clear` kabul ediliyor mu, ilk mesaja not gidiyor mu. Testler motorun yerine geçen sahte parçalarla çalışıyor; gerçek motorla denenmedi. Sürüm 0.10.0 yapıldı. Kurulu gearbox kopya değil, doğrudan `C:gearbox` klasöründen okunuyor (`claude plugin list`: "Read from: C:gearbox"); yeni kod yeni bir sohbette ya da açık sohbette `/reload-plugins` ile yüklenir.
 - Masaüstünde temizleme sonrası eski mesajlar ve geri dönüş (yukarıda).
 - Not eksik kalırsa yeni sohbet önemli bir kararı bilmez. Kalıcı bellek CLAUDE.md ve bu gibi plan dosyaları; not "Oku" satırında onlara işaret ediyor.
 - **Ölç:** aynı beş geliştirme işi tek sohbette ve her işten sonra temizlenerek; maliyet, limit ve sonuç kıyası. Eşik (150 bin) buna göre ayarlanır.
