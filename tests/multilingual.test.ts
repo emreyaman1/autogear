@@ -9,6 +9,7 @@ import { RU } from '../eval/i18n/ru'
 import { TR } from '../eval/i18n/tr'
 import { ZH } from '../eval/i18n/zh'
 import { BLIND } from '../eval/i18n/blind'
+import { BLIND2 } from '../eval/i18n/blind2'
 import { HELD, HELD_TEXTS } from '../eval/i18n/held'
 import { HELD2, HELD2_TEXTS } from '../eval/i18n/held2'
 import { DEV, FRESH, HOLDOUT, type Case } from '../eval/prompts'
@@ -149,34 +150,42 @@ const SMALL_ASKS: readonly string[] = [
   'make the loading text "not sure yet" gray',
 ]
 
-// The fourth set, written by another model that was not shown the rules
-// (eval/i18n/blind.ts), each language its own prompts.
+// The fourth and fifth sets, written by another model that was not shown the
+// rules (eval/i18n/blind.ts, blind2.ts), each language its own prompts. BLIND
+// was tuned on after its first read; BLIND2 was read once and never tuned on.
+const BLIND_SETS = [
+  ['BLIND', BLIND],
+  ['BLIND2', BLIND2],
+] as const
+
 describe('the classifier on prompts written blind (rules alone)', () => {
-  for (const [language, cases] of Object.entries(BLIND)) {
-    test(`BLIND ${language}: every prompt scored against its label`, () => {
-      let exact = 0
-      let within1 = 0
-      let severe = 0
-      const misses: string[] = []
-      for (const source of cases) {
-        const got = classify(source.text, source.prevTier === undefined ? {} : { prevTier: source.prevTier })
-        const gap = got.tier - source.tier
-        exact += gap === 0 ? 1 : 0
-        within1 += Math.abs(gap) <= 1 ? 1 : 0
-        const isSevere = gap <= -2 || (source.tier >= 3 && got.tier <= 1)
-        severe += isSevere ? 1 : 0
-        console.log(`HELDJSON ${JSON.stringify({ set: 'BLIND', language, text: source.text, tier: source.tier, prevTier: source.prevTier, got: got.tier, confidence: got.confidence, kind: got.kind, floor: got.floor, forced: got.reasons.some(reason => reason.startsWith('Türkçe ya da İngilizce değil')) })}`)
-        if (isSevere) {
-          misses.push(`T${source.tier}→T${got.tier}${got.confidence === 'low' ? '?' : ''}  ${source.text.replace(/\n/g, ' ').slice(0, 70)}`)
+  for (const [setName, set] of BLIND_SETS) {
+    for (const [language, cases] of Object.entries(set)) {
+      test(`${setName} ${language}: every prompt scored against its label`, () => {
+        let exact = 0
+        let within1 = 0
+        let severe = 0
+        const misses: string[] = []
+        for (const source of cases) {
+          const got = classify(source.text, source.prevTier === undefined ? {} : { prevTier: source.prevTier })
+          const gap = got.tier - source.tier
+          exact += gap === 0 ? 1 : 0
+          within1 += Math.abs(gap) <= 1 ? 1 : 0
+          const isSevere = gap <= -2 || (source.tier >= 3 && got.tier <= 1)
+          severe += isSevere ? 1 : 0
+          console.log(`HELDJSON ${JSON.stringify({ set: setName, language, text: source.text, tier: source.tier, prevTier: source.prevTier, got: got.tier, confidence: got.confidence, kind: got.kind, floor: got.floor, forced: got.reasons.some(reason => reason.startsWith('Türkçe ya da İngilizce değil')) })}`)
+          if (isSevere) {
+            misses.push(`T${source.tier}→T${got.tier}${got.confidence === 'low' ? '?' : ''}  ${source.text.replace(/\n/g, ' ').slice(0, 70)}`)
+          }
         }
-      }
-      const n = cases.length
-      const pct = (value: number): string => `${Math.round((100 * value) / n)}%`
-      console.log(`BLIND ${language}: n=${n} exact=${pct(exact)} within1=${pct(within1)} severe=${severe} (${pct(severe)})`)
-      for (const miss of misses) {
-        console.log(`  ${language} ${miss}`)
-      }
-    })
+        const n = cases.length
+        const pct = (value: number): string => `${Math.round((100 * value) / n)}%`
+        console.log(`${setName} ${language}: n=${n} exact=${pct(exact)} within1=${pct(within1)} severe=${severe} (${pct(severe)})`)
+        for (const miss of misses) {
+          console.log(`  ${language} ${miss}`)
+        }
+      })
+    }
   }
 })
 
