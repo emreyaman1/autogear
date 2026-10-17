@@ -200,6 +200,13 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 7. **Çok maddeli mesaj.** Her madde ayrı değerlendirilir, en zor madde esas alınır.
 8. **Her değişiklikten sonra çok dilli ve uzun sette ölç.** Ayrılmış yarıya bakmadan ayarla. Türkçe kurallar silinmez.
 
+**Başlandı (18 Ekim 2026):**
+
+- **Ölçüm seti:** 143 etiketli mesaj 7 dile çevrildi (İngilizce, İspanyolca, Almanca, Fransızca, Rusça, Çince, Japonca) ve İngilizce olanlar Türkçeye; `eval/i18n/`. Etiketler kaynağınki. Kod ve hata çıktısı çevrilmedi. Çeviriler Claude'un; bir anadil konuşmacısı kontrol etmedi.
+- **Kurallar tek başına (`claude plugin test .`, LANG satırları), ±1 kademe / ciddi hata:** Türkçe %97 / 4; İngilizce %92 / 9; İspanyolca %73 / 35; Almanca %75 / 34; Fransızca %77 / 30; Rusça, Çince, Japonca %67 / 46–47. Hedef (±1 %90, ciddi %2) yalnızca Türkçede yakın.
+- **İlk iyileştirme:** Türkçe ya da İngilizce olmayan mesajda kurallar emin olsa bile Haiku'ya soruluyor (dil kontrolü: Latin dışı yazı, ya da üç kelimeden uzun ve iki dilin küçük kelimelerinden hiçbiri yok). Kuralların "emin" deyip yanıldığı ciddi hata yedi dilde de 0 oldu (önceden İspanyolca 3, Almanca 2, Fransızca 1); İngilizcede "for a week" eklenerek 1'den 0'a indi. Türkçe/İngilizce asıl setler ve gerçek kullanım tekrarı değişmedi.
+- **Ölçülmedi:** gearbox'ın gerçekte yaptığı gibi (emin değilse Haiku) sonuç. `node eval/haiku.mjs --languages` 851 Haiku sorusu ister (ücretli, onay bekliyor). Uzun metin seti ve yapı işaretleri (adım 5'in 2–7. maddeleri) yapılmadı.
+
 ### 6. Efor tablosunu ölçüme göre yeniden ayarlamak
 
 **Kaynak:** Forn AI, "Sonnet'e Haksızlık Ediyoruz", YouTube, 4 Ekim 2026, 8 dk 25 sn. Videonun açıklamasındaki ölçüm sonuçları ve bölüm başlıkları okundu. Konuşma metni panelden alınamadı.

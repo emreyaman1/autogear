@@ -3,6 +3,8 @@
 // the answers are cached in eval/.work, so a later run asks only new prompts.
 //
 //   node eval/haiku.mjs
+//   node eval/haiku.mjs --languages   the same prompts in eight languages (tests/multilingual.test.ts),
+//                                      gearbox as it runs: Haiku asked only where the rules are unsure
 //
 // The first run spends a little usage: one short Haiku call per prompt.
 
@@ -18,8 +20,15 @@ function rulePredictions() {
     throw new Error(`plugin test printed no EVALJSON lines (exit ${run.status}): ${run.error?.message ?? output.slice(0, 500)}`)
   }
   const sets = { dev: [], holdout: [], fresh: [] }
+  const languages = {}
   let current = 'dev'
   for (const line of output.split('\n')) {
+    const multilingual = line.indexOf('MLJSON ')
+    if (multilingual >= 0) {
+      const row = JSON.parse(line.slice(multilingual + 7))
+      ;(languages[row.language] ??= []).push(row)
+      continue
+    }
     const header = /EVAL (dev|holdout|fresh):/.exec(line)
     const json = line.indexOf('EVALJSON ')
     if (json >= 0) {
@@ -29,7 +38,7 @@ function rulePredictions() {
     }
   }
 
-  return sets
+  return { sets, languages }
 }
 
 // Haiku's answer as the router takes it (hooks/core/settle.ts withHaiku): where
@@ -72,7 +81,26 @@ function score(rows, policy) {
 }
 
 const cache = readCache()
-const sets = rulePredictions()
+const { sets, languages } = rulePredictions()
+
+if (process.argv.includes('--languages')) {
+  const unsure = Object.values(languages)
+    .flat()
+    .filter(row => row.confidence === 'low')
+  const { asked, spent, failed } = await askMissing(unsure, cache).catch(error => {
+    console.error(error instanceof Error ? error.message : String(error))
+    process.exit(1)
+  })
+  for (const [language, rows] of Object.entries(languages)) {
+    for (const row of rows) {
+      row.haiku = cache[cacheKey(row)] ?? row.got
+    }
+    console.log(`${language.padEnd(3)} n=${rows.length}  kurallar ${score(rows, POLICIES['sadece kurallar'])}`)
+    console.log(`${''.padEnd(10)}gearbox  ${score(rows, POLICIES['emin değilse Haiku, sınırlı'])}`)
+  }
+  console.log(`\n${asked} yeni Haiku çağrısı (${failed} başarısız), API liste fiyatıyla $${spent.toFixed(3)}`)
+  process.exit(0)
+}
 const all = Object.values(sets).flat()
 const { asked, spent } = await askMissing(all, cache).catch(error => {
   console.error(error instanceof Error ? error.message : String(error))

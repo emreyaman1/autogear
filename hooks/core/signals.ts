@@ -169,7 +169,7 @@ const WHOLE = word('uygulama(?:yi|nin)?(?![a-z])|tum|butun|proje(?:yi|nin)?(?![a
 const REPEATED_FAILURE = cues([
   '(?:gun|hafta|ay|saat)(?:ler|lar)?d[iu]r(?![a-z])', 'gundur', 'defalarca', 'kac (?:kere|defa|kez)', 'her denemede',
   'her seferinde', 'bir turlu', 'tekrar tekrar', 'hicbir sey ise yaramadi', 'her yer bozul', 'again and again',
-  'for days', 'for hours', 'keeps? (?:failing|breaking)', 'nothing works', 'tried everything',
+  'for days', 'for hours', 'for (?:a |two |several )?weeks?(?![a-z])', 'keeps? (?:failing|breaking)', 'nothing works', 'tried everything',
 ])
 
 const SCOPE = cues([
@@ -373,8 +373,44 @@ const quote = (words: readonly string[]): string =>
     .map(item => `"${item}"`)
     .join(', ')
 
+// The rules read Turkish and English. A prompt in another language is told by
+// a script they do not read, or by three words or more with none of the small
+// words and common verbs of either; Turkish letters (ı, ğ, ş) settle it as
+// Turkish. A wrong "foreign" costs one short question to Haiku, no more.
+const NON_LATIN = /[Ѐ-ӿ֐-ۿऀ-ॿ぀-ヿ㐀-鿿가-힯]/
+const TURKISH_LETTERS = /[ıİğĞşŞ]/
+const TURKISH_OR_ENGLISH = new RegExp(
+  '(?:^|[^a-zçğıöşü])(?:' +
+    'bu|bir|için|icin|ile|ve|şu|var|yok|mı|mi|mu|mü|değil|gibi|ama|çok|neden|nasıl|olarak|sonra|daha|' +
+    'yap|ekle|yaz|sil|göster|getir|çıkar|düzelt|değiştir|kaldır|taşı|listele|geçir|yükselt|' +
+    'the|and|this|that|with|what|why|how|is|are|it|its|to|for|of|my|our|we|you|all|from|into|when|still|again|please|should|now|too|go|' +
+    'add|fix|make|write|show|move|remove|suggest|support|feature|message' +
+    ')(?![a-zçğıöşü])',
+  'i',
+)
+
+export function isTurkishOrEnglish(raw: string): boolean {
+  const text = withoutNotes(raw)
+  if (NON_LATIN.test(text)) {
+    return false
+  }
+
+  return text.split(/\s+/).filter(Boolean).length < 3 || TURKISH_LETTERS.test(text) || TURKISH_OR_ENGLISH.test(text)
+}
+
+// What the rules read the same in any language: the keyword, pasted errors,
+// file names, a long or listed description.
+const STRUCTURAL = /^(?:"ultrathink"|hata çıktısı|\d+ dosya|\d+ maddelik liste|uzun istek)/
+
 export function classify(raw: string, context: RuleContext = {}): RuleResult {
-  const result = classifyText(raw, context)
+  const read = classifyText(raw, context)
+  // In a language the rules do not read, their sure answer rests on words
+  // they happened to match (a "panel", a "rol"): Haiku, who reads every
+  // language, is asked, and the rules' tier stands only as its floor.
+  const result =
+    read.confidence === 'high' && read.source === 'rules' && read.kind !== 'greeting' && !STRUCTURAL.test(read.reasons[0] ?? '') && !isTurkishOrEnglish(raw)
+      ? { ...read, confidence: 'low' as const, reasons: [...read.reasons, "Türkçe ya da İngilizce değil: Haiku'ya sorulur"] }
+      : read
   if (context.hasAttachments === true && result.tier < 1) {
     return { ...result, tier: 1, reasons: [...result.reasons, 'görsel/ek var'] }
   }

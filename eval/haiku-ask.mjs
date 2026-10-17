@@ -80,13 +80,20 @@ export async function askMissing(items, cache) {
   }
   let spent = 0
   let failed = 0
-  await pool(missing.slice(1), 6, async item => {
+  let done = 0
+  // Three at a time: each is a Claude Code process of its own, and memory is
+  // the person's. The cache is written as it fills, so a stopped run keeps it.
+  await pool(missing.slice(1), 3, async item => {
     const answer = await askHaiku(item)
     if (answer.tier !== undefined) {
       cache[cacheKey(item)] = answer.tier
     }
     failed += answer.error === undefined ? 0 : 1
     spent += answer.cost
+    done += 1
+    if (done % 25 === 0) {
+      writeCache(cache)
+    }
   })
   writeCache(cache)
 
