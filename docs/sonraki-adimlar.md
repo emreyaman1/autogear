@@ -63,7 +63,7 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 | 14 | context-mode ile birlikte denemek | Claude |
 | 15 | Model kimliklerini kendiliğinden güncellemek | Claude |
 | 16 | `/gear doctor` komutu | Claude |
-| 17 | Büyük sohbetten temiz sohbete geçmek (ilk sürüm 0.10.0, 17 Ekim; gerçek sohbette deneniyor) | Kullanıcı |
+| 17 | Büyük sohbetten temiz sohbete geçmek (0.10.1, 17 Ekim; öneri gerçek sohbette çalıştı, "temiz sohbet" düğmesi denenmedi) | Kullanıcı |
 
 ## Adımlar
 
@@ -443,6 +443,7 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 
 **Kalan:**
 - **Gerçek bir sohbette denemek:** büyük bir masaüstü sohbetinde commit sonrası bant satırı çıkıyor mu, `$.model.fork` turdan sonra sorunsuz çalışıyor mu, düğmeden `/clear` kabul ediliyor mu, ilk mesaja not gidiyor mu. Testler motorun yerine geçen sahte parçalarla çalışıyor; gerçek motorla denenmedi. Sürüm 0.10.0 yapıldı. Kurulu gearbox kopya değil, doğrudan `C:\gearbox` klasöründen okunuyor (`claude plugin list`: "Read from: C:\gearbox"); yeni kod yeni bir sohbette ya da açık sohbette `/reload-plugins` ile yüklenir.
+- **İlk gerçek deneme (17 Ekim 2026, bu sohbet, 0.10.0, gölge mod):** öneri çalıştı: test çalıştırılan turdan sonra not yazıldı (258 bin, sonra 284 bin token), bantta "⚙ Sohbet 284 bin token · devir notu hazır [temiz sohbet] [notu gör]" çıktı. İlk seferde kullanıcı görmedi: not tur bittikten 5–10 saniye sonra geliyor ve kullanıcının bir sonraki mesajı öneriyi siliyor (tasarım gereği), o yüzden "çıkmadı" mesajı öneriyi kaldırdı. Kullanıcı: bant "çok karışık duruyor, biraz düzenlemek lazım" (iki satır, uzun limit uyarısı, iki ⚙); öneri bir sonraki mesajda kaybolup geri gelmedi. **0.10.1'de düzeltildi (kullanıcı: "şimdi yap"):** öneri sen yazmaya devam etsen de durur, **×** ile kapanır ya da yeni not gelince yenilenir; not yazılırken "Devir notu hazırlanıyor…" görünür; ikinci satır "Devir notu hazır · sohbet 284 bin token", ⚙ işaretsiz; bantta limit uyarısı yalnızca başı ("5 saatlik limit %93"; tamamı cevabın altında ve `/gear`'da); gölge modda "önerisi … · cevabı seçici veriyor" yerine "… önerirdi". "temiz sohbet" düğmesi henüz denenmedi; "hazırlanıyor" satırı için test yok.
 - Masaüstünde temizleme sonrası eski mesajlar ve geri dönüş (yukarıda).
 - Not eksik kalırsa yeni sohbet önemli bir kararı bilmez. Kalıcı bellek CLAUDE.md ve bu gibi plan dosyaları; not "Oku" satırında onlara işaret ediyor.
 - **Ölç:** aynı beş geliştirme işi tek sohbette ve her işten sonra temizlenerek; maliyet, limit ve sonuç kıyası. Eşik (150 bin) buna göre ayarlanır.

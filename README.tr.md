@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer: kendi ölçümlerinde güçlü model, ucuzunun çözemediği hiçbir işi çözmedi; bu yüzden Opus kritik işe, plan moduna ve senin istediğin duruma ayrılır.
 
-> Durum: 0.10.0. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
+> Durum: 0.10.1. Claude Code'un **early access** eklenti (function hooks) API'si üzerine kurulu; o API sürümler arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var.
 
 ## Ne sağlar
 
@@ -50,7 +50,7 @@ Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması 
 
 **Plan modu.** Claude Code'un plan modunda her istek Opus'a gider; efor, kuralların okuduğu plan büyüklüğüne göre seçilir: küçük planda medium, ortada high, çok parçalı büyük planda xhigh. Seçicinin üstüne asla çıkmaz; senin adını verdiğin model (`+sonnet`) yine önde gelir. gearbox plan modunu Claude Code'un model için eklediği nottan anlar; bu yüzden bir cevabın ortasında açılan plan modu bir sonraki mesajdan itibaren sayılır. Plan modu dışında da plan isteyen bir mesaj ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") zor iş (T3) sayılır. Cevabın altındaki satırda ve günlükte `plan modu` yazar.
 
-**Temiz sohbet (0.10, ilk sürüm).** Bir turun her adımı konuşmanın tamamını yeniden gönderir; büyük bir sohbet her mesajda daha pahalıdır. Sohbet 150 bin tokenı geçmişse ve bir iş yeni bittiyse (commit ya da push, ya da geçen bir test çalıştırması), istem üstündeki satır temiz bir sohbet önerir: `⚙ Sohbet 180 bin token · devir notu hazır`, yanında **temiz sohbet** ve **notu gör**. gearbox modele kısa bir devir notu yazdırır (proje, son commit, yapılan, açık işler, kuralların, okunacak dosyalar); **notu gör** onu gösterir, **temiz sohbet** `/clear` çalıştırır ve notu bir sonraki mesajınla, görünmeden, gönderir. Sen basmadan hiçbir şey temizlenmez; eski sohbet diskte kalır, notun son satırı onu açan `claude --resume` komutudur. Henüz gerçek bir sohbette denenmedi.
+**Temiz sohbet (0.10, ilk sürüm).** Bir turun her adımı konuşmanın tamamını yeniden gönderir; büyük bir sohbet her mesajda daha pahalıdır. Sohbet 150 bin tokenı geçmişse ve bir iş yeni bittiyse (commit ya da push, ya da geçen bir test çalıştırması), istem üstündeki satır temiz bir sohbet önerir: not yazılırken `Devir notu hazırlanıyor…`, sonra `Devir notu hazır · sohbet 180 bin token`, yanında **temiz sohbet**, **notu gör** ve **×**. Sen yazmaya devam etsen de öneri durur; birine basana ya da daha yeni bir not gelene kadar. gearbox modele kısa bir devir notu yazdırır (proje, son commit, yapılan, açık işler, kuralların, okunacak dosyalar); **notu gör** onu gösterir, **temiz sohbet** `/clear` çalıştırır ve notu bir sonraki mesajınla, görünmeden, gönderir. Sen basmadan hiçbir şey temizlenmez; eski sohbet diskte kalır, notun son satırı onu açan `claude --resume` komutudur. Gerçek bir sohbette bir kez denendi: öneri ve not çalışıyor; **temiz sohbet** düğmesi orada henüz denenmedi.
 
 **Etiketler.** Mesajın başına yazılan etiketler o mesaj için seçimi belirler ve modele gitmeden silinir: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+ucuz` (T0), `+derin` (T4). `ultrathink` T4 demektir.
 

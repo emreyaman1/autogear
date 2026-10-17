@@ -183,7 +183,8 @@ test('a nearly full window keeps critical work on Opus and warns under the answe
   expect(done.text).toContain('⚠ 5 saatlik limit %92: bu iş Opus 5.5 · high ile yapılıyor, limit dolabilir')
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
-    expect(await ui.find({ type: 'Text', text: /5 saatlik limit %92: bu iş Opus · high ile yapılıyor/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /5 saatlik limit %92/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /bu iş Opus/ })).toBeUndefined()
     await ui.unmount()
   }
   // Off, gearbox reads no windows, and the band says nothing of them.
@@ -544,6 +545,6 @@ test('before a choice the band says what the state means; in shadow mode it show
   expect(await ui.find({ type: 'Text', text: /seçip yazıyor, uygulamıyor/ })).toBeDefined()
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
-  expect(await ui.find({ type: 'Text', text: /önerisi Haiku · low · T0 önemsiz · cevabı seçici veriyor/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /Haiku · low · T0 önemsiz önerirdi/ })).toBeDefined()
   await ui.unmount()
 })

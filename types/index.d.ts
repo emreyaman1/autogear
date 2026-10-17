@@ -9,7 +9,8 @@ declare module 'claude-code' {
     // note: the last choice as the band shows it; '' before one.
     // handover: the hand-over note the band offers, '' when none; handoverTokens:
     // the conversation's size when it was written; handoverArmed: /clear has run
-    // and the note waits for the first prompt.
+    // and the note waits for the first prompt; handoverPending: a note is being
+    // written after the turn.
     gearbox: {
       mode: GearboxMode
       warning: string
@@ -18,6 +19,7 @@ declare module 'claude-code' {
       handover: string
       handoverTokens: number
       handoverArmed: boolean
+      handoverPending: boolean
     }
   }
 }

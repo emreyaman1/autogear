@@ -92,7 +92,7 @@ describe('the hand-over offer', () => {
       await turnWith($, 't1', 'git commit -m "adım 17"')
       expect(seen.forks).toBe(1)
       const ui = await $.ui.mount({ ...BAND, surface })
-      expect(await ui.find({ type: 'Text', text: /Sohbet 700 bin token · devir notu hazır/ })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: /Devir notu hazır · sohbet 700 bin token/ })).toBeDefined()
       expect(await ui.find({ type: 'Button', key: 'handover-clear', text: 'temiz sohbet' })).toBeDefined()
       expect(await ui.find({ type: 'Button', key: 'handover-show', text: 'notu gör' })).toBeDefined()
       // Unasked, nothing is cleared and no pane is opened.
@@ -180,7 +180,7 @@ describe('the hand-over offer', () => {
     await ui.unmount()
   })
 
-  test('writing on instead takes the offer down, and nothing is carried', async ($, on) => {
+  test('writing on keeps the offer and carries nothing; × takes it down', async ($, on) => {
     const seen = world($, on)
     await turnWith($, 't1', 'git commit -m x')
     const before = seen.contexts.length
@@ -188,7 +188,11 @@ describe('the hand-over offer', () => {
     expect(seen.contexts[before]).toBeUndefined()
     expect(seen.clears).toBe(0)
     const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+    expect(await ui.find({ type: 'Button', key: 'handover-clear' })).toBeDefined()
+    await ui.press({ key: 'handover-dismiss' })
     expect(await ui.find({ type: 'Button', key: 'handover-clear' })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: /devir notu/i })).toBeUndefined()
+    expect(seen.clears).toBe(0)
     await ui.unmount()
   })
 })

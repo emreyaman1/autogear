@@ -149,6 +149,9 @@ const handoverSizeAtom = atom({ plugin: 'gearbox', key: 'handoverTokens' } as co
 
 const handoverArmedAtom = atom({ plugin: 'gearbox', key: 'handoverArmed' } as const, false)
 
+// A note is being written: the turn has ended, the note follows in a few seconds.
+const handoverPendingAtom = atom({ plugin: 'gearbox', key: 'handoverPending' } as const, false)
+
 const HANDOVER_PANE = 'gearbox-handover'
 
 const kilo = (tokens: number): string => (tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}K` : String(tokens))
@@ -186,7 +189,7 @@ function showStatus($: EngineInterface, state: State): void {
   void update($, modeAtom, () => mode)
   // The band says what the last choice was beside the badge, or what the state means before one.
   const choice = last === undefined ? undefined : `${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)}`
-  const note = choice === undefined ? '' : mode === 'shadow' ? `önerisi ${choice} · cevabı seçici veriyor` : choice
+  const note = choice === undefined ? '' : mode === 'shadow' ? `${choice} önerirdi` : choice
   void update($, noteAtom, () => note)
   $.ui.status(
     mode === 'down' ? '⚙ gearbox: devre dışı (seçici), /gear'
@@ -664,6 +667,7 @@ async function writeHandover($: EngineInterface, state: State, answered: Family 
     if (tokens < HANDOVER_TOKENS) {
       return
     }
+    await update($, handoverPendingAtom, () => true)
     const reply = await $.model.fork({ prompt: notePrompt(dayOf(await $.clock.now())) })
     if (!reply.isAnswered) {
       return
@@ -681,6 +685,7 @@ async function writeHandover($: EngineInterface, state: State, answered: Family 
     // An offer only: no note, no offer.
   } finally {
     state.isForking = false
+    await update($, handoverPendingAtom, () => false)
   }
 }
 
@@ -719,11 +724,8 @@ async function startCleanConversation($: EngineInterface, state: State): Promise
 async function takeHandover($: EngineInterface, state: State): Promise<string | undefined> {
   const handover = state.handover
   if (handover?.isCleared !== true) {
-    // The person wrote on: an offer made before is for work already moved past.
-    if ((await read($, handoverAtom)) !== '') {
-      await dropHandoverOffer($)
-    }
-
+    // The person wrote on: the offer stays until they press it or close it,
+    // or a newer note replaces it.
     return undefined
   }
   state.handover = undefined
@@ -918,7 +920,9 @@ export const register: Register = on => {
     }
     const mode = await read($, modeAtom)
     const isWorking = mode === 'auto' || mode === 'shadow'
-    const warning = isWorking ? await read($, warningAtom) : ''
+    // The band keeps the warning's head ("5 saatlik limit %93"); the line under
+    // the answer and /gear say the rest.
+    const warning = isWorking ? (await read($, warningAtom)).split(':')[0] : ''
     const last = isWorking ? await read($, noteAtom) : ''
     const note = last === '' ? MODE_NOTES[mode] : last
     const actions = MODE_ACTIONS.filter(action => action.mode !== mode)
@@ -927,10 +931,13 @@ export const register: Register = on => {
     // A second line while a hand-over note is offered or on its way.
     const handover = await read($, handoverAtom)
     const isArmed = await read($, handoverArmedAtom)
+    const isPending = await read($, handoverPendingAtom)
     const offer =
-      handover === '' ? undefined
-      : isArmed ? '⚙ temiz sohbet · devir notu ilk mesajınla gidecek'
-      : `⚙ Sohbet ${Math.round((await read($, handoverSizeAtom)) / 1000)} bin token · devir notu hazır`
+      isPending && !isArmed ? 'Devir notu hazırlanıyor…'
+      : handover === '' ? undefined
+      : isArmed ? 'Temiz sohbet: devir notu ilk mesajınla gidecek'
+      : `Devir notu hazır · sohbet ${Math.round((await read($, handoverSizeAtom)) / 1000)} bin token`
+    const hasNote = handover !== '' && !(isPending && !isArmed)
     const showNote = () => $.ui.open({ id: HANDOVER_PANE, title: 'Devir notu' })
 
     if (e.surface === 'terminal') {
@@ -957,8 +964,9 @@ export const register: Register = on => {
           {row}
           <Box>
             <Text dimColor>{offer} </Text>
-            {!isArmed && <Button key="handover-clear" label="temiz sohbet" onPress={() => startCleanConversation($, state)} />}
-            <Button key="handover-show" dimColor label="notu gör" onPress={showNote} />
+            {hasNote && !isArmed && <Button key="handover-clear" label="temiz sohbet" onPress={() => startCleanConversation($, state)} />}
+            {hasNote && <Button key="handover-show" dimColor label="notu gör" onPress={showNote} />}
+            {hasNote && !isArmed && <Button key="handover-dismiss" dimColor label="×" onPress={() => dropHandoverOffer($)} />}
           </Box>
         </Box>
       )
@@ -986,8 +994,9 @@ export const register: Register = on => {
         {row}
         <Box alignItems="center" columnGap={1}>
           <Text dimColor>{offer}</Text>
-          {!isArmed && <Button key="handover-clear" label="temiz sohbet" onPress={() => startCleanConversation($, state)} />}
-          <Button key="handover-show" dimColor label="notu gör" onPress={showNote} />
+          {hasNote && !isArmed && <Button key="handover-clear" label="temiz sohbet" onPress={() => startCleanConversation($, state)} />}
+          {hasNote && <Button key="handover-show" dimColor label="notu gör" onPress={showNote} />}
+          {hasNote && !isArmed && <Button key="handover-dismiss" dimColor label="×" onPress={() => dropHandoverOffer($)} />}
         </Box>
       </Box>
     )
