@@ -398,7 +398,7 @@ autogear has no server and makes no network request of its own. Everything it ke
 - the decision log: for each of the last 200 messages its first 100 characters, the tier, the model and effort, the reasons, the cost; `/gear reset` clears it;
 - the savings totals, and the hand-over note you pressed "clean conversation" for (it is replaced by the next one).
 
-`/gear doctor` reads two environment variables, `CLAUDE_CODE_EFFORT_LEVEL` and `CLAUDE_CODE_SUBAGENT_MODEL`, to tell you whether they hold the effort or the helpers' model; no other variable or setting is read.
+`/gear doctor` reads exactly two environment variables, the one Claude Code has for a fixed effort and the one for a fixed helper model, to tell you whether either is set; their names are in `hooks/register.tsx` and in the list that `claude plugin validate` prints. No other variable or setting is read, and nothing it reads is sent anywhere.
 
 What goes to a model, always through Claude Code itself and your own account, never to a third party:
 

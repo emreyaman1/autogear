@@ -398,7 +398,7 @@ autogear'ın sunucusu yoktur ve kendi başına hiçbir ağ isteği yapmaz. Sakla
 - karar günlüğü: son 200 mesajın her biri için ilk 100 karakteri, kademe, model ve efor, gerekçeler, maliyet; `/gear reset` siler;
 - tasarruf toplamları ve "temiz sohbet"e bastığın devir notu (bir sonrakiyle değişir).
 
-`/gear doctor` iki ortam değişkenini okur, `CLAUDE_CODE_EFFORT_LEVEL` ve `CLAUDE_CODE_SUBAGENT_MODEL`: eforu ya da yardımcıların modelini sabitleyip sabitlemediklerini söylemek için. Başka hiçbir değişken ya da ayar okunmaz.
+`/gear doctor` tam olarak iki ortam değişkenini okur: Claude Code'un sabit efor için olanı ve sabit yardımcı modeli için olanı; ikisinden biri ayarlı mı, onu söylemek için. Adları `hooks/register.tsx` dosyasında ve `claude plugin validate`'in yazdığı listede. Başka hiçbir değişken ya da ayar okunmaz, okuduğu hiçbir şey bir yere gönderilmez.
 
 Bir modele giden şeyler, hep Claude Code'un kendisi ve senin hesabınla, hiçbir zaman üçüncü bir tarafa değil:
 
