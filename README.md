@@ -35,7 +35,7 @@ Then set the picker to your strongest model once (for example **Opus · high**).
 To install from a local copy, in a terminal:
 
 ```bash
-claude plugin marketplace add C:\gearbox
+claude plugin marketplace add <path to your copy of the repository>
 ```
 
 ```bash
@@ -48,13 +48,13 @@ It then runs in every Claude Code session you open, the desktop app included. Ne
 
 **The picker is the ceiling.** autogear never spends more than the model and effort the picker holds. Change the picker and it tells you the new ceiling. With the picker on **Opus · high** it is fully automatic.
 
-**The state row.** A small row above the prompt shows what autogear is doing: a badge reads **AÇIK** (on, green), **GÖLGE** (shadow, violet), **KAPALI** (off, gray) or **DURDU** (stood down, amber; see Safety nets). Its dot moves a little to say what autogear is doing: a soft pulse while it routes, a slow breath in shadow mode, still when off, a slow blink when stood down; with "reduce motion" set in your system it stays still. Beside it stands the last choice ("Sonnet · medium · T1 rutin"; in shadow mode what autogear would have picked), or before one, what the state means. Beside it are buttons for the other states, each named for what a press does: **aç** (turn on), **gölgeye al** (shadow mode), **kapat** (turn off); stood down, **yeniden dene** (try again). When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving. While a rate-limit window is nearly full or spent too fast, the row also shows a warning (see Pace below).
+**The state row.** A small row above the prompt shows what autogear is doing: a badge reads **ON** (green), **SHADOW** (violet), **OFF** (gray) or **STOPPED** (stood down, amber; see Safety nets); on a Turkish system the words are AÇIK, GÖLGE, KAPALI and DURDU. Its dot moves a little to say what autogear is doing: a soft pulse while it routes, a slow breath in shadow mode, still when off, a slow blink when stood down; with "reduce motion" set in your system it stays still. Beside it stands the last choice ("Sonnet · medium · T1 routine"; in shadow mode what autogear would have picked), or before one, what the state means. Beside it are buttons for the other states, each named for what a press does: **turn on**, **to shadow**, **turn off**; stood down, **try again**. When off, every request goes out exactly as the picker says. The status text at the bottom right shows the model and effort chosen for the last message and the session's saving. While a rate-limit window is nearly full or spent too fast, the row also shows a warning (see Pace below).
 
 **Shadow mode.** `/gear shadow` lets autogear choose without applying the choice: every request goes out as the picker says, and autogear writes what it would have picked in its log and on the state row (`Haiku · low · T0 would choose`). The line under the answer says only which model answered. The picker is the ceiling here too; when it cut the choice, both are written to the log (`Sonnet · high (without the ceiling Opus · high)`), so a need for Opus shows even under a Sonnet picker. A new version can be tried this way on real work without touching that work, and `/gear wrong` still marks its choices. `/gear on` turns routing back on.
 
 **Plan mode.** In Claude Code's plan mode every request goes to Opus, at an effort by the size of the plan as the rules read it: medium for a small one, high for a middling one, xhigh for a large one with many parts. It never goes above the picker, and a model you name (`+sonnet`) still wins. autogear sees plan mode from the note Claude Code adds for the model, so plan mode switched on in the middle of an answer counts from the next message. Outside plan mode, a request for a plan ("plan çıkar", "nasıl yapalım", "yol haritası", "plan the migration") counts as hard work (T3). The line under the answer says `plan mode` and the log says so too.
 
-**A clean conversation (0.10, first version).** Every step of a turn sends the whole conversation again, so a large one costs more on every message. When the conversation is past 150K tokens and a piece of work has just finished (a commit or push, or a passing test run), the row above the prompt offers a clean one: `Devir notu hazırlanıyor…` while the note is written, then `Devir notu hazır · sohbet 180 bin token` with **temiz sohbet**, **notu gör** and **×**. The offer stays while you write on, until you press one of them or a newer note replaces it. autogear has the model write a short hand-over note (project, last commit, what was done, what is open, your rules, what to read); **notu gör** shows it, **temiz sohbet** runs `/clear` and sends the note, unseen, with your next message. Nothing is cleared unless you press it, and the old conversation stays on disk: the note ends with the `claude --resume` line that opens it again. Tried once in a real conversation: the offer and the note work; the **temiz sohbet** press has not been tried there yet.
+**A clean conversation (0.10, first version).** Every step of a turn sends the whole conversation again, so a large one costs more on every message. When the conversation is past 150K tokens and a piece of work has just finished (a commit or push, or a passing test run), the row above the prompt offers a clean one: `Preparing the hand-over note…` while the note is written, then `Hand-over note ready · conversation 180K tokens` with **clean conversation**, **see note** and **×**. The offer stays while you write on, until you press one of them or a newer note replaces it. autogear has the model write a short hand-over note (project, last commit, what was done, what is open, your rules, what to read); **see note** shows it, **clean conversation** runs `/clear` and sends the note, unseen, with your next message. Nothing is cleared unless you press it, and the old conversation stays on disk: the note ends with the `claude --resume` line that opens it again. Tried once in a real conversation: the offer and the note work; the **clean conversation** press has not been tried there yet.
 
 **Overrides.** Tokens at the start of a message set the choice for that message only and are removed before the model sees them: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap` (T0), `+deep` (T4). Writing `ultrathink` means T4.
 
@@ -94,7 +94,7 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
                                  pacing
 ```
 
-1. **Classify** (`hooks/core/signals.ts`): a message becomes tier T0 to T4. Turkish and English cues are read; code, paths and identifiers inside the message are ignored; verbs are read together with their object ("change the color" is not "add a payment system"). The notes Claude Code puts ahead of a message are skipped, a greeting is T0 at once, and a message with nothing written (only an image) carries on with the last choice. When the rules are unsure, one short question goes to Haiku (`hooks/core/llm.ts`).
+1. **Classify** (`hooks/core/signals.ts`): a message becomes tier T0 to T4. Cues in eight languages are read (Turkish, English, Spanish, German, French, Russian, Chinese, Japanese); code, paths and identifiers inside the message are ignored; verbs are read together with their object ("change the color" is not "add a payment system"). The notes Claude Code puts ahead of a message are skipped, a greeting is T0 at once, and a message with nothing written (only an image) carries on with the last choice. When the rules are unsure, one short question goes to Haiku (`hooks/core/llm.ts`).
 2. **Settle** (`hooks/core/settle.ts`): Haiku reads the message alone, without the screenshot or the work around it, so its answer goes at most one tier below what the rules saw, and not under T2 for a request to look into something. A message in the middle of work at T2 or above (a question, a remark, one only Haiku could place) goes at most one tier below that work; new work the rules are sure of, a chore such as a commit, or a greeting starts afresh.
 3. **Decide** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): the tier maps to a model and effort through a profile, then passes two limits and a look at the rate-limit windows:
    - **Ceiling:** never above the picker's model and effort.
@@ -104,17 +104,17 @@ message ─► classify ─► settle ─► decide ─► apply     ─► answ
 5. **Verify** (`turn.complete`): the API names the model that really answered; it is compared with the choice (see Safety nets).
 6. **Count** (`hooks/core/savings.ts`): the turn's real tokens are priced twice, once on the model that answered and once on the picker's model, and added to the session's and the lifetime totals.
 
-| Tier | Example | `tasarruf` (Pro) |
+| Tier | Example | `saver` (Pro) |
 |---|---|---|
 | T0 trivial | "what does this function do", commit message, rename | Haiku · low |
 | T1 routine | clear one-place change | Sonnet · medium |
 | T2 standard | feature, tests for it, debugging with the error in hand | Sonnet · medium |
 | T3 hard | architecture, performance, security, a choice between options | Sonnet · high |
-| T3 vague hunt | a bug told without detail ("this doesn't work, fix it"), with no error, file, number or moment, and no screenshot | Sonnet · high (Opus · high in `dengeli` and `kalite`) |
+| T3 vague hunt | a bug told without detail ("this doesn't work, fix it"), with no error, file, number or moment, and no screenshot | Sonnet · high (Opus · high in `balanced` and `quality`) |
 | T3 located hunt | a bug told plainly whose cause hides (it comes and goes, it shows far from where it starts), tests written to catch bugs nobody has found yet | Sonnet · high (xhigh at T4) |
 | T4 critical | long multi-step work, repeated failure | Opus · high |
 
-Profiles: `tasarruf` (saver, for Pro), `dengeli` (balanced) and `kalite` (quality) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a located hunt on Sonnet · high, and no tier runs at max unless you ask for it (`+max`, "max ile"). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that autogear's own comparison is to check. In that comparison (Measurements) Sonnet · medium passed every hunt Opus · high passed, which is why a located hunt now goes to Sonnet at more effort; In `tasarruf` hard work and a vague hunt now run on Sonnet · high as well: over twenty tasks, two sets, Opus solved none that Sonnet · medium failed, at 3.6 times the cost. `dengeli` and `kalite` keep Opus for hard work.
+Profiles: `saver` (for Pro; stored and still accepted as `tasarruf`), `balanced` (`dengeli`) and `quality` (`kalite`) spend more, for Max plans. In every profile clearly described routine and standard work runs on Sonnet · medium, a located hunt on Sonnet · high, and no tier runs at max unless you ask for it (`+max`, "max ile"). The evidence: in a public measurement on real Python projects with hidden tests (Forn AI, 4 October 2026), Sonnet · medium fixed 13 of 13 bugs whose place was clear at a third of Opus · high's cost, and raising Sonnet's effort on clear work did not help; a bug whose error pointed at the wrong file went 6 of 6 on Opus · high and 4 of 6 on Sonnet · medium, the same bug told vaguely 0 of 2 on Sonnet, and tests that had to catch 22 hidden bugs 22 of 22 on Opus · high against 16 to 19 on Sonnet. Some of these rest on 2 to 6 runs, so the table is a starting point that autogear's own comparison is to check. In that comparison (Measurements) Sonnet · medium passed every hunt Opus · high passed, which is why a located hunt now goes to Sonnet at more effort. In `saver` hard work and a vague hunt now run on Sonnet · high as well: over twenty tasks, two sets, Opus solved none that Sonnet · medium failed, at 3.6 times the cost. `balanced` and `quality` keep Opus for hard work.
 
 A bug report counts as clear when it holds the error, a file, code, a number, the moment it happens ("when I click...") or what should happen instead; a screenshot beside it counts too.
 
@@ -131,8 +131,8 @@ The classifier numbers below were measured on labels we wrote. To see how autoge
 
 **Where it shows.**
 
-- The line under each answer: this turn's cost and what it would have cost on the picker's model.
 - The status text at the bottom right: the session's total saving.
+- `/gear` and `/gear log`: what each decision cost and what it would have cost on the picker's model.
 - `/gear savings`: a card drawn in the transcript with
   - two bars, the saving this session and in total, each with its share of the picker's bill;
   - the share of each model, as a bar and a legend;
@@ -181,7 +181,7 @@ Dollars per million tokens. A Haiku prompt over 100K tokens costs five times as 
 | **Rules, Haiku when unsure, held to the rules' signs (0.6)** | **88%** | **100%** | **0** | **19%** |
 | Always Haiku, take the higher | 74% | 96% | 0 | 100% |
 
-How the 143 labelled messages are routed, by the rules alone, with the picker on Opus · high (0.8, `tasarruf`; `claude plugin test .` prints it as `EVAL route`): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Sonnet · high 26, T3 located hunt Sonnet · high 10, T4 Opus · high 13. Until 0.7 the 33 standard ones ran on Sonnet · high and the 10 hunts on Opus · medium; the tiers themselves did not change.
+How the 143 labelled messages are routed, by the rules alone, with the picker on Opus · high (0.8, `saver`; `claude plugin test .` prints it as `EVAL route`): T0 Haiku · low 24, T1 Sonnet · medium 37, T2 Sonnet · medium 33, T3 Sonnet · high 26, T3 located hunt Sonnet · high 10, T4 Opus · high 13. Until 0.7 the 33 standard ones ran on Sonnet · high and the 10 hunts on Opus · medium; the tiers themselves did not change.
 
 \* Putting hard work (T3+) at T0/T1, or two tiers or more too low. The held-out errors were seen once, and the fresh-set errors informed the "ask when unsure" threshold, so true accuracy may be somewhat lower. The bound of 0.6 costs one message here ("bu import neden kullanılıyor?" is now T1, not T0) and is what keeps the real-use errors below from happening.
 
@@ -283,7 +283,8 @@ What it shows, the unflattering part first:
 |---|---|
 | `hooks/register.tsx` | the hooks module: events, the `/gear` command, the state row, the card hook |
 | `hooks/card.tsx` | the savings card, a tree of Box and Text |
-| `hooks/core/signals.ts` | the classifier: rules, overrides, Turkish and English cues |
+| `hooks/core/signals.ts` | the classifier: rules, overrides, the Turkish and English cues |
+| `hooks/core/languages.ts` | the cues of Spanish, German, French, Russian, Chinese and Japanese |
 | `hooks/core/llm.ts` | the question put to Haiku when the rules are unsure |
 | `hooks/core/tiers.ts` | profiles: tier to model and effort |
 | `hooks/core/policy.ts` | ceiling and cache applied to a tier, and the windows it warns about |
@@ -293,11 +294,13 @@ What it shows, the unflattering part first:
 | `hooks/core/journal.ts` | the decision log: entries, complaint and failing-check flags, your marks, the report |
 | `hooks/core/settle.ts` | how the rules, Haiku's answer and the work in hand settle a tier |
 | `hooks/core/savings.ts` | per-model totals, the saving, the markdown report |
+| `hooks/core/handover.ts` | the hand-over note: when it is offered, what the model is asked, what the new conversation gets |
 | `hooks/core/settings.ts` | stored settings and statistics, `/gear` parsing |
 | `hooks/core/text.ts` | the words autogear says, in English and Turkish, and the language choice |
 | `hooks/core/doctor.ts` | `/gear doctor`: the checks and their advice |
 | `hooks/core/switch.ts` | the drawing of the state badge |
 | `hooks/core/version.ts` | the newest Claude Code version it was tested on |
+| `docs/` | `sonraki-adimlar.md` (open steps and decisions, in Turkish) and `demo/` (the animation above and how it is made) |
 | `tests/` | rules, policy, prices and savings; the router against a mock engine; the classifier eval |
 | `eval/` | classifier measurement, the external benchmarks (`external.mjs`) and the output-quality tasks |
 | `scripts/` | the live smoke test; `harvest.mjs`, which gathers autogear's decisions from your transcripts |
@@ -320,7 +323,7 @@ node eval/haiku.mjs
 node eval/tasks.mjs
 ```
 
-`node eval/tasks.mjs <arm>` takes `--runs N` and `--set sqlglot`: ten real bugs of [sqlglot](https://github.com/tobymao/sqlglot) (MIT, about 100K lines), each set up as the code stood just before its fix, without git history, and checked by the tests that fix added. It needs sqlglot cloned into `eval/.work/repos/sqlglot` and Python 3.9+. `--dry` checks every such task for free: it must fail as given and pass with the real fix. The arm `gearbox-0.8.1` is autogear before the hunt split, to compare the two rules.
+`node eval/tasks.mjs <arm>` takes `--runs N` and `--set sqlglot`: ten real bugs of [sqlglot](https://github.com/tobymao/sqlglot) (MIT, about 100K lines), each set up as the code stood just before its fix, without git history, and checked by the tests that fix added. It needs sqlglot cloned into `eval/.work/repos/sqlglot` and Python 3.9+. `--dry` checks every such task for free: it must fail as given and pass with the real fix. The arm `gearbox-0.8.1` is autogear (then called gearbox, which is why the eval arms keep that name) before the hunt split, to compare the two rules.
 
 The last two call real models and spend usage; Haiku answers are cached under `eval/.work`. `plugin test` needs Claude Code 2.1.295 or newer (2.1.295 and 2.1.299 were used): on older builds the hooks module does not load and the router tests fail (2.1.278: 75 pass, 30 fail). The `claude` on your PATH can be older than the desktop app's own build; on Windows that one lives under `%APPDATA%\Claude\claude-code\` or, in newer apps, `%LOCALAPPDATA%\Claude-Data\<profile>\claude-code\`. The measurement scripts pick the newest of them themselves (`CLAUDE_BIN` overrides) and stop before spending anything on a build older than 2.1.295.
 
@@ -357,7 +360,8 @@ Restart the app and open a new chat.
 - [x] English README, MIT license, published on GitHub
 - [x] Shadow mode, external benchmarks and a harvest of real decisions, so a new version is judged before it routes anyone's work (0.7)
 - [x] Rate-limit windows warn instead of lowering the choice; the effort table retuned from measurements (Sonnet · medium for clear work, hunts at high, no max unasked); a state row that shows on, shadow and off apart; the shadow log keeps what the picker cut; plan mode goes to Opus (0.8)
-- [x] Measured against five setups on twenty tasks, ten of them real sqlglot bugs; in `tasarruf` hard work moves to Sonnet · high, Opus kept for critical work, plan mode and when asked (0.9)
+- [x] Measured against five setups on twenty tasks, ten of them real sqlglot bugs; in `saver` hard work moves to Sonnet · high, Opus kept for critical work, plan mode and when asked (0.9)
+- [x] A large conversation offers a clean one with a hand-over note (0.10); the rules read eight languages (0.11)
 - [x] English commands, English or Turkish speech, one italic line under every answer naming the model that answered, and `/gear doctor` (0.12)
 - [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
 - [x] Decision log with your marks, to see where the rules go wrong

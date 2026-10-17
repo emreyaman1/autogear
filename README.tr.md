@@ -35,7 +35,7 @@ Sonra seçiciyi bir kez en güçlü modeline getir (örneğin **Opus · high**).
 Yerel bir kopyadan kurmak için, bir terminalde:
 
 ```bash
-claude plugin marketplace add C:\gearbox
+claude plugin marketplace add <deponun kopyasının yolu>
 ```
 
 ```bash
@@ -94,7 +94,7 @@ mesaj ─► sınıfla ─► yerleştir ─► karar  ─► uygula    ─► c
                                  pacing
 ```
 
-1. **Sınıflandırma** (`hooks/core/signals.ts`): Mesaj T0–T4 kademelerinden birine konur. Türkçe ve İngilizce sinyaller okunur; mesajdaki kod, dosya ve değişken adları dikkate alınmaz. Fiil tek başına değil nesnesiyle değerlendirilir ("rengi değiştir" ≠ "ödeme sistemi ekle"). Claude Code'un mesajın önüne koyduğu notlar okunmaz, selamlaşma doğrudan T0'dır, hiçbir şey yazılmamış bir mesaj (yalnızca görsel) son seçimle devam eder. Kurallar emin olamazsa Haiku'ya tek kısa bir soru sorulur (`hooks/core/llm.ts`).
+1. **Sınıflandırma** (`hooks/core/signals.ts`): Mesaj T0–T4 kademelerinden birine konur. Sekiz dilin sinyalleri okunur (Türkçe, İngilizce, İspanyolca, Almanca, Fransızca, Rusça, Çince, Japonca); mesajdaki kod, dosya ve değişken adları dikkate alınmaz. Fiil tek başına değil nesnesiyle değerlendirilir ("rengi değiştir" ≠ "ödeme sistemi ekle"). Claude Code'un mesajın önüne koyduğu notlar okunmaz, selamlaşma doğrudan T0'dır, hiçbir şey yazılmamış bir mesaj (yalnızca görsel) son seçimle devam eder. Kurallar emin olamazsa Haiku'ya tek kısa bir soru sorulur (`hooks/core/llm.ts`).
 2. **Yerleştirme** (`hooks/core/settle.ts`): Haiku mesajı tek başına okur, ekran görüntüsünü ya da etrafındaki işi görmez; bu yüzden cevabı kuralların gördüğünden en çok bir kademe aşağı inebilir, bir şeyi incelemeyi isteyen mesajda T2'nin altına inmez. T2 ve üstü bir işin ortasındaki mesaj (bir soru, bir açıklama, yalnızca Haiku'nun yerleştirebildiği bir mesaj) o işin en çok bir kademe altına iner; kuralların emin olduğu yeni iş, commit gibi bir angarya ya da selamlaşma baştan başlar.
 3. **Karar** (`hooks/core/tiers.ts`, `policy.ts`, `pacing.ts`): Kademe, profil tablosundan model ve efora çevrilir, sonra iki sınırdan geçer ve limit pencerelerine bakılır:
    - **Tavan:** Seçicideki model ve efor aşılmaz.
@@ -131,8 +131,8 @@ Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölç�
 
 **Nerede görünür.**
 
-- Her cevabın altındaki satır: bu turun tutarı ve seçici modeliyle ne tutacağı.
 - Sağ alttaki durum yazısı: oturumun toplam tasarrufu.
+- `/gear` ve `/gear log`: her kararın maliyeti ve seçici modeliyle ne tutacağı.
 - `/gear savings`: konuşmanın içine çizilen bir kart:
   - iki çubuk, bu oturumun ve toplamın tasarrufu, her biri seçicinin faturasındaki payıyla;
   - her modelin payı, çubuk ve açıklamayla;
@@ -284,6 +284,7 @@ Gösterdiği, önce autogear'ın aleyhine olan:
 | `hooks/register.tsx` | hooks modülü: olaylar, `/gear` komutu, durum satırı, kartı çizen kanca |
 | `hooks/card.tsx` | tasarruf kartı, Box ve Text'ten bir ağaç |
 | `hooks/core/signals.ts` | sınıflandırıcı: kurallar, etiketler, Türkçe ve İngilizce sinyaller |
+| `hooks/core/languages.ts` | İspanyolca, Almanca, Fransızca, Rusça, Çince ve Japoncanın sinyalleri |
 | `hooks/core/llm.ts` | kurallar emin olamayınca Haiku'ya sorulan soru |
 | `hooks/core/tiers.ts` | profiller: kademeden model ve efora |
 | `hooks/core/policy.ts` | bir kademeye uygulanan tavan ve önbellek, uyarılacak limit pencereleri |
@@ -293,11 +294,13 @@ Gösterdiği, önce autogear'ın aleyhine olan:
 | `hooks/core/journal.ts` | karar günlüğü: kayıtlar, şikâyet ve kırık test işaretleri, senin işaretlerin, rapor |
 | `hooks/core/settle.ts` | kuralların, Haiku'nun cevabının ve süren işin bir kademeyi nasıl belirlediği |
 | `hooks/core/savings.ts` | modele göre toplamlar, tasarruf, markdown rapor |
+| `hooks/core/handover.ts` | devir notu: ne zaman önerilir, modelden ne istenir, yeni sohbete ne gider |
 | `hooks/core/settings.ts` | kayıtlı ayarlar ve istatistik, `/gear` ayrıştırma |
 | `hooks/core/text.ts` | autogear'ın söylediği sözler (İngilizce ve Türkçe) ve dil seçimi |
 | `hooks/core/doctor.ts` | `/gear doctor`: kontroller ve önerileri |
 | `hooks/core/switch.ts` | durum etiketinin çizimi |
 | `hooks/core/version.ts` | denendiği en yeni Claude Code sürümü |
+| `docs/` | `sonraki-adimlar.md` (açık adımlar ve kararlar) ve `demo/` (yukarıdaki animasyon ve nasıl yapıldığı) |
 | `tests/` | kurallar, politika, fiyat ve tasarruf; sahte motora karşı yönlendirici; sınıflandırıcı ölçümü |
 | `eval/` | sınıflandırma ölçümü, dış ölçütler (`external.mjs`) ve çıktı kalitesi görevleri |
 | `scripts/` | canlı duman testi; autogear'ın kararlarını oturum kayıtlarından toplayan `harvest.mjs` |
@@ -358,6 +361,7 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] Gölge mod, dış ölçütler ve gerçek kararların toplanması: yeni bir sürüm, kimsenin işini yönlendirmeden önce sınanır (0.7)
 - [x] Limit pencereleri seçimi düşürmek yerine uyarıyor; efor tablosu ölçümlere göre yeniden ayarlandı (net işte Sonnet · medium, hata avında high, istenmedikçe max yok); açık, gölge ve kapalıyı ayrı gösteren durum satırı; gölge kaydı seçicinin kırptığını da tutuyor; plan modu Opus'a gidiyor (0.8)
 - [x] Yirmi görevde beş düzenle kıyas, onu sqlglot'un gerçek hataları; `tasarruf`ta zor iş Sonnet · high'a geçti, Opus kritik işe, plan moduna ve istenince kullanılır (0.9)
+- [x] Büyük sohbet, devir notuyla temiz bir sohbet önerir (0.10); kurallar sekiz dili okur (0.11)
 - [x] İngilizce komutlar, İngilizce ya da Türkçe konuşma, her cevabın altında cevabı veren modeli söyleyen tek italik satır ve `/gear doctor` (0.12)
 - [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
 - [x] Senin işaretlerinle karar günlüğü, kuralların nerede yanıldığını görmek için
