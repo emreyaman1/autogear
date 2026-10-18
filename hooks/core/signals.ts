@@ -356,6 +356,9 @@ const ACK = new RegExp(
     `${words.ACK_LATIN})(?![a-z])|^(?:${words.ACK_CYRILLIC})(?![а-я])|^(?:${words.ACK_CJK})(?=\\s|$)`,
 )
 
+// The work in hand asked to go on: "devam", "uygula", "hallet", "continue".
+const CARRY_ON = word('devam|uygula|hallet|bitir|tamamla|apply|continue|proceed|go on|finish|do it|' + words.ACK_LATIN)
+
 // "sonraki iki bölümü de yap", "onu da yap", "kalanları da hallet": more of the
 // work in hand, at its tier.
 const MORE_OF_THE_SAME =
@@ -477,9 +480,9 @@ const NON_LATIN = /[Ѐ-ӿ֐-ۿऀ-ॿ぀-ヿ㐀-鿿가-힯]/
 const TURKISH_LETTERS = /[ıİğĞşŞ]/
 const TURKISH_OR_ENGLISH = new RegExp(
   '(?:^|[^a-zçğıöşü])(?:' +
-    'bu|bir|için|icin|ile|ve|şu|var|yok|mı|mi|mu|mü|değil|gibi|ama|çok|neden|nasıl|olarak|sonra|daha|' +
+    'bu|bir|için|icin|ile|ve|şu|var|yok|mı|mi|mu|mü|değil|gibi|ama|çok|neden|nasıl|olarak|sonra|daha|evet|tamam|hayır|hayir|lütfen|lutfen|' +
     'yap|ekle|yaz|sil|göster|getir|çıkar|düzelt|değiştir|kaldır|taşı|listele|geçir|yükselt|' +
-    'the|and|this|that|with|what|why|how|is|are|it|its|to|for|of|my|our|we|you|all|from|into|when|still|again|please|should|now|too|go|' +
+    'the|and|this|that|with|what|why|how|is|are|it|its|to|for|of|my|our|we|you|all|from|into|when|still|again|please|should|now|too|go|yes|' +
     'add|fix|make|write|show|move|remove|suggest|support|feature|message' +
     ')(?![a-zçğıöşü])',
   'i',
@@ -548,6 +551,13 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
       return rule(prevTier + bump, 'high', [`şikâyet ${quote(complaint)}: +${bump} kademe`], 'complaint', 'escalate')
     }
     if (isFollowup(text)) {
+      // "Evet, pushla.": the go-ahead names a chore and nothing more of the work.
+      const chores = found(TRIVIAL, plain)
+      const left = TRIVIAL.reduce((rest, cue) => rest.replace(new RegExp(cue.pattern.source, 'g'), ' '), plain.replace(ACK, ' '))
+      if (chores.length > 0 && found(CHANGE, left).length === 0 && found(ADD, left).length === 0 && !CARRY_ON.test(left)) {
+        return rule(0, 'high', [`basit iş: ${quote(chores)}`], 'chore')
+      }
+
       return rule(prevTier, 'high', ['kısa onay: önceki kademe'], 'followup', 'inherit')
     }
     if (MORE_OF_THE_SAME.test(plain) && found(HARD, plain).length === 0 && found(FEATURE, plain).length === 0) {

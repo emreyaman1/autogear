@@ -651,6 +651,17 @@ describe('what real use taught (0.6)', () => {
     expect(classify('son commit’te ne değişti, özetle')).toMatchObject({ tier: 0, confidence: 'high' })
   })
 
+  test('a go-ahead that names a chore alone is the chore; one that carries the work on keeps its tier', () => {
+    // From real use: "Evet, pushla." carried the T3 work it followed.
+    expect(classify('Evet, pushla.', { prevTier: 3 })).toMatchObject({ tier: 0, kind: 'chore' })
+    expect(classify('ok, commit and push', { prevTier: 2 })).toMatchObject({ tier: 0, kind: 'chore' })
+    expect(classify('evet öyle yap ve pushla', { prevTier: 3 })).toMatchObject({ tier: 3, source: 'inherit' })
+    expect(classify('tamam devam et, sonra commitle', { prevTier: 3 })).toMatchObject({ tier: 3, source: 'inherit' })
+    expect(classify('evet', { prevTier: 3 })).toMatchObject({ tier: 3, source: 'inherit' })
+    // "evet" says Turkish: the chore is not sent to Haiku as a foreign prompt.
+    expect(classify("Evet, 0.12.0 commitini GitHub'a pushla.", { prevTier: 3 })).toMatchObject({ tier: 0, confidence: 'high' })
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

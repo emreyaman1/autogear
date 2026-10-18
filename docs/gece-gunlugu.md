@@ -55,3 +55,11 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Tam test:** 2.1.299 175/175, 2.1.295 175/175, `validate` uyarısız.
 - **Önce/sonra:** 2.111 etiketli ölçüm mesajında hiçbir değişiklik yok (bütün setler, sekiz dil); dış ölçüt (741 görev) birebir aynı. 98 gerçek mesajda 3 mesaj kesin T0'dan "T1, Haiku'ya sor"a geçti (ve ardından gelen bir "sonraki adımı uygula" onların kademesini aldı).
 - **Ölçülemeyen:** Haiku'nun bu üç mesaja ne diyeceği (ölçülmedi; o gün sorulmamıştı). Haiku T0 derse yine T0'a düşebilir; kazanç, artık sorulması.
+
+## Geliştirme 4: "Evet, pushla." önemsiz iş (T0), önceki işin kademesi değil
+
+- **Değişiklik:** kısa bir onayın ("evet", "tamam", "ok") yanında yalnızca önemsiz bir iş ("pushla", "commit et") varsa ve işi sürdüren bir söz ("yap", "devam", "uygula") yoksa, mesaj önemsiz iş (T0) sayılıyor. Eskiden onay olduğu için önceki işin kademesini (gerçek kullanımda T3) taşıyordu. "evet öyle yap ve pushla", "tamam devam et, sonra commitle" önceki kademede kalıyor.
+- **Yan düzeltme:** dil tanıma "evet", "tamam", "hayır", "lütfen", "yes" sözlerini Türkçe/İngilizce işareti saymıyordu; "Evet, 0.12.0 commitini GitHub'a pushla." yabancı dil sanılıp Haiku'ya sorulacaktı. Eklendi.
+- **Test:** yeni test (gerçek iki mesaj ve üç karşı örnek). 2.1.299 176/176, 2.1.295 176/176, `validate` uyarısız.
+- **Önce/sonra:** 2.111 etiketli mesajda değişiklik yok; dış ölçüt birebir aynı; 98 gerçek mesajda 2 mesaj (iki "pushla") T0'a indi.
+- **Bilinen risk (eskiden de vardı):** önemsiz işten hemen sonra gelen "devam" ya da "sonraki adımı uygula" önceki mesajın kademesini (T0) alıyor; küçük sohbette Haiku'ya gider. Tek başına "pushla" için bu bugün de böyle. 98 gerçek mesajda pushla'dan sonra hiç "devam" gelmedi (her seferinde yeni bir iş tarifi geldi), bu yüzden şimdilik dokunulmadı; rapora yazıldı.
