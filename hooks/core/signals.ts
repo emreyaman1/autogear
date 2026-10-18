@@ -218,7 +218,7 @@ const REPLACE = word('replace|degistir|reemplaz|sustitu|ersetz|austausch|remplac
 // A text file named: "docs/api.md", "notes.txt".
 const DOC_FILE = /.(?:md|mdx|txt|rst|adoc)(?![a-z])/i
 // A commit message asked for first, its content after it: a chore.
-const COMMIT_FIRST = /^(?:commit (?:mesaji|message|msg)|(?:write|suggest) (?:a |the )?commit message)/
+const COMMIT_FIRST = /^(?:commit (?:mesaji|message|msg)|(?:write|suggest) (?:a |the |me a )?commit message)|commit (?:mesaji|message|msg)[^:]{0,20}:/
 
 // "X'ten Y'ye taşı/geçir", "migrate ... from X to Y".
 const MIGRATION = new RegExp(
@@ -675,7 +675,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
     return rule(4, 'high', [`kapsamlı iş: ${quote(scope)}, ${parts + 1} parça`])
   }
   if (parts >= 3 && feature.length >= 3 && adds.length > 0) {
-    return rule(4, 'high', [`çok parçalı özellik: ${quote(feature)}`])
+    // The words of one feature count apart ("page", "pagination", "endpoint"):
+    // sure, this rule was right on 2 of 7 labelled prompts. Haiku is asked.
+    return { ...rule(4, 'low', [`çok parçalı özellik: ${quote(feature)}`]), floor: 2 }
   }
   if (hard.length + maybeHard.length >= 3 && isWide) {
     return rule(4, 'high', [`çok sayıda zor sinyali: ${quote([...hard, ...maybeHard])}`, 'kapsamlı istek'])

@@ -750,6 +750,15 @@ describe('what real use taught (0.6)', () => {
     expect(classify('her seferinde aynı hata çıkıyor').tier).toBe(4)
   })
 
+  test('a feature in many parts is no sure T4: Haiku is asked, no lower than T2', () => {
+    // Sure, the rule was right on 2 of 7 labelled prompts; pagination's own words counted as parts.
+    const pagination = classify('add pagination to the /api/users endpoint, page and limit query params, default limit 20 max 100. update the swagger docs too')
+    expect(pagination).toMatchObject({ tier: 4, confidence: 'low', floor: 2 })
+    expect(withHaiku(pagination, 2).tier).toBe(2)
+    expect(withHaiku(pagination, 0).tier).toBe(2)
+    expect(classify('şu değişiklik için commit mesajı yaz: login sayfasındaki buton rengi maviden yeşile çevrildi').tier).toBe(0)
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })
