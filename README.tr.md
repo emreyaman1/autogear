@@ -368,7 +368,7 @@ Uygulamayı kapatıp aç ve yeni bir sohbet başlat.
 - [x] Yirmi görevde beş düzenle kıyas, onu sqlglot'un gerçek hataları; `tasarruf`ta zor iş Sonnet · high'a geçti, Opus kritik işe, plan moduna ve istenince kullanılır (0.9)
 - [x] Büyük sohbet, devir notuyla temiz bir sohbet önerir (0.10); kurallar sekiz dili okur (0.11)
 - [x] İngilizce komutlar, İngilizce ya da Türkçe konuşma, her cevabın altında cevabı veren modeli söyleyen tek italik satır ve `/gear doctor` (0.12)
-- [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor; keşif ajanlarını Haiku · low'a vermek sırada, önce kotadaki paylarının ölçülmesi gerekiyor
+- [ ] Alt ajan kuralları: istekleri kancaya ulaşıyor (bir `agentId` taşıyorlar) ve bugün olduğu gibi geçiriliyor. Geliştiricinin kendi kayıtlarında ölçüldü (30 Temmuz – 18 Ekim 2026, 27 yardımcı): yardımcılar liste fiyatıyla harcamanın %1,4'ü; yardımcılar işin daha büyük bir kısmını taşıyana kadar yönlendirme bekliyor
 - [ ] Günlükteki düzeltmelerden öğrenme
 
 ## Neye bağlanır, ne çalıştırır

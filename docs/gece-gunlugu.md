@@ -28,3 +28,11 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Ölçülemeyen:** bu tür mesaj ölçüm setlerinde neredeyse hiç yok; yeni kuralın gerçek kullanımda ne sıklıkla doğru çalıştığını yalnızca gölge kayıt gösterir. Kural benim yazdığım örneklerle denendi; dürüst bir ölçüm değil.
 - **Bulunan, düzeltilmeyen:** "fix the errors in the README", "korrigiere die Fehler", "исправь ошибки" gibi metin düzeltme istekleri "belirsiz anlatılmış hata" (T3, hata avı) sayılıyor, çünkü "error/Fehler/ошибк" hata ayıklama sözü. Bu gereğinden yüksek (pahalı yön), zayıf modele gitme riski yok; düzeltmek hata avı kuralının sırasını değiştirmeyi gerektirir, riskli olduğu için dokunulmadı.
 - **Karar:** commit.
+
+## Adım 2: yardımcıların (alt ajanların) kotadaki payı
+
+- **Bu ölçüm neyi cevaplayacak:** yardımcıları işin türüne göre ucuz modele (keşif işini Haiku'ya) vermek değer mi? Notlardaki koşul: "önce payını ölç; değmiyorsa yapma".
+- **Yöntem (ücretsiz, model çağrısı yok):** `~/.claude/projects` altındaki bütün sohbet kayıtları okundu; ölçüm betiklerinin geçici klasörleri (`Temp-gearbox-*`, `Temp-claude-*`, scratch) dışarıda. Her model isteğinin token sayıları liste fiyatıyla çarpıldı (aynı istek bir kez sayıldı). Yardımcı sayılan: `subagents/` klasöründeki kayıtlar ve yan kol (`isSidechain`) satırları. Betik oturumun geçici klasöründe (`subshare.mjs`), repoya eklenmedi.
+- **Sonuç:** 30 Temmuz – 18 Ekim 2026, 1.976 oturum. Toplam $2.725 (liste fiyatı; abonelikte limit olarak düşer). Ana sohbet: Opus 15.743 istek $2.282, Sonnet 3.479 istek $402, Haiku 2.025 istek $1,7. Yardımcılar: 27 çalıştırma, Sonnet 668 istek $38,5, Opus 18 istek $1,0, Haiku 33 istek $0,02. **Yardımcıların payı %1,4.**
+- 16 Ekim notundaki "yaklaşık 200 yardımcı" bugünkü kayıtlarda yok: kayıtlarda yalnızca 27 Agent çağrısı var (25 genel amaçlı, 2 kullanıcının kendi tanımlı yardımcısı). Eski sayı başka bir şeyi saymış olabilir; doğrulanamadı.
+- **Karar: yardımcı yönlendirme yapılmıyor.** En iyi durumda (bütün yardımcılar Haiku'ya) kazanç %1,3 civarı; buna karşılık keşif yardımcısının eksik getirdiği bilgi, onu kullanan pahalı ana işi bozabilir. README'lerin yol haritası satırı ve `docs/sonraki-adimlar.md` adım 7 bu ölçümle güncellendi. Kullanıcı yardımcıları daha çok kullanmaya başlarsa yeniden ölçülmeli.

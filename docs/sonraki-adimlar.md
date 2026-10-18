@@ -292,6 +292,7 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 - **Ne:** Claude'un açtığı yardımcıları işin türüne göre modele dağıt: kodda arama ve okuma yapan keşif yardımcıları Haiku·low, uygulama yapanlar Sonnet·medium. Büyük işte Opus medium ana ajan ile Sonnet yardımcılar düzeni (adım 6).
 - **Neden:** Yardımcılar artık ana modeli kullanıyor; ana model Opus ise kodda arama gibi basit işler de Opus'la yapılıyor. Benzer projelerin en yaygın özelliği bu (Adityaraj0421/gearbox, dominicrico/jev-router, nedjamez/claude-code-model-router). Videoda bu düzen tek başına Opus kadar başarılı ve daha ucuz çıktı.
 - **Önce:** yardımcıların toplam kotadaki payını ölç; değmiyorsa yapma.
+- **Ölçüldü (19 Ekim 2026, `gelistirme` dalı):** kullanıcının bütün sohbet kayıtları (30 Temmuz – 18 Ekim 2026, 1.976 oturum; ölçüm betiklerinin geçici klasörleri hariç), her model isteğinin token sayısı liste fiyatıyla: toplam $2.725, yardımcılar $39,5 (**%1,4**). Yardımcı 27 kez açılmış (25 genel amaçlı, 2 özel); istekleri çoğunlukla Sonnet (668 istek, $38,5), Opus 18 istek ($1,0), Haiku 33 istek. 16 Ekim notundaki "yaklaşık 200" sayısı bugünkü kayıtlarda yok (kayıtlarda yalnız 27 Agent çağrısı var). **Karar: yapılmıyor.** Hepsi bedava olsa bile tasarruf %1,4; Haiku'ya vermek en çok yaklaşık %1,3 kazandırır, keşif yardımcısının zayıf modelle eksik getirdiği bilgi ana Opus işine pahalıya patlayabilir. Yardımcı kullanımı artarsa (ör. kullanıcı sık sık paralel iş açarsa) yeniden ölçülür.
 
 ### 8. advisor (danışman) ile birleştirme
 

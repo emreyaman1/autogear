@@ -368,7 +368,7 @@ Restart the app and open a new chat.
 - [x] Measured against five setups on twenty tasks, ten of them real sqlglot bugs; in `saver` hard work moves to Sonnet · high, Opus kept for critical work, plan mode and when asked (0.9)
 - [x] A large conversation offers a clean one with a hand-over note (0.10); the rules read eight languages (0.11)
 - [x] English commands, English or Turkish speech, one italic line under every answer naming the model that answered, and `/gear doctor` (0.12)
-- [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today; routing exploration agents to Haiku · low is next, once their share of the quota is measured
+- [ ] Subagent rules: their requests reach the hook (they carry an `agentId`) and are passed through untouched today. Measured on the author's own transcripts (30 July to 18 October 2026, 27 helper runs): helpers were 1.4% of the spend at list prices, so routing them waits until helpers carry more of the work
 - [ ] Learning from the log's corrections
 
 ## What it hooks and runs
