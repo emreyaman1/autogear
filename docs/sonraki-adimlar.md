@@ -499,3 +499,12 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 | Web paneli | claude-agent-tools, weave-os/router | Cevap altı satırı, bant ve tasarruf kartı yeterli. |
 | Ucuz cevabı otomatik olarak güçlü modelle tekrar çalıştırmak | NadirClaw | Maliyeti ikiye katlar; kartopu freni yeterli. |
 | "Her şey Sonnet" ile kıyas | — | Kullanıcı kararı: gerçekte kimse böyle kullanmıyor. |
+
+### 18. Gerçek kullanıcı mesajlarından öğrenmek (kullanıcı fikri, 19 Ekim 2026)
+
+- **Fikir (kullanıcı):** autogear'ın daha doğru çalışması için Claude Code kullanan insanların gerçek mesajları en iyi veri seti.
+- **Kanıt (19 Ekim gecesi):** en işe yarayan düzeltmeler kullanıcının kendi gerçek mesajlarından çıktı. Bir modele yazdırılan sentetik setlere göre yapılan düzeltmeler, hiç bakılmamış yeni mesajlarda sonucu değiştirmedi.
+- **Gereken iki şey:** (1) mesajlar, (2) her mesajın gerçekte ne kadar iş istediği (etiket). Etiket için kayıttaki sonuç işaretleri kullanılabilir: testler geçti mi, `/gear wrong` geldi mi, şikâyetle yükseltildi mi, kartopu freni çalıştı mı.
+- **Engel, gizlilik:** autogear bugün dışarıya hiçbir şey göndermiyor; dizin başvurusundaki veri cevapları da buna göre verildi ("saklanmıyor, dışarı gönderilmiyor"). Başka kullanıcıların mesajlarını toplamak bu cevapları değiştirir, açık izin (opt-in) ister ve yeniden inceleme gerektirebilir.
+- **Seçenekler (gizliden açığa):** (a) her kullanıcının bilgisayarında kalan, kendi kayıtlarından öğrenme (adım 13; dışarı bir şey gitmez); (b) kullanıcının isterse elle paylaştığı yanlış seçim kayıtları (GitHub'daki "yanlış seçim" şablonu zaten var; mesaj metni yerine kısa özet); (c) açık izinle, metin yerine yalnızca sayısal özellikler (uzunluk, dil, hangi kural, sonuç) gönderen bir ölçüm. (c) en çok veriyi verir ama gizlilik bölümünün ve başvurunun değişmesi demek.
+- **Karar bekliyor (kullanıcı).**
