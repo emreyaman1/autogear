@@ -11,6 +11,7 @@ Each release, newest first. The evidence behind each change is in `docs/sonraki-
 - "Why are there so many files here?" ("çok"), "why this loop?" or an English "don't" no longer reads as a crash or a freeze to hunt.
 - A length of time ("3 gündür", "for 30 days") is a repeated failure only beside a word of the fault; "olup olmadığını", "yanlışlıkla" and "planladığım" no longer read as a complaint or a request for a plan.
 - From a set written by a model that never saw the rules: a value changed ("from blue to green", "30 to 60") or a database migration file is no move between stacks; work counted in files ("about 40 files") is big; "last two attempts", "back and forth" are a repeated failure; "what's going on" is no sure question; docs checked against the code and fixed are a review; "commit message: …" is a chore.
+- A feature in many parts and wide work in parts are no longer a sure T4: Haiku is asked, no lower than T2 and T3. A count of tries in digits ("5. kez") is a repeated failure. A chore or a question beside work begun ("apply the plan, then commit") is no sure T0.
 - Tests, builds, commits and pushes run in PowerShell count as they do in Bash, for the snowball brake and the clean-conversation offer.
 
 ## 0.12.2 (18 October 2026)

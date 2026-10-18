@@ -1,62 +1,74 @@
 # Gece raporu (18–19 Ekim 2026)
 
-Sen bilgisayardan uzaktayken autogear üzerinde yapılan işin özeti. Her adımın ayrıntısı ve ölçümleri `docs/gece-gunlugu.md` dosyasında.
+Sen bilgisayardan uzaktayken autogear üzerinde yapılan işin özeti. Her adımın ayrıntısı ve ölçümleri `docs/gece-gunlugu.md` dosyasında. İki bölüm var: ilk bölüm, sonra sen "devam et, limiti önemseme" deyince ikinci bölüm.
 
 ## Kısaca
 
-- **7 geliştirme yapıldı**, hepsi `gelistirme` dalında (dal: projenin ana sürümüne karışmadan değişikliklerin denendiği paralel kopya). Dal GitHub'a gönderildi; **ana sürüme (`main`) hiçbir şey gönderilmedi**, `C:\gearbox` klasörüne dokunulmadı. Senin kurulu autogear'ın değişmedi.
-- Her geliştirmeden sonra bütün testler iki Claude Code sürümünde (2.1.299 ve 2.1.295) geçti: başta 173 test vardı, sonda 180. `claude plugin validate` (eklentinin kurallara uyup uymadığını kontrol eden komut) her seferinde uyarısız geçti.
-- **2 iş ölçüldü ve yapılmamasına karar verildi** (aşağıda, nedenleriyle).
-- Harcama: model çağrısı olarak yalnızca bir küçük Haiku ölçümü, liste fiyatıyla **$0,014**. Geri kalan bütün ölçümler ücretsizdi (kurallar bilgisayarda çalışıyor, modele bir şey gitmiyor). Bu oturumun kendisi kotandan harcadı: rapor yazılırken 5 saatlik limit %34, haftalık limit %65 doluydu (oturumun başında ne kadar dolu olduğunu bilmiyorum). Haftalık limitin dolup seni günlerce bekletmemesi için, değeri düşük işlere girmeden durdum.
+- **15 geliştirme yapıldı**, hepsi `gelistirme` dalında (dal: ana sürüme karışmadan değişikliklerin denendiği ayrı kopya). Dal GitHub'a gönderildi. **Ana sürüme (`main`) hiçbir şey gönderilmedi**, `C:\gearbox` klasörüne dokunulmadı; kurulu autogear'ın değişmedi.
+- Her geliştirmeden sonra bütün testler iki Claude Code sürümünde (2.1.299 ve 2.1.295) geçti: başta 173 test, sonda 206. `claude plugin validate` (eklentinin kurallara uyup uymadığını kontrol eden komut) her seferinde uyarısız geçti.
+- **Canlı deneme geçti:** dalın kodu gerçek Claude Code'da üç seçimi de (Haiku, Opus, Sonnet) doğru uyguladı.
+- **En önemli dürüst sonuç:** kuralları hiç görmemiş bir modelin yazdığı, benim hiç bakmadığım yeni 191 mesajda, autogear'ın kararı (kurallar + Haiku) başlangıçla **aynı** kaldı: ne iyileşti ne kötüleşti. Uzun görev metinlerinde ise (dış ölçütün hiç bakılmamış yarısı, 350 görev) belirgin iyileşti: tam isabet %29 → %35, bir kademe içinde %76 → %85, gereğinden pahalı tahmin 218 → 192. Ayrıntı aşağıda.
+- Harcama (liste fiyatıyla): Haiku ölçümleri yaklaşık $0,23, Sonnet'e yazdırılan yeni mesaj setleri $0,66, canlı deneme $0,15; toplam yaklaşık **$1,05**. Bu oturumun kendisi de kotandan harcadı: son bakışta 5 saatlik limit %67, haftalık %69 doluydu.
+
+## Terimler
+
+- **Sınıflandırıcı:** autogear'ın mesajına bakıp işin zorluğuna not veren kısmı. Not ("kademe"): T0 önemsiz, T1 rutin, T2 standart, T3 zor, T4 kritik. Önce elle yazılmış kurallara bakar; emin değilse Haiku'ya sorar. **Kurallar emin olursa Haiku'ya hiç sorulmaz**, yanlışsa düzeltecek kimse yoktur.
+- **Alt sınır:** Haiku daha düşük bir not verse bile inilmeyecek en düşük not.
+- **Ciddi hata:** zor bir işi çok düşük kademeye koymak (zayıf modele vermek).
+- **Tüketilmiş set:** kurallar ayarlanırken içine bakılmış ölçüm seti; sonrasındaki başarısı dürüst ölçüm sayılmaz.
 
 ## Ne yapıldı
 
-Sınıflandırıcı: autogear'ın mesajına bakıp işin zorluğuna not veren kısmı. Not ("kademe") T0 önemsiz, T1 rutin, T2 standart, T3 zor, T4 kritik. Önce elle yazılmış kurallara bakar; emin değilse Haiku'ya sorar. **Alt sınır**: Haiku daha düşük bir not verse bile inilmeyecek en düşük not.
-
-16–18 Ekim'deki 98 gerçek mesajını (ölçüm betiklerinin kendi soruları hariç) bugünkü kurallarla yeniden okudum. Bulduğum hata türlerini düzelttim:
+**Gerçek mesajlarından gelen düzeltmeler** (16–18 Ekim'in 98 mesajı ve 1.398 gerçek mesajının bütün kelimeleri tek tek tarandı):
 
 | # | Ne düzeldi | Gerçek örnek |
 |---|---|---|
-| 1 | "Baştan dikkatlice oku, düzelt", "gözden geçir", "review", "proofread" gibi istekler en az T2 (sekiz dilde) | "readmeyi bence en baştan tekrar oku daha detaylı…": kurallar işaret görmemişti, Haiku T0 demişti |
-| 3 | İş isteyip sonunda "anlat" diyen mesaj artık kesin "soru" (T0) değil; Haiku'ya soruluyor | "sürümü artır, kurulu kopyayı güncelle, nasıl deneyeceğimi anlat": kesin T0'dı, Haiku'ya hiç sorulmuyordu |
-| 4 | "Evet, pushla." önemsiz iş (T0); önceki zor işin notunu taşımıyor | iki kez T3 olarak gitmişti |
-| 5 | "incelemede", "gözden geçirildi" bir istek sayılmıyor | "hâlâ incelemede olduğu için hiçbir şey pushlamıyoruz": Haiku T0 demişti, kural T2'de tutuyordu |
-| 6 | Testler, commit ve push PowerShell'de çalıştırılsa da sayılıyor | Windows'ta Claude komutları PowerShell'le de çalıştırıyor; "başarısız test sonrası bir kademe yukarı" ve "temiz sohbet önerisi" orada hiç çalışmıyordu |
-| 7 | Önemsiz bir mesajdan sonra "devam", "sonraki adımı uygula" en az T1 ve Haiku'ya soruluyor | "sonraki adımı uygula" önceki T0 mesajın notunu kesin olarak almıştı |
+| 1 | "Baştan dikkatlice oku, düzelt", "gözden geçir", "review" en az T2 | "readmeyi bence en baştan tekrar oku daha detaylı…" Haiku'ya gidiyordu |
+| 3 | İş isteyip "anlat" diye biten mesaj kesin soru (T0) değil | "sürümü artır, kurulu kopyayı güncelle, nasıl deneyeceğimi anlat" |
+| 4 | "Evet, pushla." önemsiz iş | önceki T3 işin notunu taşıyordu |
+| 5 | "incelemede", "gözden geçirildi" istek değil | "hâlâ incelemede olduğu için hiçbir şey pushlamıyoruz" |
+| 6 | PowerShell'de çalışan test, commit ve push da sayılıyor | Windows'ta "başarısız test sonrası bir kademe yukarı" ve "temiz sohbet önerisi" hiç çalışmıyordu |
+| 7 | Önemsiz bir mesajdan sonra "devam" en az T1 | "sonraki adımı uygula" kesin T0 alıyordu |
+| 8 | "README'deki hataları düzelt" metin düzeltme, pahalı "hata avı" değil | 'dengeli' profilde Opus · high'a gidiyordu |
+| 9 | "dönüyor" (geri veriyor) "donuyor" (donma) değil | "500 hatası dönüyor" donma sanılıyordu |
+| 10 | "neden çok…", "neden bu döngü" hata avı değil | "bu klasörde neden çok dosya var?" kesin T3'tü |
+| 11 | Süre sözü yalnız bir arızayla birlikte "tekrarlayan başarısızlık"; "olup olmadığını", "yanlışlıkla", "planladığım" şikâyet ya da plan değil | "merhaba yaklaşık 3 gündür görüşmüyoruz" kesin T4'tü (en pahalı model) |
+| 15 | İş başlatan bir sözün yanındaki "commit" ya da soru kesin T0 değil | "önerdiğin sırayı baştan sona uygula sonrasında commit et" Haiku'ya gidiyordu |
 
-(2 numara aşağıda: ölçüldü, yapılmadı.)
+**Başka bir modelin yazdığı setten gelen düzeltmeler (12):** Sonnet'e yalnız kademe tanımlarını verip (kuralları değil) 239 gerçekçi mesaj yazdırdım. Kurallar orada 12 ciddi hata yapıyordu. Düzeltilen türler: "rengini maviden yeşile çevir" gibi değer değişikliğinin "geçiş" sanılması; "40 kadar dosya var" gibi sayılmış geniş işin tanınmaması; "last two attempts" gibi sayılı denemelerin tanınmaması; "idk whats going on" sözünün kesin soru sayılması; bir commit mesajı isteğinin içindeki açıklama yüzünden özellik sayılması. O sette ciddi hata 12'den 2'ye indi. Ama o set artık tüketildi, bu yüzden dürüst ölçüm için ikinci bir set yazdırdım (aşağıda).
 
-**Önce/sonra ölçüm (her kural değişikliğinde):**
+**Emin olup sık yanılan iki kuralın Haiku'ya bırakılması (13, 14):** kuralların emin olduğu kararları gerekçeye göre saydım. "Çok parçalı özellik" (kesin T4) 7 mesajın yalnız 2'sinde doğruydu: bir sayfalama isteğindeki "page, pagination, endpoint" ayrı özellik sayılıyordu. "Kapsamlı iş" de 11'in 3'ünde fazlaydı. İkisi artık "emin değil" (Haiku karar veriyor, alt sınır T2 ve T3). Haiku ile kendi setlerinde doğru 2/9 → 9/9 ve 13/16 → 15/16.
 
-- 2.111 etiketli ölçüm mesajı (dev, holdout, fresh, gerçek kullanım tekrarı, sekiz dilde 143 mesaj, held, held2, blind, blind2): yedi geliştirmenin toplamında yalnızca **2 mesaj** değişti, ikisi de iyi yönde (kör setten İspanyolca ve Fransızca birer inceleme isteği alt sınır kazandı). Hiçbir sette kötüleşme yok.
-- 741 uzun İngilizce görev (SWE-bench Verified ve Terminal-Bench; başkalarının zorluk verdiği dış ölçüt): yalnızca **1 görev** T1'den T2'ye çıktı. Ciddi hata (zor işi çok düşük kademeye koymak) değişmedi.
-- Gerçek Haiku ile küçük deneme (10 mesaj, $0,014): düzeltilen dört gerçek mesajın dördü de T2'ye düştü. Haiku'nun T0 ya da T1 dediği üç inceleme isteğini alt sınır T2'de tuttu.
-- **Dürüstlük notu:** bu setlerin çoğu daha önce kurallar ayarlanırken okundu ("tüketildi"). "Hiçbir şey bozulmadı" demek için iyi; kuralların gerçek başarısını göstermez. Yeni kuralları denediğim örnekleri ben yazdım; 98 gerçek mesajın etiketleri de benim yargım. Yeni kuralların gerçekte ne kadar işe yaradığını en iyi senin gölge kaydın gösterecek.
+## Ölçümler (önce/sonra)
+
+- **Eski etiketli setler** (2.541 mesaj: dev, holdout, fresh, gerçek kullanım tekrarı, sekiz dil, held, held2, blind, blind2 ve yeniler): bütün gece boyunca hiçbir sette kötüleşme kalmadı. Üç değişikliğin ilk denemesi bir sette kötüleşme verdi (8, 11, 15); üçü de düzeltildi, nedenleri günlükte.
+- **Dürüst ölçüm 1, blind4** (Sonnet'in yazdığı, hiç bakmadığım 191 mesaj, sekiz dil; ayar yapılmadı):
+  - kurallar tek başına: tam isabet 120 → 121, ciddi hata 9 → 9;
+  - kurallar + Haiku (autogear'ın gerçekte yaptığı): tam %69 → %69, bir kademe içinde %97 → %97, ciddi 2 → 2.
+  - **Okuma:** kural düzeltmeleri yeni yazarların cümlelerine genellenmiyor; genel başarıyı Haiku taşıyor. Düzeltmelerin faydası, kuralların emin olup yanıldığı dar ama sık türlerde (gerçek kullanımında görülenler).
+- **Dürüst ölçüm 2, dış ölçütün saklı yarısı** (SWE-bench ve Terminal-Bench'ten 350 uzun görev; kurallar yazılırken hiç bakılmayan yarı), kurallar + Haiku: tam %29 → **%35**, bir kademe içinde %76 → **%85**, gereğinden yüksek tahmin 218 → **192**, ciddi hata 5 → 6 (%1,7; hedef en çok %2). Bedeli: Haiku'ya daha sık soruluyor (%27 → %43; her soru yaklaşık $0,0002–0,0008).
 
 ## Ölçülüp yapılmayanlar
 
-- **Yardımcıları (alt ajanları) işin türüne göre modele dağıtmak (adım 7):** bütün sohbet kayıtların (30 Temmuz – 18 Ekim, 1.976 oturum) liste fiyatıyla toplandı: toplam $2.725, yardımcılar **$39,5, yani %1,4**. Hepsi Haiku'ya gitse bile kazanç yaklaşık %1,3; buna karşılık zayıf modelin eksik getirdiği bilgi pahalı ana işi bozabilir. **Yapılmadı.** README'nin yol haritası satırı bu ölçümle güncellendi.
-- **Danışmanı (advisor) istek başına açmak (adım 8):** Mod API'si (eklentinin Claude Code'la konuştuğu arayüz) buna izin vermiyor; bir isteğin yalnızca modeli ve eforu değiştirilebiliyor. Tek yol `/advisor` komutunu kendiliğinden çalıştırmak; bu senin ayarını kalıcı değiştirir ve dizin incelemesinin zaten işaretlediği türden. **Kod yazılmadı**, bulgu notlara yazıldı.
-
-## Yapılmayanlar ve nedeni
-
-- **Temiz sohbet önerisinin sadeleştirilmesi:** görünüşe dair bir iş; ekranda nasıl durduğunu senin görmen gerekiyor ve sen "frontendini sonra geliştiririz" demiştin. Kanıtsız değiştirmedim.
-- **Model kimliklerini kendiliğinden güncellemek (adım 15):** isteğin modelini kısa adla ("sonnet") vermenin çalıştığına dair belge yok; çekirdek yönlendirmeyi kanıtsız değiştirmek riskli.
-- **Sürüm numarası artırılmadı.** Değişiklikler `CHANGELOG.md`'de "Unreleased (branch gelistirme)" başlığında. Sürüm, dal ana sürüme katılırken verilir.
+- **Yardımcıları (alt ajanları) ucuz modele dağıtmak:** bütün kayıtlarında yardımcılar harcamanın **%1,4'ü**. Değmez; yapılmadı.
+- **Danışmanı (advisor) istek başına açmak:** Mod API'si (eklentinin Claude Code'la konuştuğu arayüz) izin vermiyor. Yapılmadı.
+- **Fiilsiz özellik sözünü "emin değil" yapmak** ("giriş yaptım" gibi): denendi, geri alındı. Tasarruf ve dengeli profilde T1 ve T2 aynı modele gidiyor, yani yalnızca fazladan Haiku sorusu ekliyordu.
 
 ## Bulunan ama düzeltilmeyen sorunlar
 
-1. "fix the errors in the README", "korrigiere die Fehler" gibi metin düzeltme istekleri "belirsiz anlatılmış hata" (T3, hata avı) sayılıyor. Gereğinden pahalı ama zayıf modele gitme riski yok; düzeltmek hata avı kuralının sırasını değiştirmek demek, riskli.
-2. "Sadece not al" diye biten uzun not listeleri T4 çıkıyor (iş T2). Gereğinden pahalı; bir "üst sınır" kuralı yanlışlıkla gerçek işi düşürebilir.
-3. "yarın başlarız o işlere", "bunu kullanıcaz" gibi sözlere Haiku önceki işin notuna bakıp T3 diyor. Gereğinden pahalı; Haiku'ya sorulan soru metnine dokunmak eski Haiku ölçümlerini geçersiz kılar.
-4. İçinde "test" ya da "build" geçen her komut (ör. `cat tests/…`) "kontrol" sayılıyor. Kayıtlarda 8 kez hata verdi ama hiçbiri turun son kontrolü olmadığı için sonucu etkilemedi.
-5. Bir eğik çizgi komutu (ör. bir skill komutu) yazıldığında autogear onun yazılan satırını sınıflıyor, komutun asıl içeriğini değil. Kayıtlarında böyle bir örnek yok; dokunulmadı.
+1. "Sadece not al" diye biten uzun not listeleri hâlâ yüksek çıkabiliyor (artık Haiku'ya soruluyor ama alt sınır T2).
+2. Haiku, "yarın başlarız", "bunu kullanıcaz" gibi sözlere önceki işin notuna bakıp T3 diyor. Düzeltmek Haiku'ya sorulan soru metnini (RUBRIC) değiştirmek demek; bu eski bütün Haiku ölçümlerini geçersiz kılar.
+3. "Why does this return null here? the code looks fine" gibi sorular hâlâ kesin hata avı.
+4. İçinde "test" ya da "build" geçen her komut "kontrol" sayılıyor; kayıtlarda sonucu hiç etkilemedi.
+5. Bir eğik çizgi komutunda (skill) autogear komutun asıl içeriğini değil, yazılan satırı sınıflıyor.
+6. PowerShell kancası gerçek bir PowerShell komutunda canlı denenmedi (sahte motorla test edildi).
 
 ## Senin vermen gereken kararlar
 
-1. **Dalı ana sürüme katmak:** dizin incelemesi bitince. 7 geliştirmenin hepsi katılmaya hazır (testler ve ölçümler geçti). Dikkat: PowerShell desteği (6) eklentinin bağlandığı olay listesine yeni bir satır ekliyor; ana sürüme girince dizin taraması bunu görür (README'de yazıyor).
-2. **Sürüm numarası:** katarken 0.13.0 öneririm (yeni kurallar ve yeni kanca var).
-3. **Kendi gözünle doğrulaman iyi olur:** dal kurulduktan sonra gölge modda birkaç gün çalışıp `/gear log` ile yeni kuralların gerçek mesajlarında doğru çalışıp çalışmadığına bakmak; özellikle "baştan oku, düzelt" türü bir istek ve "Evet, pushla."
+1. **Dalı ana sürüme katmak:** dizin incelemesi bitince. Bütün geliştirmeler katılmaya hazır. Dikkat: PowerShell desteği eklentinin bağlandığı olay listesine yeni bir satır ekliyor; ana sürüme girince dizin taraması bunu görür (README'de yazıyor).
+2. **Sürüm numarası:** katarken 0.13.0 öneririm.
+3. **Sıradaki yön:** kurallara kelime eklemenin getirisi azaldı (dürüst ölçüm 1). Daha büyük kazanç için iki yol var: (a) kuralların emin olduğu kararları ölçüp sık yanılanları Haiku'ya bırakmaya devam etmek (bu gece iki kural için yapıldı, iyi sonuç verdi); (b) Haiku'ya sorulan soruyu iyileştirmek. (b) eski ölçümleri geçersiz kılar, senin kararın.
+4. **Kendi gözünle doğrulama:** dal kurulduktan sonra birkaç gün gölge modda kullan, `/gear log` ile bak.
 
 ## Başvuru durumu
 
