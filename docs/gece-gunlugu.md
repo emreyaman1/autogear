@@ -137,3 +137,9 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **İlk deneme iki sette kötüleşme verdi, düzeltildi:** Rusça "мы бьёмся над этим неделю…" ve Fransızca "ça fait une semaine qu'on lutte contre la même panne…" (held2, etiket T4) uğraşma sözü tanınmadığı için T3 ve T1'e düştü (held2 fr'de ciddi hata 0 → 1). Yedi dilde uğraşma/arıza sözleri eklendi (luchar, kämpfen, lutter, panne, бьёмся, ломается, 折腾, 苦戦 …); ikinci denemede ikisi de T4'e döndü. **Dürüstlük:** held2'ye bakarak düzelttiğim için o set bu konuda artık tüketildi.
 - **Test:** yeni test (gerçek beş mesaj ve dört karşı örnek). 2.1.299 184/184, 2.1.295 184/184, `validate` uyarısız.
 - **Önce/sonra:** 2.111 etiketli mesajda 1 değişiklik, doğru yöne ("keep the session open for 30 days", etiket T2: T4 → T2; LANG en tam isabet %92 → %93). Dış ölçüt aynı.
+
+## Denendi, geri alındı: fiilsiz özellik sözü "emin değil"
+
+- **Fikir:** "giriş yaptım", "nasıl giriş yapıcam?", "portal neresi? re-validate tuşu nerde?" içlerinde bir özellik sözü ("giriş", "validate") olduğu için kesin T2 sayılıyor; iş fiili olmayanları "emin değil" yapıp Haiku'ya sormak.
+- **Sonuç:** 2.111 mesajda kademe değişmedi, 20 mesajda yalnızca güven düştü (aralarında "show a progress bar while uploading" gibi gerçek işler de var, çünkü İngilizce "show" iş fiili sayılmıyor).
+- **Neden geri alındı:** Haiku'nun düşürebileceği en alt nokta T1 (iş sayılan mesajda bir kademe aşağısı), ve 'tasarruf' ile 'dengeli' profillerde T1 ve T2 aynı model ve efor (Sonnet · medium). Yani değişiklik yönlendirmeyi değiştirmiyor, yalnızca fazladan Haiku sorusu ekliyordu. Alt sınırı 0'a indirmek ise fiilsiz yazılmış gerçek özellik isteklerini Haiku modeline düşürebilir. Değer katmadığı için commit edilmedi.
