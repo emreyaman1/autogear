@@ -199,3 +199,8 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Değişiklik:** önemsiz iş ve soru kuralları, iş başlatan ya da sürdüren bir söz ("uygula", "başla", "devam et", "yap", "güncelle", "değiştir", "kaldır", "implement", "apply", "go ahead") ya da çalıştırma sözü ("test et", "ölçümünü yap") varken çalışmıyor; mesaj Haiku'ya soruluyor. ("commit mesajı yaz: …" bundan muaf: içindeki açıklama işin kendisi değil.)
 - **İlk deneme kötüleşme verdi, düzeltildi:** İngilizce "change" ipucu "changed", "changes" sözlerini de tuttuğu için "what changed in the last commit, summarize it" ve "write a short commit message for the changes" önemsiz iş olmaktan çıktı; gerçek kullanım tekrarında tam isabet %59 → %55 düştü. İş sözleri ayrı ve dar bir listeyle tanımlandı; ikinci denemede 2.541 mesajda 0 değişiklik, gerçek kullanım tekrarı aynı.
 - **Test:** yeni test (dört gerçek mesaj emin değil; "commit et ve push et" ve "what changed in the last commit" hâlâ kesin T0). 2.1.299 206/206, 2.1.295 206/206, `validate` uyarısız. Dış ölçüt aynı.
+
+## Canlı duman testi (bu dalın kodu, gerçek Claude Code 2.1.299)
+
+- **Bu ölçüm neyi cevaplayacak:** dalın kodu (yeni PowerShell kancası dahil) gerçek Claude Code'da yükleniyor ve seçtiği modeli gerçekten uyguluyor mu?
+- **Sonuç (`node scripts/smoke.mjs`, $0,15):** üç mesajın üçü de beklenen modelle cevaplandı: önemsiz soru Haiku, `+opus` Opus, zor tasarım sorusu Sonnet (tasarruf profili). PowerShell kancasının gerçek bir PowerShell komutunda tetiklendiği canlı denenmedi (sahte motorla test edildi; modül gerçek yükleyicide sorunsuz yüklendi).
