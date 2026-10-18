@@ -4,7 +4,7 @@ Sen bilgisayardan uzaktayken autogear üzerinde yapılan işin özeti. Her adım
 
 ## Kısaca
 
-- **15 geliştirme yapıldı**, hepsi `gelistirme` dalında (dal: ana sürüme karışmadan değişikliklerin denendiği ayrı kopya). Dal GitHub'a gönderildi. **Ana sürüme (`main`) hiçbir şey gönderilmedi**, `C:\gearbox` klasörüne dokunulmadı; kurulu autogear'ın değişmedi.
+- **18 geliştirme yapıldı**, hepsi `gelistirme` dalında (dal: ana sürüme karışmadan değişikliklerin denendiği ayrı kopya). Dal GitHub'a gönderildi. **Ana sürüme (`main`) hiçbir şey gönderilmedi**, `C:\gearbox` klasörüne dokunulmadı; kurulu autogear'ın değişmedi.
 - Her geliştirmeden sonra bütün testler iki Claude Code sürümünde (2.1.299 ve 2.1.295) geçti: başta 173 test, sonda 206. `claude plugin validate` (eklentinin kurallara uyup uymadığını kontrol eden komut) her seferinde uyarısız geçti.
 - **Canlı deneme geçti:** dalın kodu gerçek Claude Code'da üç seçimi de (Haiku, Opus, Sonnet) doğru uyguladı.
 - **En önemli dürüst sonuç:** kuralları hiç görmemiş bir modelin yazdığı, benim hiç bakmadığım yeni 191 mesajda, autogear'ın kararı (kurallar + Haiku) başlangıçla **aynı** kaldı: ne iyileşti ne kötüleşti. Uzun görev metinlerinde ise (dış ölçütün hiç bakılmamış yarısı, 350 görev) belirgin iyileşti: tam isabet %29 → %35, bir kademe içinde %76 → %85, gereğinden pahalı tahmin 218 → 192. Ayrıntı aşağıda.
@@ -62,6 +62,17 @@ Sen bilgisayardan uzaktayken autogear üzerinde yapılan işin özeti. Her adım
 4. İçinde "test" ya da "build" geçen her komut "kontrol" sayılıyor; kayıtlarda sonucu hiç etkilemedi.
 5. Bir eğik çizgi komutunda (skill) autogear komutun asıl içeriğini değil, yazılan satırı sınıflıyor.
 6. PowerShell kancası gerçek bir PowerShell komutunda canlı denenmedi (sahte motorla test edildi).
+
+## Üçüncü bölüm (kullanıcı "aynen devam et" dedi)
+
+| # | Ne yapıldı | Sonuç |
+|---|---|---|
+| 16 | `/gear share`: son işaretli ya da şüpheli kararı, mesajının kelimeleri olmadan, GitHub'daki "yanlış seçim" kaydına yapıştırılacak bir blok olarak verir (adım 18b) | GitHub formu bu bloğu istiyor; hiçbir şey gönderilmez |
+| 17 | Kendi günlüğünden öğrenme (adım 18a): bir kural sende en az 3 kez ve kararlarının dörtte birinde yanlış çıkarsa artık emin sayılmaz, Haiku'ya da sorulur | Senin günlüğünde bugün hiçbir yanlışlık işareti yok, yani henüz hiçbir şey öğrenilmez; `/gear wrong` kullandıkça çalışır |
+| 18 | Konuşulan, varsayılan ya da yapıştırılan model adı artık senin seçimin sayılmıyor | Günlüğündeki 3 "elle seçim"in 3'ü de yanlıştı; biri ("neden hep max eforla çalışıyor?") turu Opus · max'a göndermişti. Gerçek mesajlarında elle seçim sayılan 7 → 2, ikisi de gerçek istek |
+| — | PowerShell desteği canlı denendi | Ana sürümün kodu PowerShell'de başarısız testi görmüyordu, bu dalın kodu görüyor |
+
+Testler: 2.1.299 ve 2.1.295'te 211/211; `validate` uyarısız; 2.541 etiketli mesajda sınıflandırma değişmedi.
 
 ## Senin vermen gereken kararlar
 

@@ -236,3 +236,7 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Değişiklik:** model ya da efor adı (1) "neden/niye/why" soran ya da "desem/diyelim/mümkün mü/what if" diye varsayan bir cümlede, (2) yapıştırılmış metnin (`<pasted_content>`) içinde, (3) aradaki sözü iyelikli bir nesne olduğunda ("haiku ölçümünü yap") seçim sayılmıyor. "devam edildiğinde" istek değil, "devam edelim" istek.
 - **Önce/sonra (1.398 gerçek mesaj):** "elle seçim" sayılan 7 mesaj → 2; kalan ikisi gerçek istek ("bu görevi sonnete maxa verir misin", "opus sende göz gezdirip anlatır mısın?"). README'deki örnekler ve eski testler aynen geçiyor. 2.541 etiketli mesajda 0 değişiklik.
 - **Test:** yeni test (beş yanlış alarm, iki gerçek istek). 2.1.299 211/211, 2.1.295 211/211, `validate` uyarısız.
+
+## Duraklama (19 Ekim, 5 saatlik limit %100; sıfırlanma 19:30 UTC)
+
+- Bu noktaya kadar her şey commit edildi ve dal GitHub'a gönderildi. Sıradaki adaylar (kullanıcının "aynen devam et" talimatıyla): (1) kalan kurallarda "emin ama yanlış" sayımı (`sure.mjs` yöntemi, blind4 hariç); (2) skill komutlarının sınıflanması (`skill.prompt` olayı; kullanıcının kendi kullanımında skill komutu yok, öncelik düşük); (3) uzun metinlerde fazla tahmin. Main'e hiçbir şey katılmayacak; kullanıcı isteyince bütün geliştirmeler tek metinde anlatılacak, yalnızca onayladıkları katılacak.
