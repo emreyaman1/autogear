@@ -152,7 +152,7 @@ const HARD = cues([
 const MAYBE_HARD = cues([
   'neden', 'niye', 'nicin', 'sebep', 'sebeb', 'why', 'tasarla', 'tasarim', 'design', 'analiz', 'analy', 'karsilastir',
   'compar', 'strateji', 'strateg', 'degerlendir', 'evaluat', 'avantaj', 'dezavantaj', 'artilari', 'eksileri',
-  'pros and cons', 'trade.?off', 'arastir', 'investigat', 'incele', 'nasil calisiyor', 'how does', 'kapsamli',
+  'pros and cons', 'trade.?off', 'arastir', 'investigat', 'incele(?!mede|meye|n)', 'nasil calisiyor', 'how does', 'kapsamli',
   'derinlemesine', 'in depth', 'deep dive', 'yol haritasi', 'roadmap', 'yetkilendirme', 'authoriz', 'kimlik dogrula',
   'authenticat', 'should i', 'alternatif', 'alternative', 'baska (?:bir )?yol', 'another way',
   ...words.MAYBE_HARD_I18N,
@@ -179,7 +179,8 @@ const PLANNING = word(
 )
 
 // Asking for a look into something: work of its own, which Haiku may not call trivial.
-const INVESTIGATE = word('incele|arastir|investigat|look into')
+// "incelemede" (under review), "incelendi": a state, not a request.
+const INVESTIGATE = word('incele(?!mede|meye|n)|arastir|investigat|look into')
 
 // A choice between options: "Redux mı Zustand mı", "geçmeli miyiz".
 const DECISION = word(
@@ -288,7 +289,7 @@ const INFO = word(
 // gereken detaylar"). Haiku has called such a prompt trivial, and a weak model
 // reading for faults misses them.
 const REVIEW = word(
-  'gozden gecir|elden gecir|redakte|review(?:ing)?(?![a-z])|proofread|look (?:it |them |this |everything )?over|comb through|' +
+  'gozden gecir(?!il)|elden gecir(?!il)|redakte|review(?:ing)?(?![a-z])|proofread|look (?:it |them |this |everything )?over|comb through|' +
     words.REVIEW_I18N.join('|'),
 )
 const READ = word('oku(?![a-z])|okuy|okur musun|kontrol et|kontrol ed|tara(?![a-z])|re.?read|read(?![a-z])|check(?![a-z])|double.?check|go (?:through|over)(?![a-z])|' + words.READ_I18N.join('|'))

@@ -63,3 +63,10 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Test:** yeni test (gerçek iki mesaj ve üç karşı örnek). 2.1.299 176/176, 2.1.295 176/176, `validate` uyarısız.
 - **Önce/sonra:** 2.111 etiketli mesajda değişiklik yok; dış ölçüt birebir aynı; 98 gerçek mesajda 2 mesaj (iki "pushla") T0'a indi.
 - **Bilinen risk (eskiden de vardı):** önemsiz işten hemen sonra gelen "devam" ya da "sonraki adımı uygula" önceki mesajın kademesini (T0) alıyor; küçük sohbette Haiku'ya gider. Tek başına "pushla" için bu bugün de böyle. 98 gerçek mesajda pushla'dan sonra hiç "devam" gelmedi (her seferinde yeni bir iş tarifi geldi), bu yüzden şimdilik dokunulmadı; rapora yazıldı.
+
+## Geliştirme 5: "incelemede", "gözden geçirildi" bir istek değil
+
+- **Değişiklik:** "incele" ipucu artık "incelemede", "incelemeye", "incelendi/incelenmiş" gibi durum bildiren biçimleri saymıyor; "gözden geçir/elden geçir" de edilgen biçimi ("gözden geçirildi") saymıyor. Bunlar "bir şeye bak" isteği değil, bir durum.
+- **Kanıt:** "hâlâ incelemede olduğu için hiçbir şey pushlamıyoruz sanırsam" mesajına Haiku T0 dedi, ama "incele" yüzünden konan alt sınır onu T2'de tuttu (gereğinden yüksek). 98 gerçek mesajda 1 tane.
+- **Test:** yeni test (gerçek mesaj, "README gözden geçirildi mi?"; "bu modülü incele" ve "README'yi gözden geçir" alt sınırı koruyor). 2.1.299 177/177, 2.1.295 177/177, `validate` uyarısız.
+- **Önce/sonra:** 2.111 etiketli mesajda değişiklik yok; dış ölçüt aynı; 98 gerçek mesajda 1 mesaj (yukarıdaki) alt sınırını kaybetti.

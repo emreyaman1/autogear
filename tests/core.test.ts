@@ -662,6 +662,15 @@ describe('what real use taught (0.6)', () => {
     expect(classify("Evet, 0.12.0 commitini GitHub'a pushla.", { prevTier: 3 })).toMatchObject({ tier: 0, confidence: 'high' })
   })
 
+  test('a review that is a state ("incelemede", "gözden geçirildi") is no request to look into something', () => {
+    // From real use: Haiku said T0, the "incele" in "incelemede" held it at T2.
+    const remark = classify('ben arada burayı kontrol ederim. hala incelemede olduğu için hiçbirşey pushlamıyoruz sanırsam. onu not almışsındır herhalde.')
+    expect(remark.floor).toBeUndefined()
+    expect(classify('README gözden geçirildi mi?').floor).toBeUndefined()
+    expect(classify('bu modülü incele').floor).toBe(2)
+    expect(classify('README’yi gözden geçir').floor).toBe(2)
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })
