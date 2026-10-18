@@ -36,3 +36,22 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Sonuç:** 30 Temmuz – 18 Ekim 2026, 1.976 oturum. Toplam $2.725 (liste fiyatı; abonelikte limit olarak düşer). Ana sohbet: Opus 15.743 istek $2.282, Sonnet 3.479 istek $402, Haiku 2.025 istek $1,7. Yardımcılar: 27 çalıştırma, Sonnet 668 istek $38,5, Opus 18 istek $1,0, Haiku 33 istek $0,02. **Yardımcıların payı %1,4.**
 - 16 Ekim notundaki "yaklaşık 200 yardımcı" bugünkü kayıtlarda yok: kayıtlarda yalnızca 27 Agent çağrısı var (25 genel amaçlı, 2 kullanıcının kendi tanımlı yardımcısı). Eski sayı başka bir şeyi saymış olabilir; doğrulanamadı.
 - **Karar: yardımcı yönlendirme yapılmıyor.** En iyi durumda (bütün yardımcılar Haiku'ya) kazanç %1,3 civarı; buna karşılık keşif yardımcısının eksik getirdiği bilgi, onu kullanan pahalı ana işi bozabilir. README'lerin yol haritası satırı ve `docs/sonraki-adimlar.md` adım 7 bu ölçümle güncellendi. Kullanıcı yardımcıları daha çok kullanmaya başlarsa yeniden ölçülmeli.
+
+## Adım 3: gerçek kullanımın yeniden okunması (16–18 Ekim)
+
+- **Bu inceleme neyi cevaplayacak:** gerçek mesajlarda kuralların hâlâ kaçırdığı türler var mı? (Gerçek kullanım seti `eval/field.ts` 11–16 Ekim'i kapsıyor; sonrası hiç ölçülmedi.)
+- **Yöntem (ücretsiz):** kayıtlardaki kullanıcı mesajları (16 Ekim 12:00 – 18 Ekim), Haiku ölçüm betiklerinin kendi soruları hariç: 98 mesaj. Her biri bugünkü kurallarla okundu, yanına autogear'ın deposundaki günlükten o gün Haiku'nun cevabı ve seçilen kademe kondu. Etiket benim yargım (işin sonradan ne çıktığına bakarak), yani tek kişilik ve dürüst bir ölçüm değil; hata türünü bulmak için.
+- **Bulunanlar:**
+  1. **Kesin ve yanlış T0 (ciddi):** "Önce adım 17'yi gerçek bir sohbette deneyelim: sürümü artır, kurulu kopyayı güncelle, nasıl deneyeceğimi anlat." ve "held ve held2 setlerini Haiku ile ölç … eval/haiku.mjs'e bu setleri okuttur, sonra çalıştır; sonucu sade dille anlat." Sondaki "anlat" (açıkla) mesajı "soru" yapıyor, kurallar emin olduğu için Haiku'ya da sorulmuyor. Küçük sohbette Haiku'ya gider. 98 mesajda 3 tane.
+  2. **"Evet, pushla."** önceki işin kademesini (T3) sürdürüyor; işin kendisi önemsiz (T0). 2 tane. Büyük sohbette model zaten değişmiyor, yalnız efor; küçük kazanç.
+  3. **Yanlış alt sınır:** "hâlâ incelemede olduğu için hiçbir şey pushlamıyoruz" mesajındaki "incelemede" (incelemede olmak) "incele" (incelemek isteği) sanılıyor, Haiku T0 dese de T2'de tutuluyor. 1 tane. Benim yeni kuralımdaki "gözden geçir" de aynı açığa sahip ("gözden geçirildi").
+  4. Gereğinden yüksek ama zararsız (dokunulmadı): "sadece not al" diye biten uzun not listeleri T4 (#5, #6; işin kendisi T2); "yarın başlarız o işlere", "bunu kullanıcaz" gibi sözlere Haiku önceki kademeye bakıp T3 diyor.
+
+## Geliştirme 3: "…yap, sonucu anlat" artık kesin bir soru (T0) değil
+
+- **Değişiklik:** "soru" kuralı (T0, kesin) artık mesajda bir değiştirme fiili ("güncelle", "yap", "change") ya da çalıştırma/ölçme fiili ("çalıştır", "ölç", "kur", "run", "measure", "install"; yedi dilde karşılıkları) varken çalışmıyor. Böyle bir mesaj iş sayılıyor ve kurallar emin değil: Haiku'ya soruluyor. Çalıştırma/ölçme fiili tek başına da artık "iş" (T1, emin değil); eskiden "soru" ya da "belirgin sinyal yok" sayılıyordu.
+- **Neden kesin T0 kötü:** kurallar emin olunca Haiku'ya hiç sorulmuyor; küçük sohbette iş doğrudan Haiku modeline gidiyor. Bu üç mesajın işi (sürüm artırma ve kurulum, ölçüm betiğini değiştirip çalıştırma) T1–T2.
+- **Test:** yeni test, gerçek iki mesaj ve iki benzeri: emin değil ve "iş" türü; "bu fonksiyon ne yapıyor?" ve "son commit'te ne değişti, özetle" yine kesin T0.
+- **Tam test:** 2.1.299 175/175, 2.1.295 175/175, `validate` uyarısız.
+- **Önce/sonra:** 2.111 etiketli ölçüm mesajında hiçbir değişiklik yok (bütün setler, sekiz dil); dış ölçüt (741 görev) birebir aynı. 98 gerçek mesajda 3 mesaj kesin T0'dan "T1, Haiku'ya sor"a geçti (ve ardından gelen bir "sonraki adımı uygula" onların kademesini aldı).
+- **Ölçülemeyen:** Haiku'nun bu üç mesaja ne diyeceği (ölçülmedi; o gün sorulmamıştı). Haiku T0 derse yine T0'a düşebilir; kazanç, artık sorulması.

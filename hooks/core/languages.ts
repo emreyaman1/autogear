@@ -518,3 +518,13 @@ export const TO_FIX_I18N = [
   '修改', '修正', '改正', '错误', '错', '问题', '细节',
   '直し', '直す', '修正', '誤り', '間違', 'ミス', '問題', '細か',
 ]
+
+// Work to carry out beside a question cue: run it, measure it, install it.
+export const RUN_I18N = [
+  'ejecut', 'mide(?![a-z])', 'instala(?![a-z])',
+  'fuhr(?:e)? [a-z ]{0,30}aus', 'miss(?![a-z])', 'installier',
+  'execute(?![a-z])', 'lance(?![a-z])', 'mesure(?![a-z])', 'installe(?![a-z])',
+  'запусти', 'измерь', 'установи',
+  '运行', '跑一下', '测量', '安装',
+  '実行', '測定', 'インストール',
+]

@@ -636,6 +636,21 @@ describe('what real use taught (0.6)', () => {
     expect(classify('add a review form to the product page').reasons[0]).toMatch(/^özellik/)
   })
 
+  test('work asked for before an "anlat" is no question: the rules are not sure of it', () => {
+    // From real use: both were a sure T0 ("soru: anlat"), Haiku never asked.
+    const asked = [
+      "Önce adım 17'yi gerçek bir sohbette deneyelim: sürümü artır, kurulu kopyayı güncelle, nasıl deneyeceğimi anlat.",
+      "Evet, held ve held2 setlerini Haiku ile ölç (yaklaşık $0,15). Önce eval/haiku.mjs'e bu setleri okuttur, sonra çalıştır; sonucu sade dille anlat.",
+      'kör seti Haiku ile de ölç ve sonucu sade dille anlat',
+      'run the benchmark and explain the result',
+    ]
+    for (const prompt of asked) {
+      expect([prompt, classify(prompt)]).toMatchObject([prompt, { confidence: 'low', kind: 'work' }])
+    }
+    expect(classify('bu fonksiyon ne yapıyor?')).toMatchObject({ tier: 0, confidence: 'high' })
+    expect(classify('son commit’te ne değişti, özetle')).toMatchObject({ tier: 0, confidence: 'high' })
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

@@ -301,6 +301,9 @@ const TO_FIX = word(
     words.TO_FIX_I18N.join('|'),
 )
 
+// Work to carry out beside a question cue: run, measure, install.
+const RUN = word('calistir|olc(?![a-z])|olcum(?:u)? yap|kur(?![a-z])|run(?![a-z])|measure|install|deploy|' + words.RUN_I18N.join('|'))
+
 const CONVERSION = /(?:typescript|javascript|python|kotlin|swift|go(?:lang)?|rust|java)(?:'?[a-z]{0,3})?\s+(?:cevir|donustur)|convert[^.]{0,40}to (?:typescript|javascript|python)/
 
 const TEST_WRITE = word(
@@ -671,7 +674,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   if (isShort && LIST.test(rest) && INFO.test(rest) && feature.length === 0) {
     return rule(0, 'high', ['bilgi listeleme'], 'question')
   }
-  if (isShort && question.length > 0 && adds.length === 0) {
+  // "sürümü artır, kurulu kopyayı güncelle, nasıl deneyeceğimi anlat": work
+  // asked for first, the "anlat" only says how to report it. No question then.
+  if (isShort && question.length > 0 && adds.length === 0 && changes.length === 0 && !RUN.test(rest)) {
     return rule(0, 'high', [`soru: ${quote(question)}`], 'question')
   }
 
@@ -718,6 +723,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   }
   if (adds.length > 0) {
     return rule(1, 'low', [`iş: ${quote(adds)}`])
+  }
+  if (RUN.test(rest)) {
+    return rule(1, 'low', ['iş: çalıştırmak ya da ölçmek'])
   }
   if (isShort && (/\?\s*$/.test(raw.trim()) || QUESTION_START.test(text) || question.length > 0)) {
     return rule(1, 'low', ['soru'], 'question')
