@@ -695,3 +695,19 @@ test('/gear share gives the doubtful decision without a word of the message', as
     expect(shared).not.toContain(word)
   }
 })
+
+test('a rule the log caught out three times is no longer sure here: Haiku is asked where it would have been', async ($, on) => {
+  world(on, { classifierReply: 'T3' })
+  const features = ['CSV dışa aktarma özelliği ekle', 'profil fotoğrafı yükleme özelliği ekle', 'dark mode desteği ekle']
+  for (const [index, text] of features.entries()) {
+    await turnOn($, `t${index}`, text, 'claude-sonnet-5-5', { read: 1000, write: 100, output: 50 })
+    await $.command.run({ command: 'gear', args: 'wrong weak' })
+  }
+  const log = (await $.command.run({ command: 'gear', args: 'log' })) as { text: string }
+  expect(log.text).toContain('"özellik" 3/3')
+  await say($, 'ürün listesine kategori filtresi ekle')
+  await step($, 't9')
+  const status = JSON.stringify(await $.command.run({ command: 'gear', args: '' }))
+  expect(status).toContain('bu kural sende sık yanıldı')
+  expect(status).toContain('Haiku: T3')
+})

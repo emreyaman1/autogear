@@ -126,7 +126,8 @@ The classifier numbers below were measured on labels we wrote. To see how autoge
 - `/gear log` shows the latest 25 as a table, the tiers used, and the **doubtful decisions**: those the work itself called into question (you complained and autogear moved up a tier; the tests or build failed at the end of the turn) and those you marked.
 - When a decision was wrong, say so right after the answer: `/gear wrong weak` (the model was too weak) or `/gear wrong strong` (stronger than the work needed). The mark lands on the latest message. To tell the project, `/gear share` prints that decision as a block for a "Wrong model or effort" report on GitHub, without the words of your message; nothing is sent unless you paste it.
 - The doubtful share is a floor: a wrong choice nobody noticed is not counted. With a few days of use it shows which kinds of message the rules get wrong, which is where to tune next.
-- `/gear reset` clears the log. It never leaves your machine.
+- **It learns from the log, on your machine.** When the decisions of one rule went wrong at least 3 times and in at least a quarter of that rule's decisions in the log (a complaint after the answer, broken tests, a `/gear wrong` mark), that rule is no longer sure for you: where it would have decided alone, Haiku is asked as well. `/gear log` names the rules learned this way. Nothing about it leaves your machine.
+- `/gear reset` clears the log, and with it what was learned. It never leaves your machine.
 
 ## Savings
 

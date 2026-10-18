@@ -108,6 +108,7 @@ const REASONS: readonly (readonly [RegExp, string])[] = [
   [/^iş: (.+)$/, 'work: $1'],
   [/^belirgin sinyal yok$/, 'no clear sign'],
   [/^Türkçe ya da İngilizce değil: Haiku'ya sorulur$/, 'not Turkish or English: Haiku is asked'],
+  [/^bu kural sende sık yanıldı: Haiku'ya sorulur$/, 'this rule went wrong here often: Haiku is asked'],
   [/^görsel\/ek var$/, 'image or attachment present'],
   [/^okunamadı: (.+)$/, 'could not read: $1'],
   [/^istek: (\w+) efor$/, 'asked: $1 effort'],

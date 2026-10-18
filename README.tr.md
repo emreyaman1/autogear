@@ -126,6 +126,7 @@ Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölç�
 - `/gear log` son 25 kararı tablo olarak, kullanılan kademeleri ve **şüpheli kararları** gösterir: işin kendisinin sorguladığı kararlar (şikâyet ettin ve autogear bir kademe yükseltti; turun sonunda testler ya da derleme kırıktı) ve senin işaretlediklerin.
 - Bir karar yanlışsa cevaptan hemen sonra söyle: `/gear wrong weak` (model çok zayıftı) ya da `/gear wrong strong` (işin gerektirdiğinden güçlüydü). İşaret son mesaja düşer. Projeye bildirmek için `/gear share` o kararı GitHub'daki "Wrong model or effort" kaydına yapıştırılacak bir blok olarak yazar; mesajının kelimeleri içinde yok, sen yapıştırmadıkça hiçbir şey gönderilmez.
 - Şüpheli oranı bir tabandır: kimsenin fark etmediği yanlış seçimler sayılmaz. Birkaç günlük kullanımla kuralların hangi tür mesajlarda yanıldığını gösterir, bir sonraki ayar da orada.
+- **Günlükten öğrenir, senin makinende.** Bir kuralın kararları günlükte en az 3 kez ve o kuralın kararlarının en az dörtte birinde yanlış çıktıysa (cevaptan sonra şikâyet, kırık test, `/gear wrong` işareti), o kural senin için artık emin sayılmaz: tek başına karar vereceği yerde Haiku'ya da sorulur. `/gear log` böyle öğrenilen kuralları yazar. Bununla ilgili hiçbir şey makinenden çıkmaz.
 - `/gear reset` günlüğü siler. Makinenden hiç çıkmaz.
 
 ## Tasarruf

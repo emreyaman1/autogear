@@ -4,6 +4,7 @@ Each release, newest first. The evidence behind each change is in `docs/sonraki-
 
 ## Unreleased (branch gelistirme)
 
+- autogear learns from your own log, on your machine: a rule whose decisions went wrong at least 3 times and in a quarter of its decisions there (a complaint, broken tests, a `/gear wrong` mark) is no longer sure for you, and Haiku is asked where it would have decided alone. `/gear log` names the rules learned.
 - `/gear share` prints the latest marked or doubtful decision as a block to paste into a "Wrong model or effort" report, without the words of the message (its language and length only); the report form asks for it. Nothing is sent.
 - A close read of written work to fix it ("gözden geçir", "review", "proofread", or "read it again carefully and fix what is wrong", in all eight languages) is no less than T2: Haiku had called such a prompt trivial.
 - Work asked for before an "explain" ("bump the version, update the install, tell me how to try it") is no longer a sure question; "yes, push" is the push, not the work before it; "under review" is no request to look into something.

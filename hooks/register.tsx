@@ -15,7 +15,7 @@ import { savingsCard, type LimitRow } from './card'
 import { doctorText, type Facts } from './core/doctor'
 import { cleanNote, dayOf, handoverContext, HANDOVER_TOKENS, isWorkDone, notePrompt, resumeLine } from './core/handover'
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
-import { addEntry, flagLast, journalText, markLast, markName, readJournal, shareText, snippet, type Mark } from './core/journal'
+import { addEntry, flagLast, journalText, learnedRules, markLast, markName, readJournal, ruleKey, shareText, snippet, type Entry, type Mark } from './core/journal'
 import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort, type Family } from './core/models'
 import { pace, paceWarning } from './core/pacing'
 import { decide, type Decision } from './core/policy'
@@ -147,6 +147,8 @@ type State = {
   sent: Map<string, { model: string; effort: string | undefined }>
   // The models the turn's helpers (subagents) ran on.
   helpers: Set<string>
+  // The rules this person's own log taught autogear not to be sure of.
+  learned: Set<string>
 }
 
 const modeAtom = atom({ plugin: 'autogear', key: 'mode' } as const, 'auto')
@@ -367,8 +369,17 @@ function readPrompt(state: State, parsed: ParsedPrompt, hasAttachments: boolean)
     rule = { tier: toTier(Math.max(2, state.last?.tier ?? 2)), confidence: 'low', source: 'rules', kind: 'work', reasons: [`okunamadı: ${why}`.slice(0, 120)] }
   }
   state.complaints = rule.kind === 'complaint' ? state.complaints + 1 : 0
+  // A rule this person's log has caught out too often is not sure here: Haiku is asked.
+  const key = ruleKey(rule.reasons[0])
+  if (rule.confidence === 'high' && rule.source === 'rules' && key !== undefined && state.learned.has(key)) {
+    return { ...rule, confidence: 'low', reasons: [...rule.reasons, 'bu kural sende sık yanıldı: Haiku\'ya sorulur'] }
+  }
 
   return rule
+}
+
+function learn(state: State, journal: readonly Entry[]): void {
+  state.learned = new Set(learnedRules(journal).map(one => one.rule))
 }
 
 // The prompt with its leading +tokens taken off, notes ahead of it kept.
@@ -446,7 +457,10 @@ async function afterShadowTurn($: EngineInterface, state: State, decision: Decis
   } catch {
     // Statistics are a nicety.
   }
-  await noteDecision($, decision, familyOf(usage?.model), undefined, isCheckFailed)
+  const journal = await noteDecision($, decision, familyOf(usage?.model), undefined, isCheckFailed)
+  if (journal !== undefined) {
+    learn(state, journal)
+  }
 }
 
 async function afterTurn($: EngineInterface, state: State, decision: Decision, usage: TurnUsage | undefined): Promise<TurnMoney | undefined> {
@@ -496,7 +510,10 @@ async function afterTurn($: EngineInterface, state: State, decision: Decision, u
       stats.families[decision.family].turns += 1
     }
     stats.overhead += overhead
-    await noteDecision($, decision, answered, money, isCheckFailed)
+    const journal = await noteDecision($, decision, answered, money, isCheckFailed)
+    if (journal !== undefined) {
+      learn(state, journal)
+    }
     stats.since = stats.since === 0 ? await $.clock.now() : stats.since
     stats.overrides += decision.source === 'override' ? 1 : 0
     stats.escalations += decision.source === 'escalate' ? 1 : 0
@@ -516,7 +533,7 @@ async function noteDecision(
   answered: Family | undefined,
   money: TurnMoney | undefined,
   isCheckFailed: boolean,
-): Promise<void> {
+): Promise<Entry[] | undefined> {
   try {
     const journal = readJournal(await $.store.get('journal'))
     if (decision.source === 'escalate') {
@@ -546,8 +563,11 @@ async function noteDecision(
       })
     }
     await $.store.set('journal', journal)
+
+    return journal
   } catch {
     // A log only: a store that refuses it changes no answer.
+    return undefined
   }
 }
 
@@ -674,6 +694,11 @@ async function noticeVersion($: EngineInterface): Promise<void> {
 async function loadSettings($: EngineInterface, state: State): Promise<void> {
   state.settings = readSettings(await $.store.get('settings'))
   setLang(resolveLang(state.settings.lang, systemLocale()))
+  try {
+    learn(state, readJournal(await $.store.get('journal')))
+  } catch {
+    // Learning is a nicety: a store that refuses it changes no answer.
+  }
   showStatus($, state)
   await $.command.register({
     name: 'gear',
@@ -749,6 +774,7 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
       return { text: L('No decision to mark yet.', 'Henüz işaretlenecek bir karar yok.') }
     }
     await $.store.set('journal', journal)
+    learn(state, journal)
 
     return {
       text: L(
@@ -771,6 +797,7 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
   if (changed === 'reset') {
     await $.store.set('journal', [])
     await $.store.set('stats', readStats(undefined))
+    state.learned = new Set()
     state.session = emptyTotals()
     showStatus($, state)
 
@@ -907,6 +934,7 @@ export const register: Register = on => {
     ceiling: undefined,
     sent: new Map(),
     helpers: new Set(),
+    learned: new Set(),
   }
 
   on('session.start', async ($, e, next) => {

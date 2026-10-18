@@ -163,6 +163,44 @@ export function shareText(entries: readonly Entry[], facts: ShareFacts): string 
   ].join('\n')
 }
 
+// Learning from this person's own log, on this machine. A rule of the
+// classifier is known by its reason's head ("zor iş", "özellik"). Where its
+// decisions went wrong often enough here (a complaint after the answer, broken
+// tests, a /gear wrong mark), it is no longer sure for this person: Haiku is
+// asked, as for any prompt the rules cannot place. Nothing leaves the machine.
+export const LEARN_MIN_WRONG = 3
+export const LEARN_RATE = 0.25
+
+// Reasons that are no reading of the prompt by a rule: a choice by hand, a
+// carry-on, an escalation, a turn with no prompt, plan mode.
+const NOT_A_RULE = /^(?:elle|istek|kısa onay|aynı işin devamı|şikâyet|kullanıcı mesajı yok|plan modu|okunamadı|önemsiz bir mesajdan sonra devam)/
+
+export const ruleKey = (reason: string | undefined): string | undefined => {
+  const head = (reason ?? '').replace(/:.*$/, '').trim()
+
+  return head === '' || NOT_A_RULE.test(head) ? undefined : head
+}
+
+const isWrong = (entry: Entry): boolean => entry.mark !== undefined || entry.flags.length > 0
+
+export type Learned = { rule: string; wrong: number; total: number }
+
+export function learnedRules(entries: readonly Entry[]): Learned[] {
+  const counts = new Map<string, Learned>()
+  for (const entry of entries) {
+    const rule = ruleKey(entry.reasons?.[0])
+    if (rule === undefined) {
+      continue
+    }
+    const seen = counts.get(rule) ?? { rule, wrong: 0, total: 0 }
+    seen.total += 1
+    seen.wrong += isWrong(entry) ? 1 : 0
+    counts.set(rule, seen)
+  }
+
+  return [...counts.values()].filter(one => one.wrong >= LEARN_MIN_WRONG && one.wrong / one.total >= LEARN_RATE).sort((a, b) => b.wrong - a.wrong)
+}
+
 const two = (value: number): string => String(value).padStart(2, '0')
 
 function when(at: number): string {
@@ -179,6 +217,20 @@ function when(at: number): string {
 const cell = (text: string): string => text.replace(/\|/g, '/')
 
 const isDoubtful = (entry: Entry): boolean => entry.flags.length > 0 || entry.mark !== undefined
+
+// The rules this person's log has taught autogear not to be sure of.
+function learnedLine(entries: readonly Entry[]): string | undefined {
+  const learned = learnedRules(entries)
+  if (learned.length === 0) {
+    return undefined
+  }
+  const list = learned.map(one => `"${one.rule}" ${one.wrong}/${one.total}`).join(', ')
+
+  return L(
+    `Learned from this log: these rules went wrong here often, so Haiku is now asked where they would have been sure: ${list}.`,
+    `Bu günlükten öğrenilen: bu kurallar burada sık yanıldı, bu yüzden emin olacakları yerde artık Haiku'ya soruluyor: ${list}.`,
+  )
+}
 
 export function journalText(entries: readonly Entry[]): string {
   if (entries.length === 0) {
@@ -249,6 +301,7 @@ export function journalText(entries: readonly Entry[]): string {
       'Bir karar yanlışsa `/gear wrong weak` (model çok zayıftı) ya da `/gear wrong strong` (gereğinden güçlüydü) yazın; son mesajın kararını işaretler.',
     ),
     L('The doubtful share is a floor: decisions that were wrong and that nobody noticed are not counted.', 'Şüpheli oranı alt sınırdır: yanlış olup kimsenin fark etmediği kararlar sayılmaz.'),
+    learnedLine(entries),
   ]
     .filter(line => line !== undefined)
     .join('\n')

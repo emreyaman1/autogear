@@ -4,7 +4,7 @@ import { pace, paceWarning } from '../hooks/core/pacing'
 import { decide } from '../hooks/core/policy'
 import { costOf, readTokens, turnMoney, usd } from '../hooks/core/prices'
 import { addTurn, emptyTotals, savedOf, savingsText, sharesOf, splitCells, sumOf } from '../hooks/core/savings'
-import { addEntry, flagLast, journalText, markLast, MAX_ENTRIES, readJournal, snippet, type Entry } from '../hooks/core/journal'
+import { addEntry, flagLast, journalText, learnedRules, markLast, MAX_ENTRIES, readJournal, ruleKey, snippet, type Entry } from '../hooks/core/journal'
 import { applyCommand, DEFAULTS, readSettings, readStats } from '../hooks/core/settings'
 import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
 import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
@@ -829,3 +829,27 @@ describe('settle', () => {
   })
 })
 
+
+describe('learning from the log', () => {
+  const entry = (reason: string, wrong: boolean): Entry => ({
+    at: 0, text: '', tier: 2, family: 'sonnet', effort: 'medium', source: 'kural', ceiling: 'opus', spent: 0, baseline: 0,
+    flags: wrong ? ['şikâyetle yükseltildi'] : [], mark: undefined, reasons: [reason],
+  })
+
+  test('a rule is learned once it went wrong three times and in a quarter of its decisions', () => {
+    const two = [entry('özellik: "x"', true), entry('özellik: "y"', true), entry('özellik: "z"', false)]
+    expect(learnedRules(two)).toEqual([])
+    const three = [...two, entry('özellik: "w"', true)]
+    expect(learnedRules(three)).toEqual([{ rule: 'özellik', wrong: 3, total: 4 }])
+    const rare = [...three, ...Array.from({ length: 9 }, () => entry('özellik: "v"', false))]
+    expect(learnedRules(rare)).toEqual([])
+  })
+
+  test('a choice by hand, a carry-on or an escalation is no rule to learn', () => {
+    expect(ruleKey('elle: +opus')).toBeUndefined()
+    expect(ruleKey('kısa onay: önceki kademe')).toBeUndefined()
+    expect(ruleKey('şikâyet "olmadi": +1 kademe')).toBeUndefined()
+    expect(ruleKey('zor iş: "yavas"')).toBe('zor iş')
+    expect(ruleKey('hata çıktısı')).toBe('hata çıktısı')
+  })
+})
