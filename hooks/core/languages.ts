@@ -186,19 +186,26 @@ export const SCOPE_I18N = [
 
 // Failing again and again: days, weeks, nothing works.
 export const REPEATED_FAILURE_I18N = [
-  'llevamos (?:[0-9]+|dos|tres|cuatro|una|un|varios|unos) (?:dias|semanas|semana|meses|mes|horas)', 'desde hace (?:[0-9]+|dos|tres|una|un|varios) (?:dias|semanas|semana|meses|mes|horas)',
-  'nada funciona', 'cada intento', 'una y otra vez', 'ya probamos todo', 'de una vez por todas',
-  'seit (?:[0-9]+|zwei|drei|vier|einer|einem|mehreren|ein paar) (?:tagen|wochen|woche|monaten|monat|stunden)', 'immer wieder', 'jeder versuch', 'nichts hilft',
+    'nada funciona', 'cada intento', 'una y otra vez', 'ya probamos todo', 'de una vez por todas',
+  'immer wieder', 'jeder versuch', 'nichts hilft',
   'nichts funktioniert', 'alles versucht', 'endgultig',
-  'depuis (?:[0-9]+|deux|trois|quatre|une|un|plusieurs) (?:jours|semaines|semaine|mois|heures)', 'voila (?:[0-9]+|deux|trois|une|un) (?:jours|semaines|semaine|mois)',
-  'rien ne marche', 'rien ne fonctionne', 'chaque tentative', 'encore et encore', 'definitivement',
-  'ca fait (?:[0-9]+|une|deux|trois|plusieurs) (?:jours?|semaines?|mois)',
-  'уже (?:[0-9]+ |два |две |три |четыре |несколько )?(?:дн|недел|месяц|час)', 'две недели', 'три дня', 'неделю', 'ничего не помогает', 'каждая попытка',
+    'rien ne marche', 'rien ne fonctionne', 'chaque tentative', 'encore et encore', 'definitivement',
+    'ничего не помогает', 'каждая попытка',
   'каждое исправление', 'снова и снова', 'раз и навсегда',
   '(?:[0-9]+|两|二|三|几|一) ?(?:天|周|个星期|个月)[^。，]{0,12}(?:想|试|尝试|修|解决|折腾)', '(?:试|尝试|修|折腾)[^。，]{0,10}(?:[0-9]+|两|二|三|几|一) ?(?:天|周|个星期|个月)',
   '什么办法都', '彻底解决', '每次(?:尝试|修|改)', '一次又一次', '试了又试', '到处都坏', '反复',
   '(?:[0-9]+|二|三|一|数) ?(?:日|週間|か月|ヶ月|カ月)[^。、]{0,12}(?:やって|試し|直そう|直し|直せ|直らな|修正|解決できな|取り組)', '試すたびに', '直すたびに', '何度も', '何をしても', '格闘', '悩まされ', '苦戦',
   '何をやっても', '根本から',
+]
+
+// How long a fault has lasted ("seit drei Tagen", "уже неделю"): a repeated
+// failure only beside a word of the fault (signals.ts, STRUGGLE).
+export const DURATION_I18N = [
+  'llevamos (?:[0-9]+|dos|tres|cuatro|una|un|varios|unos) (?:dias|semanas|semana|meses|mes|horas)', 'desde hace (?:[0-9]+|dos|tres|una|un|varios) (?:dias|semanas|semana|meses|mes|horas)',
+  'seit (?:[0-9]+|zwei|drei|vier|einer|einem|mehreren|ein paar) (?:tagen|wochen|woche|monaten|monat|stunden)',
+  'depuis (?:[0-9]+|deux|trois|quatre|une|un|plusieurs) (?:jours|semaines|semaine|mois|heures)', 'voila (?:[0-9]+|deux|trois|une|un) (?:jours|semaines|semaine|mois)',
+  'ca fait (?:[0-9]+|une|deux|trois|plusieurs) (?:jours?|semaines?|mois)',
+  'уже (?:[0-9]+ |два |две |три |четыре |несколько )?(?:дн|недел|месяц|час)', 'две недели', 'три дня', 'неделю',
 ]
 
 // Moving a thing from one stack to another.

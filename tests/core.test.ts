@@ -714,6 +714,20 @@ describe('what real use taught (0.6)', () => {
     }
   })
 
+  test('words that only look like a complaint, a lasting failure or a plan are none of them', () => {
+    // All from real use.
+    expect(classify('merhaba yaklaşık 3 gündür görüşmüyoruz, en son limitin bitmişti').tier).toBeLessThan(4)
+    expect(classify('2 aydır tek başıma geliştirdiğim bu projeyi yayınlayacağım').tier).toBeLessThan(4)
+    expect(classify("cv'nin akts uyumlu olup olmadığını kontrol eden bir sistem geliştirmek istiyorum", { prevTier: 1 }).kind).not.toBe('complaint')
+    expect(classify('yanlışlıkla escye bastım devam et', { prevTier: 2 }).kind).not.toBe('complaint')
+    expect(classify('satın almayı planladığımız akıllı prizlerin marka ve modellerini söyle').tier).toBeLessThan(3)
+    // The real ones stay.
+    expect(classify('3 gündür bu hatayı çözemiyoruz, her denemede başka bir yer bozuluyor').tier).toBe(4)
+    expect(classify('this bug has been there for days').tier).toBe(4)
+    expect(classify('olmadı', { prevTier: 2 }).kind).toBe('complaint')
+    expect(classify('bunu planla').reasons).toEqual(['plan istemek'])
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

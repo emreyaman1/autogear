@@ -180,7 +180,7 @@ const AGENTIC = cues([
 // Asking for a plan: how to go about the work, before doing it. Carrying out a
 // plan ("planı uygula") is not this.
 const PLANNING = word(
-  [...words.PLANNING_I18N, ...words.STRUCTURE_I18N].join('|') + '|plan (?:yap|cikar|hazirla|olustur|kur)|planla(?!n)|yol haritasi|roadmap|nasil (?:yapalim|ilerleyelim|ilerlemeliyiz)|adim adim (?:plan|yol haritasi)|(?:make|write|draft|propose) (?:a |an )?(?:plan|implementation plan)|plan (?:out|for|the|how)(?![a-z])|how should we (?:approach|do|implement|build|structure|tackle)',
+  [...words.PLANNING_I18N, ...words.STRUCTURE_I18N].join('|') + '|plan (?:yap|cikar|hazirla|olustur|kur)|planla(?!n|dig|mis|di|ri)|yol haritasi|roadmap|nasil (?:yapalim|ilerleyelim|ilerlemeliyiz)|adim adim (?:plan|yol haritasi)|(?:make|write|draft|propose) (?:a |an )?(?:plan|implementation plan)|plan (?:out|for|the|how)(?![a-z])|how should we (?:approach|do|implement|build|structure|tackle)',
 )
 
 // Asking for a look into something: work of its own, which Haiku may not call trivial.
@@ -210,14 +210,28 @@ const WHOLE = word(
 )
 
 const REPEATED_FAILURE = cues([
-  '(?:gun|hafta|ay|saat)(?:ler|lar)?d[iu]r(?![a-z])', 'gundur', 'defalarca', 'kac (?:kere|defa|kez)', 'her denemede',
+  'defalarca', 'kac (?:kere|defa|kez)', 'her denemede',
   'her seferinde', 'bir turlu', 'tekrar tekrar', 'hicbir sey ise yaramadi', 'her yer bozul', 'again and again',
-  'for days', 'for hours', 'for (?:a |two |several )?weeks?(?![a-z])', 'keeps? (?:failing|breaking)', 'nothing works', 'tried everything',
-  'for [0-9]+ (?:days?|hours?|weeks?|months?)', 'every attempt', 'each attempt',
+  'keeps? (?:failing|breaking)', 'nothing works', 'tried everything', 'every attempt', 'each attempt',
   ...words.REPEATED_FAILURE_I18N,
   ...words.REPEATED_MORE,
   ...words.REPEATED_MORE2,
 ])
+
+// "3 gündür", "for days": a fault that has lasted, but only beside a word of
+// the fault in the same sentence; "3 gündür görüşmüyoruz", "2 aydır
+// geliştirdiğim proje" are no failure.
+const DURATION = cues([
+  '(?:gun|hafta|ay|saat)(?:ler|lar)?d[iu]r(?![a-z])', 'gundur', 'saattir', 'for days', 'for hours', 'for (?:a |two |several )?weeks?(?![a-z])',
+  'for [0-9]+ (?:days?|hours?|weeks?|months?)',
+  ...words.DURATION_I18N,
+])
+const STRUGGLE = word(
+  'hata|coz|olmuyor|olmadi|calismiyor|calismadi|bozuk|bozul|ugras|calisiyo|deniyo|dene|duzel|sorun|problem|becereme|basarama|takil|fix|fail|error|bug|broken|struggl|stuck|trying|tried|issue|crash|' +
+    // the same in the other languages: struggle, break down, fail, cannot fix
+    'luch|pele|falla|no funciona|arregl|kampf|kaputt|funktioniert nicht|absturz|reparier|lutt|panne|plant|echou|marche pas|correctif|бь[её]мся|борем|лома|слома|не работает|не можем|не получается|почин|折腾|搞不定|修不好|崩溃|失败|直らな|壊れ|失敗|苦戦|' +
+    [...words.FAILURE_I18N, ...words.DEBUG_I18N, ...words.FRUSTRATION_I18N].join('|'),
+)
 
 const SCOPE = cues([
   'complete', 'full(?:-| )?(?:stack|featured)', 'entire', 'whole', 'bastan sona', 'sifirdan', 'eksiksiz', 'komple',
@@ -225,7 +239,7 @@ const SCOPE = cues([
   ...words.SCOPE_I18N,
 ])
 
-const DESIGN = word('tasarla|design|architect|planla|kurgula|' + words.DESIGN_I18N.join('|'))
+const DESIGN = word('tasarla|design|architect|planla(?!n|dig|mis|di|ri)|kurgula|' + words.DESIGN_I18N.join('|'))
 const SYSTEM = word(
   'sistem|system|sema|schema|veritaban|database|mimari|architecture|api|yapi|altyapi|infrastructure|servis|service|permission|role model|access model|data model|rbac|' +
     words.SYSTEM_I18N.join('|'),
@@ -366,8 +380,8 @@ const SYMPTOM = word(
 )
 
 const FRUSTRATION = cues([
-  'olmadi', 'olmuyor', 'hala (?:ayni|hata|calism|olm|bozuk)', 'yine (?:ayni|hata|olmadi|calism|bozuk)', 'tekrar hata',
-  'calismiyor', 'calismadi', 'yanlis', 'bozuldu', 'bozdun', 'duzelmedi', 'ayni hata', 'anlamadin',
+  'olmadi(?![a-z])', 'olmuyor', 'hala (?:ayni|hata|calism|olm|bozuk)', 'yine (?:ayni|hata|olmadi|calism|bozuk)', 'tekrar hata',
+  'calismiyor', 'calismadi', 'yanlis(?!likla)', 'bozuldu', 'bozdun', 'duzelmedi', 'ayni hata', 'anlamadin',
   'istedigim (?:bu|gibi) degil', 'istedigim (?:sey(?:i)? )?(?:bu degil|olmamis|olmadi)', 'istedigim gibi (?:olmamis|olmadi)',
   'yapmamissin', 'yanlis anla', 'anlamamissin', 'still', 'same error', 'doesn.?t work', 'does not work', 'didn.?t work',
   'not working', 'wrong', 'broken', 'that.?s not', 'not what i',
@@ -622,7 +636,8 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   const isWide = isLong || files >= 3
 
   // T4: long, many-sided work, or work that has already failed again and again.
-  const again = found(REPEATED_FAILURE, rest)
+  const lasting = rest.split(/[.!?\n。！？]/).flatMap(sentence => (STRUGGLE.test(sentence) ? found(DURATION, sentence) : []))
+  const again = [...found(REPEATED_FAILURE, rest), ...lasting]
   if (again.length > 0) {
     return rule(4, 'high', [`tekrarlayan başarısızlık: ${quote(again)}`])
   }
