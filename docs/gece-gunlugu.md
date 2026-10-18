@@ -90,3 +90,11 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Ölçüm:** sınıflandırma değişmedi (2.111 mesajda 0 değişiklik).
 - **Dikkat:** bu, eklentinin bağlandığı olay listesine yeni bir satır ekliyor; `main`'e katılınca dizin taraması bunu görür (README'de yazıyor).
 - **Bulunan, düzeltilmeyen:** "test" ya da "build" kelimesi geçen her komut (`cat tests/…`, içinde "test" geçen bir `node -e` betiği) kontrol sayılıyor. Kayıtlarda bunlardan 8'i hata verdi; hiçbiri turun son kontrolü olmadığı için sonucu etkilemedi (günlükte "test/derleme kırık" işareti 209 kayıtta 0). Sıkılaştırmak (yalnız gerçek test çalıştırıcıları) kartopu frenini zayıflatabilir; dokunulmadı.
+
+## Geliştirme 7: önemsiz bir mesajdan sonra "devam" önemsiz iş değil
+
+- **Sorun:** "devam", "sonraki adımı uygula" önceki mesajın kademesini kesin olarak alıyor. Önceki mesaj önemsizse (bir push, bir soru; T0), sürdürülen iş de T0 sayılıyor ve küçük sohbette Haiku'ya gidiyor. Gerçek kullanımda bir kez oldu (17 Ekim: "sonraki adımı uygula", önceki mesaj kesin T0 sayıldığı için; o hata Geliştirme 3'te düzeldi). Geliştirme 4 ("Evet, pushla." T0) bu durumu biraz daha sık yapabilirdi; bu adım o riski kapatıyor.
+- **Değişiklik:** önceki kademe T0 iken işi sürdüren bir söz ("devam", "uygula", "yap", "sonraki adımı …", "go ahead", "继续", "продолжай" vb.) artık "T1, emin değil, alt sınır T1": Haiku'ya soruluyor, ama Haiku T0 derse T1'de kalıyor. Yalın onay ve teşekkür ("tamam", "evet", "merci") eskisi gibi önceki kademede. Önceki kademe T1 ve üstüyse hiçbir şey değişmedi.
+- **Test:** yeni test (dört sürdürme sözü, üç karşı örnek). 2.1.299 180/180, 2.1.295 180/180, `validate` uyarısız.
+- **Önce/sonra:** 2.111 etiketli mesajda değişiklik yok; gerçek kullanım tekrarı (FIELD) aynı. 98 gerçek mesajda ek değişiklik yok (o tek örnek Geliştirme 3'ten sonra zaten önceki kademesi T1 olan bir mesajın ardından geliyor).
+- **Bedel:** T0'dan sonraki her "devam" için bir Haiku sorusu (yaklaşık $0,0002) ve en az Sonnet.

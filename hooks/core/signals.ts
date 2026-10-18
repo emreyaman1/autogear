@@ -357,8 +357,11 @@ const ACK = new RegExp(
     `${words.ACK_LATIN})(?![a-z])|^(?:${words.ACK_CYRILLIC})(?![а-я])|^(?:${words.ACK_CJK})(?=\\s|$)`,
 )
 
+// A go-ahead's first word, when it is only that: "evet", "tamam", "ok".
+const ACK_ONLY = /^(?:evet|tamam|tamamdir|ok|okay|okey|olur|peki|yes|yep|yeah|sure)(?![a-z])/
+
 // The work in hand asked to go on: "devam", "uygula", "hallet", "continue".
-const CARRY_ON = word('devam|uygula|hallet|bitir|tamamla|apply|continue|proceed|go on|finish|do it|' + words.ACK_LATIN)
+const CARRY_ON = word('devam|uygula|hallet|bitir|tamamla|yap(?![a-z])|apply|continue|proceed|go on|go ahead|finish|do it|sigue|continua|adelante|hazlo|aplicalo|weiter|mach es|vas y|applique|продолжа|продолжи|давай|继续|接着|続けて|進めて')
 
 // "sonraki iki bölümü de yap", "onu da yap", "kalanları da hallet": more of the
 // work in hand, at its tier.
@@ -544,6 +547,10 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   if (GREETING.test(plain)) {
     return rule(0, 'high', ['selamlaşma'], 'greeting')
   }
+  // "devam", "sonraki adımı uygula" after a push or a question: the work it
+  // goes on with is not the trivial prompt before it, and its size is not
+  // known. Haiku is asked, and no lower than T1.
+  const goOnAfterTrivial = (): RuleResult => ({ ...rule(1, 'low', ['önemsiz bir mesajdan sonra devam']), floor: 1 })
   const complaint = length <= 400 ? [...found(FRUSTRATION, text), ...(AGAIN.test(text) ? ['yine olmadı'] : [])] : []
   if (prevTier !== undefined && length <= 400) {
     if (complaint.length > 0) {
@@ -559,10 +566,14 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
         return rule(0, 'high', [`basit iş: ${quote(chores)}`], 'chore')
       }
 
+      if (prevTier === 0 && CARRY_ON.test(plain.replace(ACK_ONLY, ' '))) {
+        return goOnAfterTrivial()
+      }
+
       return rule(prevTier, 'high', ['kısa onay: önceki kademe'], 'followup', 'inherit')
     }
     if (MORE_OF_THE_SAME.test(plain) && found(HARD, plain).length === 0 && found(FEATURE, plain).length === 0) {
-      return rule(prevTier, 'high', ['aynı işin devamı: önceki kademe'], 'followup', 'inherit')
+      return prevTier === 0 ? goOnAfterTrivial() : rule(prevTier, 'high', ['aynı işin devamı: önceki kademe'], 'followup', 'inherit')
     }
   }
 

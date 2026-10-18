@@ -671,6 +671,19 @@ describe('what real use taught (0.6)', () => {
     expect(classify('README’yi gözden geçir').floor).toBe(2)
   })
 
+  test('going on after a trivial prompt is not trivial work: Haiku is asked, and no lower than T1', () => {
+    // From real use: "sonraki adımı uygula" after a T0 prompt was a sure T0.
+    for (const prompt of ['sonraki adımı uygula', 'devam', 'ok go ahead', '继续']) {
+      const rule = classify(prompt, { prevTier: 0 })
+      expect([prompt, rule]).toMatchObject([prompt, { tier: 1, confidence: 'low', floor: 1 }])
+      expect(withHaiku(rule, 0).tier).toBe(1)
+    }
+    // A plain go-ahead or thanks after it stays where it was; after real work, "devam" keeps the work's tier.
+    expect(classify('tamam', { prevTier: 0 })).toMatchObject({ tier: 0, confidence: 'high' })
+    expect(classify('merci', { prevTier: 0 })).toMatchObject({ tier: 0 })
+    expect(classify('devam', { prevTier: 2 })).toMatchObject({ tier: 2, source: 'inherit' })
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })
