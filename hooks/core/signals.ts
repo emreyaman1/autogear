@@ -546,7 +546,7 @@ const NON_LATIN = /[Ѐ-ӿ֐-ۿऀ-ॿ぀-ヿ㐀-鿿가-힯]/
 const TURKISH_LETTERS = /[ıİğĞşŞ]/
 const TURKISH_OR_ENGLISH = new RegExp(
   '(?:^|[^a-zçğıöşü])(?:' +
-    'bu|bir|için|icin|ile|ve|şu|var|yok|mı|mi|mu|mü|değil|gibi|ama|çok|neden|nasıl|olarak|sonra|daha|evet|tamam|hayır|hayir|lütfen|lutfen|' +
+    'bu|bir|için|icin|ile|ve|şu|var|yok|mı|mi|mu|mü|değil|gibi|ama|çok|neden|nasıl|olarak|sonra|daha|evet|tamam|hayır|hayir|lütfen|lutfen|bunu|buna|bunun|bunlar|şunu|onu|ona|bana|sana|beni|benim|senin|lazım|lazim|hâlâ|hala|kez|defa|olmuyor|oldu|olsun|' +
     'yap|ekle|yaz|sil|göster|getir|çıkar|düzelt|değiştir|kaldır|taşı|listele|geçir|yükselt|' +
     'the|and|this|that|with|what|why|how|is|are|it|its|to|for|of|my|our|we|you|all|from|into|when|still|again|please|should|now|too|go|yes|' +
     'add|fix|make|write|show|move|remove|suggest|support|feature|message' +
@@ -672,7 +672,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   }
   const scope = found(SCOPE, rest)
   if (scope.length > 0 && parts >= 2 && (feature.length > 0 || adds.length > 0)) {
-    return rule(4, 'high', [`kapsamlı iş: ${quote(scope)}, ${parts + 1} parça`])
+    // Sure, it sent hard work that is not long or many-sided to T4 (3 of 11
+    // labelled prompts): Haiku is asked, no lower than T3.
+    return { ...rule(4, 'low', [`kapsamlı iş: ${quote(scope)}, ${parts + 1} parça`]), floor: 3 }
   }
   if (parts >= 3 && feature.length >= 3 && adds.length > 0) {
     // The words of one feature count apart ("page", "pagination", "endpoint"):

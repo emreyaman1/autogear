@@ -759,6 +759,13 @@ describe('what real use taught (0.6)', () => {
     expect(classify('şu değişiklik için commit mesajı yaz: login sayfasındaki buton rengi maviden yeşile çevrildi').tier).toBe(0)
   })
 
+  test('wide work in parts is no sure T4 either, no lower than T3; "5. kez" is a repeated failure', () => {
+    const wide = classify("Our image upload endpoint accepts basically anything. I'm worried about path traversal in the filename and SVGs with scripts inside. Go through the whole upload flow under uploads/ and fix whatever is wrong.")
+    expect(wide).toMatchObject({ confidence: 'low', floor: 3 })
+    expect(classify('Bunu 5. kez soruyorum: PDF çıktısında Türkçe karakterler hâlâ bozuk')).toMatchObject({ tier: 4, confidence: 'high' })
+    expect(classify('versiyonu 3. sürüme yükselt').tier).toBe(1)
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

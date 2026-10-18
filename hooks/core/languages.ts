@@ -440,7 +440,7 @@ export const MAYBE_HARD_MORE = [
 // Failing for the third, fourth or fifth time.
 export const REPEATED_MORE = [
   '(?:third|fourth|fifth|3rd|4th|5th) (?:time|attempt|try)', 'for the (?:third|fourth|fifth) time',
-  '(?:ucuncu|dorduncu|besinci) (?:kez|deneme)',
+  '(?:ucuncu|dorduncu|besinci) (?:kez|deneme)', '[3-9]\\. ?(?:kez|defa|kere|deneme)', '[3-9]\\.? (?:kez|defa|kere) (?:soruyorum|istiyorum|soyluyorum|deniyorum|denedik)',
   '(?:tercera|cuarta|quinta) (?:vez|intento)', 'por (?:tercera|cuarta|quinta) vez',
   'zum (?:dritten|vierten|funften) mal', '(?:dritten|vierten|funften) versuch',
   '(?:troisieme|quatrieme|cinquieme) (?:fois|tentative)', 'pour la (?:troisieme|quatrieme|cinquieme) fois',

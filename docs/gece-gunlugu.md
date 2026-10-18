@@ -176,3 +176,10 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Değişiklik:** bu kural artık "emin değil, alt sınır T2": kademeyi Haiku veriyor, T2'nin altına inemiyor. Ayrıca "şu değişiklik için commit mesajı yaz: …" (commit mesajı isteği cümlenin başında değil) de önemsiz iş.
 - **Ölçüm (Haiku ile, $0,004):** bu kuralın tuttuğu 9 etiketli mesajın 9'u da doğru kademeye düştü (T4 ikisi T4'te kaldı; T2 dördü ve T3 üçü yerini buldu). Önce 2/9 doğruydu.
 - **Test:** yeni test. 2.1.299 204/204, 2.1.295 204/204, `validate` uyarısız. Kurallar tek başına: 2.541 mesajda 1 kademe değişikliği (o commit mesajı, doğru yöne), 11 mesajda yalnız güven düştü.
+
+## Geliştirme 14: "kapsamlı iş" de kesin T4 değil; "5. kez" tekrarlayan başarısızlık
+
+- **Kanıt:** aynı sayımda "kapsamlı iş, N parça" (T4, kesin) 11 Türkçe/İngilizce mesajda 3 kez fazlaydı (biri iki kademe). Uzun ama tek konulu zor işler ("the whole upload flow", "dashboard gets slower") T4 sayılıyordu.
+- **Değişiklik:** bu kural artık "emin değil, alt sınır T3": Haiku T4 ya da T3 der, T3'ün altına inilmiyor. "Bunu 5. kez soruyorum", "3. kez deniyorum" gibi rakamla yazılmış tekrar artık tekrarlayan başarısızlık (önceden yalnız "üçüncü kez" yazıyla tanınıyordu). Dil tanımaya "bunu, buna, bana, sana, lazım, hâlâ, kez, olmuyor…" eklendi: "Bunu 5. kez soruyorum: PDF hâlâ bozuk" yabancı dil sanılıyordu.
+- **Ölçüm (Haiku ile, önbellekten, $0):** bu kuralın tuttuğu 16 etiketli mesajda (sekiz dil) doğru 13 → 15: iki T3 mesajı yerini buldu, T2 bir mesaj T4'ten T3'e indi; T4 olan 12 mesajın hepsi T4'te kaldı ("5. kez" mesajı artık kesin T4).
+- **Test:** yeni test. 2.1.299 205/205, 2.1.295 205/205, `validate` uyarısız. Kurallar tek başına: 2.541 mesajda kademe değişmedi, 58 mesajda yalnız güven düştü (Türkçe ve İngilizcede Haiku'ya sorulan oranı 2 puan arttı).
