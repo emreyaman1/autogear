@@ -766,6 +766,20 @@ describe('what real use taught (0.6)', () => {
     expect(classify('versiyonu 3. sürüme yükselt').tier).toBe(1)
   })
 
+  test('a chore or a question beside work begun is no sure T0', () => {
+    // From real use: each was a sure T0, so Haiku was never asked.
+    for (const prompt of [
+      'önerdiğin sırayı baştan sona uygula sonrasında commit et',
+      'cmd terminalinde giriş yaptım. haiku ölçümünü yap sonrasında commit ve pushla',
+      "slug'ın ne demek olduğunu anlat ve sırada ne yapılması gerekiyorsa ona başla",
+      'ikinci gorus ajanı ne işe yarıyor ve onu test et',
+    ]) {
+      expect([prompt, classify(prompt).confidence]).toEqual([prompt, 'low'])
+    }
+    expect(classify('commit et ve push et')).toMatchObject({ tier: 0, confidence: 'high' })
+    expect(classify('what changed in the last commit, summarize it')).toMatchObject({ tier: 0, confidence: 'high' })
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

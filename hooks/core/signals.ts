@@ -364,8 +364,12 @@ const RUNTIME = word(
   'calismiyor|calismadi|kiriliyor|patliyor|crash|exception|fail|build|derle|compil|test|sayfa|page|ekran|screen|konsol|console|server|sunucu|api(?![a-z])|link',
 )
 
+// Work begun or carried out beside a chore or a question: "sırayı uygula, sonra
+// commit et", "anlat ve sıradakine başla".
+const WORK_GO = word('basla|baslat|uygula|implement|start (?:on|with|the)|begin|devam et|hallet|bitir|yap(?![a-z])|guncelle(?![a-z])|degistir(?![a-z])|kaldir(?![a-z])|apply|carry out|go ahead')
+
 // Work to carry out beside a question cue: run, measure, install.
-const RUN = word('calistir|olc(?![a-z])|olcum(?:u)? yap|kur(?![a-z])|run(?![a-z])|measure|install|deploy|' + words.RUN_I18N.join('|'))
+const RUN = word('calistir|olc(?![a-z])|olcum[a-z]* yap|test et|kur(?![a-z])|run(?![a-z])|measure|install|deploy|' + words.RUN_I18N.join('|'))
 
 const CONVERSION = /(?:typescript|javascript|python|kotlin|swift|go(?:lang)?|rust|java)(?:'?[a-z]{0,3})?\s+(?:cevir|donustur)|convert[^.]{0,40}to (?:typescript|javascript|python)/
 
@@ -772,7 +776,8 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
 
   // T0: questions about code in view, and chores. A chore is asked for in a
   // few words: "commit" or "typo" inside a long description is part of it.
-  if (length <= CHORE_LENGTH && trivial.length > 0 && (feature.length === 0 || adds.length === 0 || COMMIT_FIRST.test(text))) {
+  const isMoreWork = WORK_GO.test(rest) || RUN.test(rest)
+  if (length <= CHORE_LENGTH && trivial.length > 0 && (COMMIT_FIRST.test(text) || ((feature.length === 0 || adds.length === 0) && !isMoreWork))) {
     return rule(0, 'high', [`basit iş: ${quote(trivial)}`], 'chore')
   }
   if (isShort && LIST.test(rest) && INFO.test(rest) && feature.length === 0) {
@@ -780,7 +785,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   }
   // "sürümü artır, kurulu kopyayı güncelle, nasıl deneyeceğimi anlat": work
   // asked for first, the "anlat" only says how to report it. No question then.
-  if (isShort && question.length > 0 && adds.length === 0 && changes.length === 0 && !RUN.test(rest)) {
+  if (isShort && question.length > 0 && adds.length === 0 && changes.length === 0 && !RUN.test(rest) && !WORK_GO.test(rest)) {
     return rule(0, 'high', [`soru: ${quote(question)}`], 'question')
   }
 

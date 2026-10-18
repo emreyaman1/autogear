@@ -191,3 +191,11 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Sonuç, saklı yarı (n=350):** tam isabet %29 → **%35**; ±1 %76 → **%85**; fazla tahmin 218 → **192**; eksik 31 → 34; ciddi hata 5 → **6** (%1,4 → %1,7; hedef en çok %2); sıra uyumu 0,19 → 0,23; Haiku'ya sorulan %27 → %43.
 - **Tamamı:** SWE-bench (500) tam %34 → %39, ±1 %80 → %89, ciddi 1 → 1; Terminal-Bench (241) tam %27 → %31, ±1 %73 → %78, ciddi 7 → 8.
 - **Okuma:** gerçek kararda belirgin iyileşme, özellikle fazla tahminde (gereğinden pahalı model). Bedel: Haiku'ya daha sık soruluyor (her soru yaklaşık $0,0002–0,0008 ve 1–2 saniye) ve Terminal-Bench'te bir ciddi hata fazlası. Tek çalıştırma; Haiku aynı soruya her zaman aynı cevabı vermiyor.
+
+## Geliştirme 15: iş başlatan bir sözün yanındaki "commit" ya da soru kesin T0 değil
+
+- **Yöntem:** 1.398 gerçek mesajda kuralların kesin "önemsiz" (T0, yani Haiku modeli, Haiku'ya da sorulmadan) dediği bütün mesajlar listelendi ve tek tek okundu.
+- **Bulunanlar:** "önerdiğin sırayı baştan sona uygula sonrasında commit et" ve "haiku ölçümünü yap sonrasında commit ve pushla" yalnızca "commit" yüzünden önemsiz iş; "slug'ın ne demek olduğunu anlat ve sırada ne yapılması gerekiyorsa ona başla" ve "ikinci görüş ajanı ne işe yarıyor ve onu test et" soru sayılıyordu.
+- **Değişiklik:** önemsiz iş ve soru kuralları, iş başlatan ya da sürdüren bir söz ("uygula", "başla", "devam et", "yap", "güncelle", "değiştir", "kaldır", "implement", "apply", "go ahead") ya da çalıştırma sözü ("test et", "ölçümünü yap") varken çalışmıyor; mesaj Haiku'ya soruluyor. ("commit mesajı yaz: …" bundan muaf: içindeki açıklama işin kendisi değil.)
+- **İlk deneme kötüleşme verdi, düzeltildi:** İngilizce "change" ipucu "changed", "changes" sözlerini de tuttuğu için "what changed in the last commit, summarize it" ve "write a short commit message for the changes" önemsiz iş olmaktan çıktı; gerçek kullanım tekrarında tam isabet %59 → %55 düştü. İş sözleri ayrı ve dar bir listeyle tanımlandı; ikinci denemede 2.541 mesajda 0 değişiklik, gerçek kullanım tekrarı aynı.
+- **Test:** yeni test (dört gerçek mesaj emin değil; "commit et ve push et" ve "what changed in the last commit" hâlâ kesin T0). 2.1.299 206/206, 2.1.295 206/206, `validate` uyarısız. Dış ölçüt aynı.
