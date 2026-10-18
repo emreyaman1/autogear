@@ -70,3 +70,14 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Kanıt:** "hâlâ incelemede olduğu için hiçbir şey pushlamıyoruz sanırsam" mesajına Haiku T0 dedi, ama "incele" yüzünden konan alt sınır onu T2'de tuttu (gereğinden yüksek). 98 gerçek mesajda 1 tane.
 - **Test:** yeni test (gerçek mesaj, "README gözden geçirildi mi?"; "bu modülü incele" ve "README'yi gözden geçir" alt sınırı koruyor). 2.1.299 177/177, 2.1.295 177/177, `validate` uyarısız.
 - **Önce/sonra:** 2.111 etiketli mesajda değişiklik yok; dış ölçüt aynı; 98 gerçek mesajda 1 mesaj (yukarıdaki) alt sınırını kaybetti.
+
+## Ölçüm: düzeltilen mesajlarda Haiku ne diyor (gerçek Haiku, $0,014)
+
+- **Bu ölçüm neyi cevaplayacak:** yeni kurallarla, kurallar + Haiku birlikte (autogear'ın gerçekte yaptığı) bu mesajları nereye koyuyor?
+- **Sonuç (10 mesaj, her biri bir kez):** dört gerçek mesajın dördü de T2'ye düştü (Haiku bu sefer T2 dedi; 17 Ekim'de aynı README mesajına T0 demişti, yani Haiku aynı mesaja her seferinde aynı cevabı vermiyor). İnceleme isteklerinde Haiku "proofread the README" ve Fransızca "relis le README…" için T0, "review my changes" için T1 dedi; alt sınır üçünü de T2'de tuttu. "kodu gözden geçir" için Haiku T3 dedi, o geçerli oldu.
+- **Okuma:** alt sınır, tam da Haiku'nun düşük dediği yerde işe yarıyor. Tek çalıştırma, küçük örnek.
+
+## Adım 8'e bakış: danışman (advisor) istek başına açılabilir mi? (ücretsiz, tür dosyası okundu)
+
+- **Sonuç:** hayır. Mod API'sinde bir isteğin yalnızca modeli ve eforu değiştirilebiliyor; danışman için alan yok. Danışmanın çağrıları cevapta görünüyor ama değiştirilemiyor; ayarlar yalnızca okunabiliyor. Tek yol `/advisor` komutunu turlar arasında çalıştırmak; bu kalıcı bir ayar değişikliği ve dizin incelemesinin zaten işaretlediği türden ("kendi kendine komut çalıştırıyor").
+- **Karar:** kod yazılmadı. `docs/sonraki-adimlar.md` adım 8'e bulgu ve öneri yazıldı (yapılmasın; yapılırsa bir kez ve sorarak). Kanıt da zayıf: adım 4'te danışmanlı düzen 9/10, tek başına Sonnet 10/10.

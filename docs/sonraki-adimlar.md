@@ -299,6 +299,7 @@ Bugünkü kural (`hooks/core/pacing.ts`, `hooks/core/policy.ts`) iki limit pence
 - **Ne:** gearbox bir mesajı Sonnet ya da Haiku'ya verdiğinde Opus danışman açık olsun; Claude zor anda Opus'a danışsın.
 - **Neden:** Belgeye göre danışmanı açıp kapamak önbelleği bozmaz; model değiştirmek bozar.
 - **Önce bakılacak:** Mod API'si danışmanı istek başına açıp kapatabiliyor mu? Danışman deneysel; Anthropic hesabıyla çalışıyor.
+- **Bakıldı (19 Ekim 2026, Claude Code 2.1.299'un tür dosyasından; denenmedi):** istek başına açıp kapatmak **yok**. Bir isteğin (`turn.step`) değiştirilebilen alanları yalnızca model ve efor; danışman için alan yok. Danışmanın yaptığı çağrılar cevapta okunabiliyor (`serverToolUses`, adı `advisor`), ama engellenemiyor ya da değiştirilemiyor. Ayarlar (`$.settings.read`) yalnızca okunuyor. Tek yol, turlar arasında `/advisor` komutunu kişi yazmış gibi çalıştırmak (`$.command.run`, `/clear` için yapıldığı gibi); bu kullanıcının ayarını kalıcı değiştirir ve dizin incelemesi kendi kendine komut çalıştırmayı zaten işaretliyor (MOD_RUNS_COMMAND). **Öneri:** yapılmasın; olursa yalnızca bir kez, kullanıcıya sorarak (bantta "danışmanı aç" düğmesi). Ayrıca adım 4'teki kıyasta danışmanlı düzen tek başına Sonnet'ten iyi çıkmadı (9/10, Sonnet 10/10).
 
 ### 9. Dil ayarı ve İngilizce komutlar (kullanıcı kararı)
 
