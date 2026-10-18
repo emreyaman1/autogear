@@ -728,6 +728,28 @@ describe('what real use taught (0.6)', () => {
     expect(classify('bunu planla').reasons).toEqual(['plan istemek'])
   })
 
+  test('what a model that never saw the rules wrote: values are no migration, counted files and counted tries are big', () => {
+    // A value changed or a database migration written: a small change, not a move between stacks.
+    for (const prompt of ['butonun rengini maviden yeşile çevir', "timeout süresini 30'dan 60'a çevir", 'config.yaml 里的 timeout 从 30 改成 60', 'Add an index on orders.customer_id in a new alembic migration']) {
+      expect([prompt, classify(prompt).tier]).toEqual([prompt, 1])
+    }
+    expect(classify("Python 2'den 3'e geçir").reasons).toEqual(['bir yapıdan diğerine geçiş'])
+    expect(classify('commit mesajı yaz: kullanıcı listesindeki sayfalama hatası düzeltildi').tier).toBe(0)
+    // Work across a counted number of files, or a move to a new structure.
+    expect(classify("tüm API uçlarını yeni hata yönetimi yapısına geçir, 40 kadar dosya var, her birinde eski try-catch'leri kaldırıp merkezi yapıyı kullan").tier).toBe(4)
+    expect(classify('надо везде заменить старую библиотеку логирования на structlog: около 60 файлов').floor).toBe(2)
+    expect(classify('bu klasörde 12 dosya var, hangisi ne işe yarıyor?').floor).toBeUndefined()
+    // Tries counted; "idk whats going on" is no sure question.
+    expect(classify('the last two attempts at moving us from REST polling to websockets broke reconnect handling').tier).toBe(4)
+    expect(classify("pytest says `fixture 'db_session' not found` in tests/test_reports.py but it works in test_users.py. idk whats going on")).toMatchObject({ confidence: 'low' })
+    // Docs read against the code and fixed, in Japanese.
+    expect(classify('docs/api.md の認証まわりの説明、実際のコードと合ってるか確認して。違うとこあったら直して').floor).toBe(2)
+    // "çalışıyor" (it works) and "her seferinde" (every time) are no failure on their own.
+    expect(classify('bu projeyi 2 aydır yapıyorum ama hala login kısmı bana karışık geliyor, bi bakar mısın nasıl çalışıyor').tier).toBeLessThan(4)
+    expect(classify('bu fonksiyonda neden her seferinde yeni liste oluşturuyoruz?').tier).toBeLessThan(4)
+    expect(classify('her seferinde aynı hata çıkıyor').tier).toBe(4)
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

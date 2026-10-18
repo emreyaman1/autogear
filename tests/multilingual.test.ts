@@ -10,6 +10,8 @@ import { TR } from '../eval/i18n/tr'
 import { ZH } from '../eval/i18n/zh'
 import { BLIND } from '../eval/i18n/blind'
 import { BLIND2 } from '../eval/i18n/blind2'
+import { BLIND3 } from '../eval/i18n/blind3'
+import { TRICKY } from '../eval/i18n/tricky'
 import { HELD, HELD_TEXTS } from '../eval/i18n/held'
 import { HELD2, HELD2_TEXTS } from '../eval/i18n/held2'
 import { DEV, FRESH, HOLDOUT, type Case } from '../eval/prompts'
@@ -150,12 +152,15 @@ const SMALL_ASKS: readonly string[] = [
   'make the loading text "not sure yet" gray',
 ]
 
-// The fourth and fifth sets, written by another model that was not shown the
-// rules (eval/i18n/blind.ts, blind2.ts), each language its own prompts. BLIND
-// was tuned on after its first read; BLIND2 was read once and never tuned on.
+// The fourth to seventh sets, written by another model that was not shown the
+// rules (eval/i18n/blind.ts, blind2.ts, blind3.ts, tricky.ts), each language its
+// own prompts. BLIND, BLIND3 and TRICKY were tuned on after their first read;
+// BLIND2 was read once and never tuned on.
 const BLIND_SETS = [
   ['BLIND', BLIND],
   ['BLIND2', BLIND2],
+  ['BLIND3', BLIND3],
+  ['TRICKY', TRICKY],
 ] as const
 
 describe('the classifier on prompts written blind (rules alone)', () => {

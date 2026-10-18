@@ -201,9 +201,28 @@ const FAILURE = word(
     words.FAILURE_I18N.join('|'),
 )
 
+// A number or a measure changed ("30'dan 60'a", "from 5s to 15s", "从 30 改成 60"), not a
+// product's version ("Python 2'den 3'e"; the name before it is the sign).
+const VALUE_CHANGE = new RegExp(
+  "(?:^|[^a-z0-9])(?<!(?:python|node|vue|react|angular|java|php|ruby|go|django|rails|laravel|spring|net|ios|android|postgres|mysql|v|surum|version|versiyon) )[0-9]+(?:[a-z%]{0,3})'?(?:ten|tan|den|dan)\\s+[0-9]+(?:[a-z%]{0,3})'?(?:ye|ya|e|a)(?![a-z])|from [0-9]+[a-z%]{0,3} to [0-9]+|从 ?[0-9]+[^。，]{0,6}(?:改成|换成|改为) ?[0-9]+|[0-9]+[^0-9、。]{0,3}から[0-9]+",
+)
+// A database migration file to write: no move.
+const DB_MIGRATION = word(
+  'migration (?:file|dosya|script)|migration dosyas|(?:write|add|create|generate|yaz|ekle) (?:a |an |the |bir )?(?:[a-z]+ )?migration|migration(?:u|i)? (?:yaz|ekle|olustur)|fichier de migration|archivo de migracion|migrationsdatei|alembic|flyway|liquibase',
+)
+
+// "40 kadar dosya", "about 60 files", "около 60 файлов": work counted in files.
+const COUNTED_FILES = /(?:^|[^0-9])[1-9][0-9]+ ?(?:kadar |civari |tane |adet )?(?:dosya|files?(?![a-z])|archivos|fichiers|dateien|файл|个文件|个 ?文件|ファイル)/
+// Replacing one thing with another, in the languages CHANGE does not read.
+const REPLACE = word('replace|degistir|reemplaz|sustitu|ersetz|austausch|remplac|замен|替换|置き換')
+// A text file named: "docs/api.md", "notes.txt".
+const DOC_FILE = /.(?:md|mdx|txt|rst|adoc)(?![a-z])/i
+// A commit message asked for first, its content after it: a chore.
+const COMMIT_FIRST = /^(?:commit (?:mesaji|message|msg)|(?:write|suggest) (?:a |the )?commit message)/
+
 // "X'ten Y'ye taşı/geçir", "migrate ... from X to Y".
 const MIGRATION = new RegExp(
-  "'?(?:ten|tan|den|dan)\\s+[^,.;]{0,40}?'?(?:ye|ya|e|a)\\s+(?:gec|tasi|cevir|donustur|aktar)|(?:migrat|convert|rewrite)[^.]{0,60}from [^.]{1,40} to |(?:^|[^a-z])migrat",
+  "'?(?:ten|tan|den|dan)\\s+[^,.;]{0,40}?'?(?:ye|ya|e|a)\\s+(?:gec|tasi|cevir|donustur|aktar)|(?:migrat|convert|rewrite)[^.]{0,60}from [^.]{1,40} to |(?:^|[^a-z])migrat|yeni [^,.;]{0,40}?(?:yapi|mimari|sistem|altyapi|kutuphane|framework|modul)[a-z]*(?:ya|ye|na|ne|a|e) (?:gec|tasi|aktar|donustur)",
 )
 const WHOLE = word(
   'uygulama(?:yi|nin)?(?![a-z])|tum|butun|proje(?:yi|nin)?(?![a-z])|codebase|whole|entire|the app(?![a-z])|our app|her sey|all our|all the|' + words.WHOLE_I18N.join('|'),
@@ -211,8 +230,9 @@ const WHOLE = word(
 
 const REPEATED_FAILURE = cues([
   'defalarca', 'kac (?:kere|defa|kez)', 'her denemede',
-  'her seferinde', 'bir turlu', 'tekrar tekrar', 'hicbir sey ise yaramadi', 'her yer bozul', 'again and again',
-  'keeps? (?:failing|breaking)', 'nothing works', 'tried everything', 'every attempt', 'each attempt',
+  'bir turlu', 'tekrar tekrar', 'hicbir sey ise yaramadi', 'her yer bozul', 'again and again',
+  'keeps? (?:failing|breaking)', 'nothing works', 'back and forth',
+  '(?:last|after|past|previous) (?:two|three|four|five|few|several|[0-9]+) (?:attempts|tries)', '(?:two|three|four|five|[0-9]+) attempts? (?:at|to)', 'tried everything', 'every attempt', 'each attempt',
   ...words.REPEATED_FAILURE_I18N,
   ...words.REPEATED_MORE,
   ...words.REPEATED_MORE2,
@@ -222,12 +242,12 @@ const REPEATED_FAILURE = cues([
 // the fault in the same sentence; "3 gündür görüşmüyoruz", "2 aydır
 // geliştirdiğim proje" are no failure.
 const DURATION = cues([
-  '(?:gun|hafta|ay|saat)(?:ler|lar)?d[iu]r(?![a-z])', 'gundur', 'saattir', 'for days', 'for hours', 'for (?:a |two |several )?weeks?(?![a-z])',
+  '(?:gun|hafta|ay|saat)(?:ler|lar)?d[iu]r(?![a-z])', 'gundur', 'saattir', 'her seferinde', 'for an? (?:hour|day|week|month)', 'for days', 'for hours', 'for (?:a |two |several )?weeks?(?![a-z])',
   'for [0-9]+ (?:days?|hours?|weeks?|months?)',
   ...words.DURATION_I18N,
 ])
 const STRUGGLE = word(
-  'hata|coz|olmuyor|olmadi|calismiyor|calismadi|bozuk|bozul|ugras|calisiyo|deniyo|dene|duzel|sorun|problem|becereme|basarama|takil|fix|fail|error|bug|broken|struggl|stuck|trying|tried|issue|crash|' +
+  'hata|coz|olmuyor|olmadi|calismiyor|calismadi|bozuk|bozul|ugras|calisiyo(?:r)?sun|deniyo|dene|duzel|sorun|problem|becereme|basarama|takil|fix|fail|error|bug|broken|struggl|stuck|trying|tried|issue|crash|' +
     // the same in the other languages: struggle, break down, fail, cannot fix
     'luch|pele|falla|no funciona|arregl|kampf|kaputt|funktioniert nicht|absturz|reparier|lutt|panne|plant|echou|marche pas|correctif|бь[её]мся|борем|лома|слома|не работает|не можем|не получается|почин|折腾|搞不定|修不好|崩溃|失败|直らな|壊れ|失敗|苦戦|' +
     [...words.FAILURE_I18N, ...words.DEBUG_I18N, ...words.FRUSTRATION_I18N].join('|'),
@@ -295,7 +315,7 @@ const TRIVIAL = cues([
 const QUESTION = cues([
   'ne yapiyor', 'ne ise yariyor', 'nedir', 'ne demek', 'ne anlama gel', 'acikla(?:r mi|yabilir|yin)?(?![a-z])',
   'anlat(?:ir mi|abilir|in)?(?![a-z])', 'ozetle', 'ozet(?![a-z])', 'ne degisti',
-  'hangi dosya', 'nerede', 'kac tane', 'what does', 'what is', 'what.?s', 'explain', 'summari[sz]', 'how many',
+  'hangi dosya', 'nerede', 'kac tane', 'what does', 'what is', 'what.?s(?! (?:going on|wrong|happening|up with))', 'explain', 'summari[sz]', 'how many',
   'where is', 'which file', 'what changed',
   ...words.QUESTION_I18N,
 ])
@@ -328,6 +348,9 @@ const TO_FIX = word(
 const FIX_VERB = word('duzelt|fix|correct|corrig|korrigier|beheb|arregl|исправ|修改|修正|改正|直し|直す|直して')
 // Typos are a chore of their own (TRIVIAL), in the languages TRIVIAL does not read too.
 const TYPO = word('typo|yazim|imla|faute(?:s)? de frappe|tippfehler|errata|опечат|错别字|誤字|タイプミス')
+
+// The fix spelled out: a word in quotes, or "x -> y". A one-place change, not a read.
+const NAMED_FIX = /["'“”«»„][^"'“”«»„\n]{1,40}["'“”«»„]|->|→/
 
 // A text rather than a program: a README, the docs, a translation.
 const DOC = word(
@@ -369,7 +392,7 @@ const WHEN = new RegExp(
 const VAGUE_LENGTH = 120
 
 const DEBUG = word(
-  'hata(?:si|yi)? (?:veriyor|aliyorum|cikiyor|firlatiyor|donuyor)|kiriliyor|patliyor|calismiyor|calismadi|bozuk|fail(?:s|ed|ing)?(?![a-z])|broken|exception|crash|[45]\\d\\d hatasi|error|' +
+  'hata(?:si|yi)? (?:veriyor|aliyorum|cikiyor|firlatiyor|donuyor)|kiriliyor|patliyor|calismiyor|calismadi|bozuk|fail(?:s|ed|ing)?(?![a-z])|broken|exception|crash|[45]\\d\\d hatasi|error|not found|bulunamadi|bulunamiyor|' +
     words.DEBUG_I18N.join('|'),
 )
 
@@ -632,7 +655,10 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   const parts = (rest.match(/,/g)?.length ?? 0) + (rest.match(words.JOINERS)?.length ?? 0)
   const isLong = length > 1200
   const isShort = length <= 200
-  const isMigration = MIGRATION.test(rest) || words.MIGRATION_I18N.test(rest) || words.MOVE_FROM_TO.test(rest)
+  // "rengini maviden yeşile çevir", "timeout 30'dan 60'a", "add the migration file":
+  // a value or a database migration, no move from one stack to another.
+  const isMigration =
+    (MIGRATION.test(rest) || words.MIGRATION_I18N.test(rest) || words.MOVE_FROM_TO.test(rest)) && small.length === 0 && !VALUE_CHANGE.test(rest) && !DB_MIGRATION.test(rest)
   const isWide = isLong || files >= 3
 
   // T4: long, many-sided work, or work that has already failed again and again.
@@ -682,6 +708,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   if (isMigration) {
     return rule(3, 'high', ['bir yapıdan diğerine geçiş'])
   }
+  if (COUNTED_FILES.test(rest) && (adds.length + changes.length > 0 || REPLACE.test(rest))) {
+    return { ...rule(3, 'low', ['çok dosyaya yayılan iş']), floor: 2 }
+  }
   if (maybeHard.length >= 2 || (maybeHard.length === 1 && (hasError || isWide))) {
     return rule(3, 'high', [`zor sinyalleri: ${quote(maybeHard)}`])
   }
@@ -699,13 +728,16 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   }
 
   // T2: debugging with an error in hand, and writing tests.
-  const isReview = (REVIEW.test(rest) && !(feature.length > 0 && adds.length > 0)) || (READ.test(rest) && CLOSELY.test(rest) && TO_FIX.test(rest))
+  // A review: a review word, a read asked for closely with something to fix, or a text read and put right.
+  const isReview =
+    (REVIEW.test(rest) && !(feature.length > 0 && adds.length > 0)) ||
+    (READ.test(rest) && TO_FIX.test(rest) && (CLOSELY.test(rest) || DOC.test(rest) || DOC_FILE.test(raw)))
   if (hasError) {
     return rule(2, 'high', ['hata çıktısı'])
   }
   // "fix the errors in the README", "README'deki hataları düzelt": faults in a
   // text, which a read finds; no program is failing, so no hunt.
-  if (DOC.test(rest) && FIX_VERB.test(rest) && ERRORS.test(rest) && !TYPO.test(rest) && !RUNTIME.test(rest) && !hasError && files === 0) {
+  if (DOC.test(rest) && FIX_VERB.test(rest) && ERRORS.test(rest) && !TYPO.test(rest) && !RUNTIME.test(rest) && !hasError && files === 0 && !NAMED_FIX.test(raw)) {
     return { ...rule(2, 'low', ['metindeki hataları düzeltmek']), floor: isReview ? 2 : 1 }
   }
   if (DEBUG.test(rest.replace(words.ERROR_MESSAGE_PHRASE, ' '))) {
@@ -736,7 +768,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
 
   // T0: questions about code in view, and chores. A chore is asked for in a
   // few words: "commit" or "typo" inside a long description is part of it.
-  if (length <= CHORE_LENGTH && trivial.length > 0 && (feature.length === 0 || adds.length === 0)) {
+  if (length <= CHORE_LENGTH && trivial.length > 0 && (feature.length === 0 || adds.length === 0 || COMMIT_FIRST.test(text))) {
     return rule(0, 'high', [`basit iş: ${quote(trivial)}`], 'chore')
   }
   if (isShort && LIST.test(rest) && INFO.test(rest) && feature.length === 0) {

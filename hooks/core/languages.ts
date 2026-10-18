@@ -90,7 +90,7 @@ export const PLANNING_I18N = [
   'fais un plan', 'prepare un plan', 'etablis un plan', 'plan pour', 'planifie',
   'составь план', 'сделай план', 'подготовь план', 'спланируй', 'план [а-я]+ разделени',
   '制定[^。，]{0,20}计划', '做个计划', '做一个计划', '规划', '方案',
-  '計画を立て', '計画を作', 'プランを',
+  '計画を立て', '計画を作', 'プランを', '方針案', '方針を(?:考え|出し|決め)',
 ]
 
 export const WHY_I18N = [
@@ -215,6 +215,7 @@ export const MIGRATION_I18N = new RegExp(
     '(?:^|[^a-z])(?:pasa|pasar|traslada|trasladar|porta|reescribe|reescribir)[^.?!]{0,60}(?: de )[^.?!]{1,40}(?: a | hacia )',
     '(?:^|[^a-z])(?:umzieh|umstell|portier|verschieb)',
     ' von [^.?!]{1,40} auf [^.?!]{1,40} um(?![a-z])',
+    '(?:^|[^a-z])wechsel[a-z]* (?:[a-z]+ )?von [^.?!]{1,40} (?:auf|zu) ',
     '(?:^|[^a-z])(?:deplace|passe|bascule|reecris|porte|convertis)[^.?!]{0,60}(?: de | d.)[^.?!]{1,40} vers ',
     'перенес|мигрир|миграц|перепи[сш][^.?!]{0,50} с [^.?!]{1,40} на ',
     '迁移|移植|重写|改写',
@@ -452,7 +453,7 @@ export const REPEATED_MORE = [
 export const SEQUENCE = new RegExp(
   [
     '(?:^|[^a-z0-9])(?:first|then|after that|next)(?![a-z])',
-    '(?:^|[^a-z0-9])(?:once|sonra|ardindan|ilk olarak|once(?= )|asama asama)',
+    '(?:^|[^a-z0-9])(?:once|sonra|ardindan|ilk olarak|once(?= )|asama asama|adim adim|step by step)',
     '(?:^|[^a-z0-9])(?:primero|luego|despues|despues de|por etapas|por fases)',
     '(?:^|[^a-z0-9])(?:zuerst|erst|dann|danach|schrittweise|in schritten)',
     '(?:^|[^a-z0-9])(?:d abord|puis|ensuite|etape par etape|par etapes)',
@@ -479,7 +480,7 @@ export const HARD_MORE2 = [
 export const REPEATED_MORE2 = [
   'tried (?:two|three|four|five|[0-9]+) times', '(?:three|four|five|[0-9]+) times (?:already|now)',
   '(?:iki|uc|dort|bes|[0-9]+) kez (?:denedik|denendi|duzelt)',
-  '(?:intentamos|probamos|intentado|probado|arreglar|arreglado|corregido|corregir)[^.?!]{0,30}(?:dos|tres|cuatro|cinco|[0-9]+) veces',
+  '(?:intentamos|probamos|intentaste|probaste|intentado|probado|arreglar|arreglado|corregido|corregir)[^.?!]{0,30}(?:dos|tres|cuatro|cinco|[0-9]+) veces',
   '(?:dritte[nr]?|vierte[nr]?|funfte[nr]?) (?:versuch|mal)', 'schon (?:zwei|drei|vier|funf|[0-9]+) ?mal (?:versucht|probiert|repariert)',
   '(?:essaye|tente|corrige)[^.?!]{0,20}(?:deux|trois|quatre|cinq|[0-9]+) fois',
   '(?:два|три|четыре|пять|[0-9]+) раз[а]? (?:пытал|правил|исправля|чини)',
