@@ -92,6 +92,7 @@ const REASONS: readonly (readonly [RegExp, string])[] = [
   [/^soru$/, 'question'],
   [/^uzun, çok cümleli iş tarifi$/, 'long, many-sentence description of work'],
   [/^inceleme isteği: (.+)$/, 'request to look into something: $1'],
+  [/^dikkatli okuma ve düzeltme$/, 'a close read to find and fix faults'],
   [/^tek zor sinyali: (.+)$/, 'one sign of hard work: $1'],
   [/^kodu başka bir dile çevirmek$/, 'converting code to another language'],
   [/^uzun istek$/, 'long request'],

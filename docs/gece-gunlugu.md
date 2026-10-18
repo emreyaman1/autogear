@@ -1,0 +1,30 @@
+# Gece günlüğü (18–19 Ekim 2026)
+
+Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Bağlam sıkışırsa buradan sürdürülür. Bütün iş `C:\gearbox-dev` klasöründe, `gelistirme` dalında; `main`'e ve `C:\gearbox`'a dokunulmuyor (dizin incelemesi sürüyor).
+
+## Kurulum
+
+- `git worktree add C:\gearbox-dev -b gelistirme` (main @ 136ec60'tan).
+- Yalnızca bu bilgisayarda duran gerçek kullanım seti (`eval/field.ts`, `tests/field.test.ts`) ve Haiku cevap önbelleği (`eval/.work/`) çalışma kopyasına kopyalandı; git onları zaten dışarıda tutuyor (`.git/info/exclude`), commit'e girmiyor.
+- Test komutu: iki Claude Code sürümü (2.1.299 ve 2.1.295) ile `claude plugin test .`, ayrıca `claude plugin validate .`.
+
+## Başlangıç ölçümü (hiçbir değişiklik yokken)
+
+- Testler: 2.1.299'da 173/173, 2.1.295'te 173/173 geçti. `validate` geçti, uyarı yok.
+- Kurallar tek başına: dev %100 tam / %100 ±1; holdout %91 / %98; fresh %85 / %100; gerçek kullanım tekrarı %59 / %98, ciddi hata 0.
+- 143 mesaj × 8 dil (LANG): tam isabet tr %92, en %92, es %85, de %85, fr %86, ru %81, zh %83, ja %83; ciddi hata her dilde 0.
+- held (36 × 8): %81–97 tam; blind (24 × 8): %63–88 tam; ciddi hata 0.
+- Bu sayılar kıyas için; setlerin çoğu daha önce kurallar ayarlanırken okundu ("tüketildi"), yani kuralların gerçek başarısını değil, değişikliğin bir şeyi bozup bozmadığını gösterir.
+
+## Geliştirme 1: "baştan oku, dikkatlice kontrol et, düzelt" türü mesajlar
+
+- **Sorun (kanıt):** 18 Ekim'deki gerçek mesaj "readmeyi bence en baştan tekrar oku daha detaylı. düzeltilmesi gereken ufak detaylar gördüm bir tane daha fazla olabilir". Kurallar hiçbir işaret görmedi (T1, emin değil), Haiku T0 dedi. Küçük bir sohbette bu iş Haiku'ya, yani en zayıf modele giderdi; 400 satırlık bir README'yi ince ince okuyup hata bulmak zayıf modelin kaçıracağı türden iş.
+- **Değişiklik:** yeni kural "dikkatli okuma ve düzeltme": (a) "gözden geçir", "elden geçir", "review", "proofread", "look over" gibi sözler tek başına; ya da (b) bir okuma/kontrol fiili ("oku", "kontrol et", "read", "check", "go through") + bir özen sözü ("baştan", "tekrar", "dikkatlice", "detaylı", "satır satır", "again", "carefully", "whole") + düzeltilecek bir şey ("düzelt", "hata", "eksik", "detaylar", "fix", "mistake"). Sonuç T2, emin değil (Haiku'ya sorulur), ama Haiku daha düşük derse T2'de kalır (alt sınır). Haiku daha yüksek derse (T3) onun dediği olur. Yedi dilin karşılıkları da eklendi (İspanyolca "revisa", Almanca "überprüfe", Fransızca "relis", Rusça "перечитай", Çince "审查/仔细", Japonca "見直し"). İçinde "review" geçen özellik isteği ("add a review form") özellik olarak kalıyor.
+- **Neden T2 ve neden bu kadar dar:** T2 Sonnet · medium demek; net anlatılmış işte en iyi değer (adım 6 ve 12'nin ölçümleri). "oku" tek başına tetiklemiyor ("bu dosyayı oku ve anlat" soru olarak T0 kaldı); "go through" ve "double-check" yalnızca özen sözü ve düzeltilecek bir şeyle birlikte sayılıyor, çünkü "go through the steps", "double-check the port" küçük işler.
+- **Test:** `tests/core.test.ts` içinde yeni test: gerçek mesaj T2 ve alt sınır 2; sekiz dilde 12 inceleme isteği Haiku T0 dese bile en az T2; üç yanlış alarm örneği. Değişiklik olmadan test düşüyor (denendi: gerçek mesaj T1 çıktı).
+- **Tam test:** 2.1.299 174/174, 2.1.295 174/174, `validate` geçti, uyarı yok.
+- **Önce/sonra (kurallar tek başına, ücretsiz):** dev, holdout, fresh, gerçek kullanım tekrarı, 143 × 8 dil, held, blind: bütün özet satırları birebir aynı. 2.111 mesajdan yalnızca 2'si değişti, ikisi de kör setten ve ikisi de iyi yönde: İspanyolca "formulario ... revisa" (etiket T2) ve Fransızca "Revois la gestion des fichiers téléversés" (etiket T3) artık T2 alt sınırı taşıyor; eskiden Haiku T1'e indirebilirdi.
+- **Dış ölçüt (`node eval/external.mjs`, 741 uzun İngilizce görev, ücretsiz):** yalnızca 1 görev T1'den T2'ye çıktı (gereğinden yüksek tahmin 128 → 129 ve 209 → 210); ciddi hata değişmedi (10 ve 6).
+- **Ölçülemeyen:** bu tür mesaj ölçüm setlerinde neredeyse hiç yok; yeni kuralın gerçek kullanımda ne sıklıkla doğru çalıştığını yalnızca gölge kayıt gösterir. Kural benim yazdığım örneklerle denendi; dürüst bir ölçüm değil.
+- **Bulunan, düzeltilmeyen:** "fix the errors in the README", "korrigiere die Fehler", "исправь ошибки" gibi metin düzeltme istekleri "belirsiz anlatılmış hata" (T3, hata avı) sayılıyor, çünkü "error/Fehler/ошибк" hata ayıklama sözü. Bu gereğinden yüksek (pahalı yön), zayıf modele gitme riski yok; düzeltmek hata avı kuralının sırasını değiştirmeyi gerektirir, riskli olduğu için dokunulmadı.
+- **Karar:** commit.

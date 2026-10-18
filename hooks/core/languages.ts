@@ -479,3 +479,42 @@ export const REPEATED_MORE2 = [
   '(?:试了|修了|改了)(?:两|三|四|五|[0-9]+) ?(?:次|遍)',
   '(?:二|三|四|五|[0-9]+) ?回(?:修正|試し|直し|やって)',
 ]
+
+// A close read of written work to find what is wrong in it: "revisa", "relis",
+// "перечитай", "见直し"; said alone, it is a review.
+export const REVIEW_I18N = [
+  'revis(?:a|ar|alo|ala|en|ad)(?![a-z])', 'repas(?:a|ar|alo)(?![a-z])', 'relee',
+  'uberpruf', 'durchsehen', 'durchgehen', 'gegenlesen', 'korrekturlesen', 'korrektur lesen',
+  'relis', 'relire', 'relisez', 'passe[rz]? en revue', 'revois', 'revoir', 'reviser',
+  'перечитай', 'перечитать', 'вычитай', 'вычитать', 'просмотри', 'пересмотри', 'ревью',
+  '审查', '审阅', '校对', '复查', '过一遍', '检查一遍',
+  '読み直', '見直', '精査', '校正', 'レビュー', 'チェックし直',
+]
+
+// A read or a check, which a word of care ("de nuevo", "genau") makes a review.
+export const READ_I18N = [
+  'lee(?:lo|la|r)?(?![a-z])', 'comprueba', 'verifica',
+  'lies(?![a-z])', 'lesen', 'prufe?(?![a-z])', 'kontrollier',
+  'lis(?![a-z])', 'lire', 'verifie[rz]?(?![a-z])', 'controle[rz]?(?![a-z])',
+  'прочитай', 'прочти', 'проверь', 'проверить',
+  '读', '阅读', '检查', '看一遍',
+  '読ん', '読み', '確認', 'チェック',
+]
+
+export const CLOSELY_I18N = [
+  'de nuevo', 'otra vez', 'con (?:cuidado|detalle)', 'detenidamente', 'desde el principio', 'linea por linea', 'a fondo',
+  'nochmal', 'noch einmal', 'erneut', 'genau', 'grundlich', 'sorgfaltig', 'von vorne', 'zeile fur zeile',
+  'a nouveau', 'encore', 'attentivement', 'soigneusement', 'en detail', 'depuis le debut', 'ligne par ligne',
+  'внимательно', 'тщательно', 'подробно', 'снова', 'ещё раз', 'еще раз', 'заново', 'с начала', 'построчно',
+  '仔细', '认真', '重新', '从头', '再', '逐行',
+  'もう一度', '再度', 'じっくり', '丁寧に', '細かく', '最初から', '一行ずつ',
+]
+
+export const TO_FIX_I18N = [
+  'corrig', 'arregl', 'error', 'errata', 'fallo', 'problema', 'detalle',
+  'korrigier', 'beheb', 'fehler', 'problem', 'kleinigkeit',
+  'corrige', 'faute', 'erreur', 'probleme', 'detail',
+  'исправ', 'ошибк', 'опечат', 'проблем', 'недочет', 'недочёт',
+  '修改', '修正', '改正', '错误', '错', '问题', '细节',
+  '直し', '直す', '修正', '誤り', '間違', 'ミス', '問題', '細か',
+]

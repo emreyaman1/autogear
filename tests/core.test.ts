@@ -606,6 +606,36 @@ describe('what real use taught (0.6)', () => {
     expect(withHaiku(rule, 3).tier).toBe(3)
   })
 
+  test('a close read of written work to fix it is no less than T2, in every language; a plain read is not one', () => {
+    // From real use: the rules saw no sign (T1), Haiku said T0.
+    const real = classify('readmeyi bence en baştan tekrar oku daha detaylı. düzeltilmesi gereken ufak detaylar gördüm bir tane daha fazla olabilir')
+    expect(real).toMatchObject({ tier: 2, confidence: 'low', floor: 2 })
+    expect(withHaiku(real, 0).tier).toBe(2)
+    expect(withHaiku(real, 3).tier).toBe(3)
+    const reviews = [
+      'kodu gözden geçir',
+      "README'yi baştan sona dikkatlice oku, yazım hatalarını düzelt",
+      'dokümanı satır satır kontrol et, eksik bir şey varsa düzelt',
+      'review my changes before I merge',
+      'proofread the README',
+      'read the docs again carefully and fix any mistakes',
+      'revisa el README y corrige los errores',
+      'lies die Anleitung nochmal genau und korrigiere die Fehler',
+      'relis le README et corrige les fautes',
+      'перечитай README и исправь ошибки',
+      '从头仔细读一遍README，修改细节',
+      'READMEを見直して、間違いを直して',
+    ]
+    for (const prompt of reviews) {
+      const rule = classify(prompt)
+      expect([prompt, withHaiku(rule, 0).tier >= 2]).toEqual([prompt, true])
+    }
+    // A read to explain, a read with nothing to fix, a feature with "review" in it.
+    expect(classify('bu dosyayı oku ve ne yaptığını anlat').tier).toBe(0)
+    expect(classify('README tekrar oku').floor).toBeUndefined()
+    expect(classify('add a review form to the product page').reasons[0]).toMatch(/^özellik/)
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

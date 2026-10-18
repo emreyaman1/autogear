@@ -282,6 +282,25 @@ const INFO = word(
   'dosya|file|klasor|folder|dizin|director|script|todo|yorum|comment|log(?![a-z])|loglar|degisiklik|diff|commit|branch|bagimlilik|dependenc|paket|package|route|fonksiyon|function|sinif|class|variable|' + words.INFO_I18N.join('|'),
 )
 
+// A close read of work already written, to find what is wrong in it: "gözden
+// geçir", "review", "proofread"; or a read asked for again, closely or from the
+// top, with something in it to fix ("baştan tekrar oku ... düzeltilmesi
+// gereken detaylar"). Haiku has called such a prompt trivial, and a weak model
+// reading for faults misses them.
+const REVIEW = word(
+  'gozden gecir|elden gecir|redakte|review(?:ing)?(?![a-z])|proofread|look (?:it |them |this |everything )?over|comb through|' +
+    words.REVIEW_I18N.join('|'),
+)
+const READ = word('oku(?![a-z])|okuy|okur musun|kontrol et|kontrol ed|tara(?![a-z])|re.?read|read(?![a-z])|check(?![a-z])|double.?check|go (?:through|over)(?![a-z])|' + words.READ_I18N.join('|'))
+const CLOSELY = word(
+  'bastan|tekrar|yeniden|bir daha|bir kez daha|dikkat|detayli|ayrintili|satir satir|tek tek|kelime kelime|iyice|ince ince|tamamini|again|carefully|thoroughly|closely|line by line|in detail|from the (?:top|start|beginning)|once more|whole|entire|every|' +
+    words.CLOSELY_I18N.join('|'),
+)
+const TO_FIX = word(
+  'duzelt|hata|eksik|sorun|tutarsiz|yanlis|detaylar|ayrintilar|kusur|fix|mistake|error|issue|problem|typo|inconsisten|wrong|correct|' +
+    words.TO_FIX_I18N.join('|'),
+)
+
 const CONVERSION = /(?:typescript|javascript|python|kotlin|swift|go(?:lang)?|rust|java)(?:'?[a-z]{0,3})?\s+(?:cevir|donustur)|convert[^.]{0,40}to (?:typescript|javascript|python)/
 
 const TEST_WRITE = word(
@@ -636,6 +655,12 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   }
   if (TEST_WRITE.test(rest)) {
     return rule(2, 'high', ['test yazmak'])
+  }
+  // A review of written work, a chore's words in it or not ("baştan oku, yazım
+  // hatalarını düzelt"): no less than T2. A feature named with its verb ("add a
+  // review form") is the feature's.
+  if ((REVIEW.test(rest) && !(feature.length > 0 && adds.length > 0)) || (READ.test(rest) && CLOSELY.test(rest) && TO_FIX.test(rest))) {
+    return { ...rule(2, 'low', ['dikkatli okuma ve düzeltme']), floor: 2 }
   }
 
   // T0: questions about code in view, and chores. A chore is asked for in a
