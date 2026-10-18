@@ -219,3 +219,13 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Neden "Haiku'ya sor" ve kademe değiştirmek değil:** kuralı emin olmaktan çıkarmanın bedeli bir Haiku sorusu (yaklaşık $0,0002); kademeyi kendiliğinden yükseltmek ya da düşürmek ise yanlış bir sayımla kalıcı olarak pahalı ya da zayıf model demek olurdu. Haiku'nun cevabı yine alt sınırla sınırlı.
 - **Test:** iki saf test (eşik: 2 yanlış yetmez, 3/4 öğrenilir, 3/13 öğrenilmez; elle seçim, kısa onay, şikâyet kural sayılmaz) ve bir yönlendirici testi (üç özellik isteği `/gear wrong weak` ile işaretleniyor; dördüncü özellik isteğinde Haiku'ya soruluyor ve onun cevabı geçerli oluyor). 2.1.299 210/210, 2.1.295 210/210, `validate` uyarısız. Sınıflandırma değişmedi.
 - **Gerçek günlükte ne yapardı (yalnızca okundu):** kullanıcının iki günlüğünde (128 ve 86 karar) **hiçbir yanlışlık işareti yok**: `/gear wrong` hiç kullanılmamış, şikâyetle yükseltme ve kırık test işareti de yok. Yani bugün hiçbir kural öğrenilmezdi. Öğrenme, kullanıcı işaretledikçe çalışacak; işaret seyrek kaldıkça etkisi küçük kalır. Bu da adım 18b'nin (`/gear share`) ve işaretlemeyi kolaylaştırmanın önemini gösteriyor.
+
+## Canlı deneme: PowerShell desteği (Geliştirme 6) gerçek Claude Code'da
+
+- **Bu ölçüm neyi cevaplayacak:** PowerShell'de başarısız kalan bir test, gerçek Claude Code'da bir sonraki mesajı gerçekten bir kademe yukarı alıyor mu ("kartopu freni")?
+- **Yöntem:** geçici bir klasörde `npm test` her zaman başarısız (ve kontrol için her zaman başarılı) olan bir `package.json`. `claude -p`, yalnızca PowerShell aracı açık, aynı süreçte iki mesaj: (1) "PowerShell aracıyla `npm test` çalıştır", (2) "bu fonksiyon ne yapıyor? function add(a, b) { … }" (normalde Haiku). Seçici Opus · high. Toplam yaklaşık $0,13.
+- **Sonuç:**
+  - bu dal, test başarısız: 2. mesaj **Sonnet** (bir kademe yukarı) ✓
+  - bu dal, test başarılı: 2. mesaj **Haiku** ✓ (yükselmenin sebebi gerçekten başarısız test)
+  - main'in kodu, test başarısız: 2. mesaj **Haiku**: eski kod PowerShell'deki başarısızlığı görmüyordu ✓ (sorun gerçekti)
+- Devir notu (commit/push sonrası temiz sohbet önerisi) için canlı deneme yapılmadı: 150 bin tokenlık bir sohbet gerekiyor; sahte motorla test edildi, aynı kod yolunu kullanıyor.
