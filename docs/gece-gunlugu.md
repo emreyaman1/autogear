@@ -229,3 +229,10 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
   - bu dal, test başarılı: 2. mesaj **Haiku** ✓ (yükselmenin sebebi gerçekten başarısız test)
   - main'in kodu, test başarısız: 2. mesaj **Haiku**: eski kod PowerShell'deki başarısızlığı görmüyordu ✓ (sorun gerçekti)
 - Devir notu (commit/push sonrası temiz sohbet önerisi) için canlı deneme yapılmadı: 150 bin tokenlık bir sohbet gerekiyor; sahte motorla test edildi, aynı kod yolunu kullanıyor.
+
+## Geliştirme 18: konuşulan, varsayılan ya da yapıştırılan model adı bir seçim değil
+
+- **Kanıt:** kullanıcının günlüğündeki 3 "elle seçim" kararının 3'ü de aslında istek değildi (adım 18a için günlüğe bakarken bulundu): (1) "… ve neden hep max eforla çalışıyor? ben mi açtım öyle bir özellik?" bir soru, "max efor ile çalış" isteği sanıldı ve tur **Opus · max** ile gitti; (2) mesaja yapıştırılmış bir metnin içindeki "high efor" sözü istek sanıldı; (3) "opus ile devam edildiğinde iki kez önbellek bozulmuş olur" bir varsayım, "opus ile devam et" sanıldı. Ayrıca kayıtlarda: "haiku ölçümünü yap" Haiku isteği; "… opus kullan ama … sonnet kullan desem bu mümkün mü" Sonnet isteği sanılıyordu. Elle seçim en öncelikli karar olduğu için (seçici tavanını bile aşar) bu hatalar pahalı.
+- **Değişiklik:** model ya da efor adı (1) "neden/niye/why" soran ya da "desem/diyelim/mümkün mü/what if" diye varsayan bir cümlede, (2) yapıştırılmış metnin (`<pasted_content>`) içinde, (3) aradaki sözü iyelikli bir nesne olduğunda ("haiku ölçümünü yap") seçim sayılmıyor. "devam edildiğinde" istek değil, "devam edelim" istek.
+- **Önce/sonra (1.398 gerçek mesaj):** "elle seçim" sayılan 7 mesaj → 2; kalan ikisi gerçek istek ("bu görevi sonnete maxa verir misin", "opus sende göz gezdirip anlatır mısın?"). README'deki örnekler ve eski testler aynen geçiyor. 2.541 etiketli mesajda 0 değişiklik.
+- **Test:** yeni test (beş yanlış alarm, iki gerçek istek). 2.1.299 211/211, 2.1.295 211/211, `validate` uyarısız.

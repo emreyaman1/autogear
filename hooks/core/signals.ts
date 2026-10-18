@@ -875,9 +875,9 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
 // model asked for by name, in words. Talk about a model is no request: past
 // tense ("haiku ile yaptı") and opinions ("opus pahalı") name no verb here.
 const REQUEST_VERB =
-  '(?:ver(?:ir misin|ebilir misin|sene|in|iver)?|gec(?:ir|elim|ebilir misin|in)?|kullan(?:arak|ir misin|abilir misin|in|sana)?|yap(?:ar misin|abilir misin|sana|sin|in|iver)?|bak(?:ar misin|abilir misin|sana|sin|in)?|incele(?:r misin|yebilir misin|sin|yin)?|devam(?: et)?|hallet|ustlen|sen ?de|use|switch to)(?![a-z])'
+  '(?:ver(?:ir misin|ebilir misin|sene|in|iver)?|gec(?:ir|elim|ebilir misin|in)?|kullan(?:arak|ir misin|abilir misin|in|sana)?|yap(?:ar misin|abilir misin|sana|sin|in|iver)?|bak(?:ar misin|abilir misin|sana|sin|in)?|incele(?:r misin|yebilir misin|sin|yin)?|devam(?: et(?:sin|in)?(?![a-z])| ed(?:elim|in|iver|ebilir misin|er misin)(?![a-z])|(?![a-z])(?! ed))|hallet|ustlen|sen ?de|use|switch to)(?![a-z])'
 const NAMED_FAMILY = new RegExp(
-  String.raw`(?:^|[^a-z])(haiku|sonnet|opus|fable)(?:'?(?:ye|ya|e|a|yle|yla|le|la))?(?:\s+ile)?,?(?=\s+(?:[a-z]+\s+){0,2}?` + `${REQUEST_VERB})`,
+  String.raw`(?:^|[^a-z])(haiku|sonnet|opus|fable)(?:'?(?:ye|ya|e|a|yle|yla|le|la))?(?:\s+ile)?,?(?=\s+(?:(?![a-z]*(?:[iu]n[iu]|s[iu]n[iu])\s)[a-z]+\s+){0,2}?` + `${REQUEST_VERB})`,
   'g',
 )
 const NAMED_EFFORT: readonly [RegExp, Effort][] = [
@@ -893,9 +893,26 @@ const NAMED_FAMILY_EN = /(?:^|[^a-z])(?:use|switch to|go with) (haiku|sonnet|opu
 
 export type NamedChoice = { override: Override; words: string[] }
 
+// Text the person pasted in is someone else's words: a model named there is no request.
+const PASTED = /<pasted_content[^>]*>[\s\S]*?<\/pasted_content[^>]*>/g
+
+// The sentence a match stands in: a question about an effort ("neden hep max
+// eforla çalışıyor?") asks for none.
+function sentenceAt(text: string, index: number): string {
+  const start = Math.max(text.lastIndexOf('.', index), text.lastIndexOf('?', index - 1), text.lastIndexOf('!', index), text.lastIndexOf('\n', index)) + 1
+  const ends = ['.', '?', '!', '\n'].map(mark => text.indexOf(mark, index)).filter(at => at >= 0)
+
+  return text.slice(start, ends.length === 0 ? text.length : Math.min(...ends) + 1)
+}
+
+// A sentence that asks why, or supposes ("… desem bu mümkün mü"), asks for no model.
+const NOT_A_REQUEST = /(?:^|[^a-z])(?:neden|niye|nicin|why|how come|desem|dersem|diyelim|varsayalim|mumkun mu|olabilir mi|what if|if i)(?![a-z])/
+
 export function namedChoice(raw: string): NamedChoice | undefined {
-  const text = normalize(prose(raw))
-  const families = [...text.matchAll(NAMED_FAMILY), ...text.matchAll(NAMED_FAMILY_EN)].sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+  const text = normalize(prose(raw.replace(PASTED, ' ')))
+  const families = [...text.matchAll(NAMED_FAMILY), ...text.matchAll(NAMED_FAMILY_EN)]
+    .filter(one => !NOT_A_REQUEST.test(sentenceAt(text, one.index ?? 0)))
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
   const last = families.at(-1)
   const family = FAMILY_WORDS.find(one => one === last?.[1])
   if (last !== undefined && family !== undefined) {
@@ -904,8 +921,8 @@ export function namedChoice(raw: string): NamedChoice | undefined {
 
     return { override: effort === undefined ? { family } : { family, effort }, words: [family, ...(effort === undefined ? [] : [effort])] }
   }
-  const alone = EFFORT_ALONE.exec(text)
-  if (alone !== null) {
+  const alone = [...text.matchAll(new RegExp(EFFORT_ALONE.source, 'g'))].find(one => !NOT_A_REQUEST.test(sentenceAt(text, one.index ?? 0)))
+  if (alone !== undefined) {
     const word = alone[1] ?? ''
     const effort: Effort = /max|maks|en yuksek/.test(word) ? 'max' : word === 'xhigh' ? 'xhigh' : word === 'yuksek' ? 'high' : word === 'orta' ? 'medium' : 'low'
 

@@ -780,6 +780,18 @@ describe('what real use taught (0.6)', () => {
     expect(classify('what changed in the last commit, summarize it')).toMatchObject({ tier: 0, confidence: 'high' })
   })
 
+  test('a model or an effort talked about, supposed or pasted in is no choice', () => {
+    // From real use: all three were taken as the person's choice (one ran at Opus · max).
+    expect(namedChoice('ve neden hep max eforla çalışıyor? ben mi açtım öyle bir özellik?')).toBeUndefined()
+    expect(namedChoice('opus ile büyük bir sohbette isek commit etmek için haikuya dönmesin çünkü opus ile devam edildiğinde iki kez önbellek bozulmuş olur')).toBeUndefined()
+    expect(namedChoice('bunu not al <pasted_content id="1">Sonnet high efor ile çalışsın</pasted_content id="1"> sonra bakarız')).toBeUndefined()
+    expect(namedChoice('bundan sonra önemli işler için opus kullan ama önemsiz işler için sonnet kullan desem bu mümkün mü')).toBeUndefined()
+    expect(namedChoice('haiku ölçümünü yap sonrasında commit ve pushla')).toBeUndefined()
+    // Asked for, they still are.
+    expect(namedChoice('opus ile devam edelim')?.override).toEqual({ family: 'opus' })
+    expect(namedChoice('neden max efor kullanıyorsun? max eforla düzelt')?.override).toEqual({ effort: 'max' })
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })
