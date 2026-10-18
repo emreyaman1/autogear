@@ -54,8 +54,13 @@ const LATIN_EXTRA: Record<string, string> = { ß: 'ss', æ: 'ae', œ: 'oe', ø: 
 
 // Lowercases and folds Turkish letters, so "Çalışmıyor" and "calismiyor" read alike;
 // other Latin accents come off the same way ("café", "über", "señor").
+// Folded, "dönüyor" (it returns: "500 hatası dönüyor") would read as
+// "donuyor" (it freezes), a hunt; it is said as what it means first.
+const RETURNS = /(^|[^a-zçğıöşü])dön(?:üyor|üyo|dürüyor)(?![a-zçğıöşü])/gi
+
 export function normalize(text: string): string {
   return text
+    .replace(RETURNS, '$1veriyor')
     .toLowerCase()
     .replace(/̇/g, '')
     .replace(/[çğıöşüâîû]/g, letter => FOLD[letter] ?? letter)

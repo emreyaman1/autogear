@@ -695,6 +695,15 @@ describe('what real use taught (0.6)', () => {
     expect(classify("README'deki yazım hatalarını düzelt").tier).toBe(0)
   })
 
+  test('"dönüyor" (it returns) is no "donuyor" (it freezes)', () => {
+    // Folding ö and ü made them one word: a plain error report read as a hang to hunt.
+    const report = classify("500 hatası dönüyor /api/orders çağrısında, loglarda 'Cannot read properties of undefined' var")
+    expect(report).toMatchObject({ tier: 2, reasons: ['hata ayıklama'] })
+    expect(report.hunt).toBeUndefined()
+    expect(classify('uygulama bazen donuyor, neden olduğunu bul')).toMatchObject({ tier: 3, hunt: 'located' })
+    expect(classify('ekran donuyor').hunt).toBe('located')
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })
