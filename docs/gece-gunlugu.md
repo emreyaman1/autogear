@@ -98,3 +98,9 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Test:** yeni test (dört sürdürme sözü, üç karşı örnek). 2.1.299 180/180, 2.1.295 180/180, `validate` uyarısız.
 - **Önce/sonra:** 2.111 etiketli mesajda değişiklik yok; gerçek kullanım tekrarı (FIELD) aynı. 98 gerçek mesajda ek değişiklik yok (o tek örnek Geliştirme 3'ten sonra zaten önceki kademesi T1 olan bir mesajın ardından geliyor).
 - **Bedel:** T0'dan sonraki her "devam" için bir Haiku sorusu (yaklaşık $0,0002) ve en az Sonnet.
+
+## Son kontrol ve bitiş
+
+- Son hâl: 2.1.299 180/180, 2.1.295 180/180, `validate` uyarısız. Başlangıca göre 2.111 etiketli mesajdan 2'si değişti (ikisi de iyi yönde), bütün özet satırları birebir aynı; dış ölçütte 741 görevden 1'i T1→T2.
+- Limit: 5 saatlik %34, haftalık %65 (Pro). Haftalık limit dolarsa kullanıcı 5 gün bekler; kalan işler (aşağıdaki "düzeltilmeyenler") ya riskli ya da kazancı küçük olduğu için burada durdum.
+- Rapor: `docs/gece-raporu.md`. `docs/sonraki-adimlar.md` güncellendi. Dal main'e katılmadı.
