@@ -302,6 +302,23 @@ const TO_FIX = word(
     words.TO_FIX_I18N.join('|'),
 )
 
+// Asked to put right: "düzelt", "fix", "korrigiere", "исправь".
+const FIX_VERB = word('duzelt|fix|correct|corrig|korrigier|beheb|arregl|исправ|修改|修正|改正|直し|直す|直して')
+// Typos are a chore of their own (TRIVIAL), in the languages TRIVIAL does not read too.
+const TYPO = word('typo|yazim|imla|faute(?:s)? de frappe|tippfehler|errata|опечат|错别字|誤字|タイプミス')
+
+// A text rather than a program: a README, the docs, a translation.
+const DOC = word(
+  'readme|docs?(?![a-z])|documentation|dokuman|dokumantasyon|belge(?:de|deki|yi|nin)?(?![a-z])|metin|metni|metindeki|yazi(?:si|daki|lar)|text(?![a-z])|cumle|paragraf|ceviri|translation|wording|changelog|' +
+    words.DOC_I18N.join('|'),
+)
+// Faults named as such: "hatalar", "errors", "Fehler".
+const ERRORS = word('hata|yanlis|error|mistake|fehler|erreur|faute|errores|ошибк|错误|错|間違|誤り')
+// A program failing: then the fault is a bug, whatever text it is in.
+const RUNTIME = word(
+  'calismiyor|calismadi|kiriliyor|patliyor|crash|exception|fail|build|derle|compil|test|sayfa|page|ekran|screen|konsol|console|server|sunucu|api(?![a-z])|link',
+)
+
 // Work to carry out beside a question cue: run, measure, install.
 const RUN = word('calistir|olc(?![a-z])|olcum(?:u)? yap|kur(?![a-z])|run(?![a-z])|measure|install|deploy|' + words.RUN_I18N.join('|'))
 
@@ -659,8 +676,14 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   }
 
   // T2: debugging with an error in hand, and writing tests.
+  const isReview = (REVIEW.test(rest) && !(feature.length > 0 && adds.length > 0)) || (READ.test(rest) && CLOSELY.test(rest) && TO_FIX.test(rest))
   if (hasError) {
     return rule(2, 'high', ['hata çıktısı'])
+  }
+  // "fix the errors in the README", "README'deki hataları düzelt": faults in a
+  // text, which a read finds; no program is failing, so no hunt.
+  if (DOC.test(rest) && FIX_VERB.test(rest) && ERRORS.test(rest) && !TYPO.test(rest) && !RUNTIME.test(rest) && !hasError && files === 0) {
+    return { ...rule(2, 'low', ['metindeki hataları düzeltmek']), floor: isReview ? 2 : 1 }
   }
   if (DEBUG.test(rest.replace(words.ERROR_MESSAGE_PHRASE, ' '))) {
     // "bu çalışmıyor, düzelt": no error, no place, no number, nothing said of
@@ -684,7 +707,7 @@ function classifyText(raw: string, { prevTier, frustrationStreak = 0, hasAttachm
   // A review of written work, a chore's words in it or not ("baştan oku, yazım
   // hatalarını düzelt"): no less than T2. A feature named with its verb ("add a
   // review form") is the feature's.
-  if ((REVIEW.test(rest) && !(feature.length > 0 && adds.length > 0)) || (READ.test(rest) && CLOSELY.test(rest) && TO_FIX.test(rest))) {
+  if (isReview) {
     return { ...rule(2, 'low', ['dikkatli okuma ve düzeltme']), floor: 2 }
   }
 

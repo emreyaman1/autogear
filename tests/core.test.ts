@@ -684,6 +684,17 @@ describe('what real use taught (0.6)', () => {
     expect(classify('devam', { prevTier: 2 })).toMatchObject({ tier: 2, source: 'inherit' })
   })
 
+  test('faults in a text are fixed by a read, not hunted: no less than T1, no hunt', () => {
+    for (const prompt of ['fix the errors in the README', "README'deki hataları düzelt", 'korrigiere die Fehler in der Anleitung', 'исправь ошибки в README', '修改文档里的错误']) {
+      const rule = classify(prompt)
+      expect([prompt, rule.hunt, rule.tier, rule.floor]).toEqual([prompt, undefined, 2, 1])
+    }
+    // A program failing is a bug wherever it shows; a chore stays a chore.
+    expect(classify('the docs page shows an error').hunt).toBe('vague')
+    expect(classify('fix the error in login.js').reasons[0]).toBe('hata ayıklama')
+    expect(classify("README'deki yazım hatalarını düzelt").tier).toBe(0)
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

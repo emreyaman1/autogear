@@ -528,3 +528,13 @@ export const RUN_I18N = [
   '运行', '跑一下', '测量', '安装',
   '実行', '測定', 'インストール',
 ]
+
+// A text rather than a program: the docs, a manual, a translation.
+export const DOC_I18N = [
+  'documentacion', 'manual', 'traduccion', 'texto',
+  'dokumentation', 'anleitung', 'ubersetzung', 'text',
+  'documentation', 'traduction', 'texte',
+  'документац', 'инструкци', 'перевод', 'текст',
+  '文档', '说明', '翻译', '文本',
+  'ドキュメント', '説明書', '翻訳', '文章',
+]
