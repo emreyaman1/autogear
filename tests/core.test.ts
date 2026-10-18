@@ -704,6 +704,16 @@ describe('what real use taught (0.6)', () => {
     expect(classify('ekran donuyor').hunt).toBe('located')
   })
 
+  test('a "why" about "çok", a loop or double quotes is no hunt; a crash, a freeze or a double order is', () => {
+    for (const prompt of ['bu klasörde neden çok dosya var?', 'neden bu döngüyü kullandın?', 'neden çift tırnak kullandın?']) {
+      const rule = classify(prompt)
+      expect([prompt, rule.hunt, rule.confidence]).toEqual([prompt, undefined, 'low'])
+    }
+    for (const prompt of ['uygulama neden çöktü?', 'neden ekran dondu', 'kullanıcılar öde düğmesine çift tıklayınca neden çift sipariş oluşuyor?']) {
+      expect([prompt, classify(prompt).hunt]).toEqual([prompt, 'located'])
+    }
+  })
+
   test('a model named in words is a choice; talk about a model is not', () => {
     expect(namedChoice('bu görevi sonnete maxa verir misin, yaratıcı işlerde daha iyi')?.override).toEqual({ family: 'sonnet', effort: 'max' })
     expect(namedChoice('haiku low ile yaptı, güvenmiyorum. opus sende göz gezdirip anlatır mısın?')?.override).toEqual({ family: 'opus' })

@@ -118,3 +118,10 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Değişiklik:** sadeleştirmeden önce Türkçe harfle yazılmış "dönüyor / dönüyo / döndürüyor", anlamı olan "veriyor" sözüne çevriliyor. Türkçe harfsiz yazılmış "donuyor" eskisi gibi donma sayılıyor (kullanıcı harfsiz yazınca iki anlam ayırt edilemiyor; yüksek tahmin daha güvenli yön).
 - **Test:** yeni test (holdout mesajı T2 "hata ayıklama", hata avı değil; "uygulama bazen donuyor…" ve "ekran donuyor" hâlâ hata avı). 2.1.299 182/182, 2.1.295 182/182, `validate` uyarısız.
 - **Önce/sonra:** 2.111 mesajda yalnızca bu mesaj değişti (Türkçe asıl sette ve 8 dillik setin Türkçesinde), ikisi de doğru yöne: holdout tam isabet %91 → %93, LANG tr %92 → %93, hata avı sayısı 10 → 9. Dış ölçüt aynı. **Dürüstlük:** holdout bu mesaj yüzünden "tüketilmiş" sayılmalı; bu artış kuralın genel başarısının kanıtı değil, yalnızca o tek hatanın düzeldiği.
+
+## Geliştirme 10: "neden çok …", "neden bu döngü" hata avı değil
+
+- **Sorun:** "bir hatanın sebebini bulmak" kuralı (T3, kesin, hata avı) "neden" + bir arıza sözü arıyor. Arıza sözleri kelime başı olarak çok genişti: "cok" (çöktü için) Türkçedeki en sık kelimelerden "çok"u da tutuyordu; "don" (dondu için) "döngü", "donanım" ve İngilizce "don't"u; "cift" (çift sipariş için) "çift tırnak"ı. Sonuç: "bu klasörde neden çok dosya var?", "neden bu döngüyü kullandın?", "neden çift tırnak kullandın?" kesin T3 hata avıydı (Haiku'ya sorulmadan Sonnet · high, 'dengeli'de Opus · high).
+- **Değişiklik:** bu üç söz yalnızca arıza bildiren biçimleriyle sayılıyor: "çöktü/çöküyor/çökme", "dondu/donuyor/donma", "çift sipariş/kayıt/ödeme/işlem/mail". Bu sorular artık "tek zor işareti" (T2, emin değil): Haiku'ya soruluyor, en az T1.
+- **Test:** yeni test (üç soru hata avı değil; "uygulama neden çöktü?", "neden ekran dondu", "çift tıklayınca neden çift sipariş" hâlâ hata avı). 2.1.299 183/183, 2.1.295 183/183, `validate` uyarısız.
+- **Önce/sonra:** 2.111 etiketli mesajda 0 değişiklik. Dış ölçütte 1 görev (etiket T1) T3'ten T2'ye indi, doğru yöne (büyük olasılıkla İngilizce "don't" yüzünden yanlış tutuluyordu). 98 gerçek mesajda ek değişiklik yok.

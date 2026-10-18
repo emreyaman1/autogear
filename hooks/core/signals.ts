@@ -194,8 +194,11 @@ const DECISION = word(
 
 const WHY = word('neden|niye|nicin|sebep|sebeb|why|' + words.WHY_I18N.join('|'))
 const HUNT = word('bul|find|figure out|arastir|investigat|incele|tespit|anla|understand|debug|' + words.HUNT_I18N.join('|'))
+// "çok" (very) folds like "çöktü" (it crashed), "döngü" (a loop) like "dondu"
+// (it froze), "çift tırnak" like "çift sipariş": the forms that name a fault.
 const FAILURE = word(
-  'hata|error|fail|crash|cok|don|takil|bozul|broken|yanlis|wrong|duplicate|cift|iki kez|twice|kayb|lost|null|undefined|yavas|slow|' + words.FAILURE_I18N.join('|'),
+  'hata|error|fail|crash|cok(?:tu|uyor|uyo|me|er|ecek)(?![a-z])|don(?:uyor|uyo|du|ma|ar|ak)(?![a-z])|takil|bozul|broken|yanlis|wrong|duplicate|cift (?:siparis|kayit|odeme|islem|mail|e-?posta|ucret|cekim)|ciftlen|iki kez|twice|kayb|lost|null|undefined|yavas|slow|' +
+    words.FAILURE_I18N.join('|'),
 )
 
 // "X'ten Y'ye taşı/geçir", "migrate ... from X to Y".

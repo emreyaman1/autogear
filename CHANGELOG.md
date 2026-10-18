@@ -8,6 +8,7 @@ Each release, newest first. The evidence behind each change is in `docs/sonraki-
 - Work asked for before an "explain" ("bump the version, update the install, tell me how to try it") is no longer a sure question; "yes, push" is the push, not the work before it; "under review" is no request to look into something.
 - "Fix the errors in the README" is a text to read and put right (T2), not a vague bug hunt sent to high effort; typos stay a chore.
 - "500 hatası dönüyor" (it returns an error) is no longer read as "donuyor" (it freezes), a hunt.
+- "Why are there so many files here?" ("çok"), "why this loop?" or an English "don't" no longer reads as a crash or a freeze to hunt.
 - Tests, builds, commits and pushes run in PowerShell count as they do in Bash, for the snowball brake and the clean-conversation offer.
 
 ## 0.12.2 (18 October 2026)
