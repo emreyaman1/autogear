@@ -35,6 +35,10 @@ export type Entry = {
   wanted?: { family: Family; effort: Effort }
   // Chosen in plan mode.
   isPlanning?: true
+  // The message's language and size, for a report shared without its words.
+  lang?: string
+  chars?: number
+  words?: number
 }
 
 export const MAX_ENTRIES = 200
@@ -85,6 +89,8 @@ export function readJournal(stored: unknown): Entry[] {
         ...(FAMILIES.includes(value.answered as Family) ? { answered: value.answered as Family } : {}),
         ...readWanted(value.wanted),
         ...(value.isPlanning === true ? { isPlanning: true as const } : {}),
+        ...(typeof value.lang === 'string' ? { lang: value.lang } : {}),
+        ...(typeof value.chars === 'number' ? { chars: num(value.chars), words: num(value.words) } : {}),
       },
     ]
   })
@@ -120,6 +126,41 @@ export function markLast(entries: Entry[], mark: Mark): Entry | undefined {
   }
 
   return last
+}
+
+// What a shared report says beside a decision: the setup it was made in.
+export type ShareFacts = { autogear: string; claudeCode: string | undefined; profile: string }
+
+// A decision to paste into a report of a wrong choice: everything about it but
+// the message's words (its language and size only). The marked or flagged
+// decision nearest the end, else the last one.
+export function shareText(entries: readonly Entry[], facts: ShareFacts): string {
+  const entry = [...entries].reverse().find(isDoubtful) ?? entries.at(-1)
+  if (entry === undefined) {
+    return L('No decision to share yet.', 'Henüz paylaşılacak bir karar yok.')
+  }
+  const wanted = entry.wanted === undefined ? '' : ` · wanted ${FAMILY_NAMES[entry.wanted.family]} · ${entry.wanted.effort}`
+  const lines = [
+    `autogear ${facts.autogear} · Claude Code ${facts.claudeCode ?? '?'} · profile ${facts.profile}`,
+    `message: ${entry.lang ?? '?'} · ${entry.chars ?? '?'} chars · ${entry.words ?? '?'} words`,
+    `choice: T${entry.tier} · ${FAMILY_NAMES[entry.family]} · ${entry.effort} · source ${entry.source}${entry.isShadow === true ? ' · shadow' : ''}${entry.isPlanning === true ? ' · plan mode' : ''}`,
+    `picker: ${entry.ceiling === undefined ? '?' : FAMILY_NAMES[entry.ceiling]}${wanted}`,
+    `why: ${(entry.reasons ?? []).join('; ') || '?'}`,
+    `flags: ${entry.flags.join('; ') || 'none'} · mark: ${entry.mark ?? 'none'}`,
+  ]
+
+  return [
+    L(
+      'Paste this into a "Wrong model or effort" report (github.com/emreyaman1/autogear/issues). It holds no words of your message, only its language and size and the cue words the rules matched. Say there what the work really needed.',
+      'Bunu bir "Wrong model or effort" kaydına yapıştırın (github.com/emreyaman1/autogear/issues). Mesajınızın hiçbir kelimesini içermez; yalnızca dilini, uzunluğunu ve kuralların eşleştiği ipucu sözlerini. Orada işin gerçekte ne istediğini yazın.',
+    ),
+    '',
+    '```',
+    ...lines,
+    '```',
+    '',
+    L('Nothing is sent: copying it is yours to do.', 'Hiçbir şey gönderilmez: kopyalamak sizin elinizde.'),
+  ].join('\n')
 }
 
 const two = (value: number): string => String(value).padStart(2, '0')

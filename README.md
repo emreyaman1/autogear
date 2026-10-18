@@ -68,6 +68,7 @@ Or say it in words: "use opus", "switch to sonnet at max", "go with haiku", "max
 | `/gear savings` | the savings card (see below) |
 | `/gear log` | the log of autogear's latest decisions and the doubtful ones |
 | `/gear wrong weak\|strong` | mark the latest decision: model too weak, or more than the work needed |
+| `/gear share` | the latest marked or doubtful decision as a block to paste into a "wrong choice" report: no words of the message, only its language, size and the cue words matched |
 | `/gear reset` | reset the savings counter and the log |
 | `/gear on` / `/gear off` | turn autogear on / off (off: the picker's model is used) |
 | `/gear shadow` | shadow mode: choose and write it down, apply nothing |
@@ -123,7 +124,7 @@ A bug report counts as clear when it holds the error, a file, code, a number, th
 The classifier numbers below were measured on labels we wrote. To see how autogear does on your own work, it keeps a log of its decisions on your machine: the start of each message (100 characters), the tier, the model and effort that answered, what autogear wanted when the picker cut it, the source of the choice, what the turn cost, and what happened next. The last 200 are kept.
 
 - `/gear log` shows the latest 25 as a table, the tiers used, and the **doubtful decisions**: those the work itself called into question (you complained and autogear moved up a tier; the tests or build failed at the end of the turn) and those you marked.
-- When a decision was wrong, say so right after the answer: `/gear wrong weak` (the model was too weak) or `/gear wrong strong` (stronger than the work needed). The mark lands on the latest message.
+- When a decision was wrong, say so right after the answer: `/gear wrong weak` (the model was too weak) or `/gear wrong strong` (stronger than the work needed). The mark lands on the latest message. To tell the project, `/gear share` prints that decision as a block for a "Wrong model or effort" report on GitHub, without the words of your message; nothing is sent unless you paste it.
 - The doubtful share is a floor: a wrong choice nobody noticed is not counted. With a few days of use it shows which kinds of message the rules get wrong, which is where to tune next.
 - `/gear reset` clears the log. It never leaves your machine.
 
@@ -337,7 +338,7 @@ The last two call real models and spend usage; Haiku answers are cached under `e
 3. `node scripts/harvest.mjs` gathers those choices from the transcripts into `eval/.work/harvest.json`; labeled, they become a real-use set to replay the next version over.
 4. Only then `/gear on`.
 
-**Trying a change in your own Claude Code.** Claude Code runs an installed copy of the plugin, not the folder. After editing, raise `version` in `.claude-plugin/plugin.json`, then:
+**Trying a change in your own Claude Code.** Claude Code runs an installed copy of the plugin, not the folder. After editing, raise `version` in `.claude-plugin/plugin.json` and `AUTOGEAR_VERSION` in `hooks/core/version.ts`, then:
 
 ```bash
 claude plugin marketplace update autogear
@@ -395,7 +396,7 @@ What it calls on its own:
 autogear has no server and makes no network request of its own. Everything it keeps stays in the plugin's store on your machine, the place Claude Code gives every plugin:
 
 - your settings (mode, profile, language, the switches);
-- the decision log: for each of the last 200 messages its first 100 characters, the tier, the model and effort, the reasons, the cost; `/gear reset` clears it;
+- the decision log: for each of the last 200 messages its first 100 characters, its language and length, the tier, the model and effort, the reasons, the cost; `/gear reset` clears it. `/gear share` prints one decision from it without the message's words, for you to paste into a report if you want to; it sends nothing;
 - the savings totals, and the hand-over note you pressed "clean conversation" for (it is replaced by the next one).
 
 `/gear doctor` reads exactly two environment variables, the one Claude Code has for a fixed effort and the one for a fixed helper model, to tell you whether either is set; their names are in `hooks/register.tsx` and in the list that `claude plugin validate` prints. No other variable or setting is read, and nothing it reads is sent anywhere.

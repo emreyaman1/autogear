@@ -204,3 +204,11 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 
 - **Bu ölçüm neyi cevaplayacak:** dalın kodu (yeni PowerShell kancası dahil) gerçek Claude Code'da yükleniyor ve seçtiği modeli gerçekten uyguluyor mu?
 - **Sonuç (`node scripts/smoke.mjs`, $0,15):** üç mesajın üçü de beklenen modelle cevaplandı: önemsiz soru Haiku, `+opus` Opus, zor tasarım sorusu Sonnet (tasarruf profili). PowerShell kancasının gerçek bir PowerShell komutunda tetiklendiği canlı denenmedi (sahte motorla test edildi; modül gerçek yükleyicide sorunsuz yüklendi).
+
+## Geliştirme 16 (adım 18b, kullanıcı kararı): `/gear share`, yanlış seçimi mesajın kelimeleri olmadan paylaşmak
+
+- **Ne:** yeni komut `/gear share` (eski Türkçe adlar gibi `/gear paylas` da çalışıyor). Günlükteki son işaretli ya da şüpheli kararı (yoksa son kararı) bir kod bloğu olarak yazar: autogear ve Claude Code sürümü, profil; mesajın dili, karakter ve kelime sayısı; kademe, model, efor, kaynak; seçicinin modeli; gerekçeler (kuralların eşleştiği ipucu sözleri); işaretler. **Mesajın kelimeleri yok.** Hiçbir şey gönderilmez; kullanıcı isterse kopyalayıp GitHub'daki "Wrong model or effort" kaydına yapıştırır.
+- Bunun için günlük artık her karar için mesajın dilini (tr, en, ru, zh, ja, ko ya da "other") ve uzunluğunu da saklıyor (eski kayıtlar sorunsuz okunuyor; onlarda "?"). README'lerin Gizlilik bölümü bunu söylüyor.
+- GitHub'daki "Wrong model or effort" formu artık önce bu bloğu istiyor; mesajın kendisi isteğe bağlı oldu.
+- autogear'ın sürümü kodda da yazılı olmalıydı (`AUTOGEAR_VERSION`, `hooks/core/version.ts`): testler `plugin.json`'ı okuyamıyor (motor yalnızca kod dosyası yüklüyor), bu yüzden ikisini birlikte yükseltmek README'nin geliştirme adımlarına yazıldı.
+- **Test:** yeni yönlendirici testi: iki tur, ikincisi `/gear wrong weak` ile işaretleniyor; `/gear paylas` çıktısında "message: tr · 24 chars · 4 words", "choice: T0 · Haiku · low", "mark: zayif" var, iki mesajın hiçbir kelimesi yok. 2.1.299 207/207, 2.1.295 207/207, `validate` uyarısız. Sınıflandırma değişmedi (2.541 mesajda 0).

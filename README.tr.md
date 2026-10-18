@@ -68,6 +68,7 @@ Ya da düz yazıyla söyle: "bu görevi sonnet'e max ile ver", "opus ile yap", "
 | `/gear savings` | tasarruf kartı (aşağıda) |
 | `/gear log` | autogear'ın son kararlarının günlüğü ve şüpheli olanlar |
 | `/gear wrong weak\|strong` | son kararı işaretle: model çok zayıftı, ya da işin gerektirdiğinden güçlüydü |
+| `/gear share` | son işaretli ya da şüpheli kararı, bir "yanlış seçim" kaydına yapıştırılacak bir blok olarak verir: mesajın kelimeleri yok, yalnızca dili, uzunluğu ve eşleşen ipucu sözleri |
 | `/gear reset` | tasarruf sayacını ve günlüğü sıfırla |
 | `/gear on` / `/gear off` | autogear'ı aç / kapat (kapalıyken seçicideki model kullanılır) |
 | `/gear shadow` | gölge mod: seç ve yaz, hiçbirini uygulama |
@@ -123,7 +124,7 @@ Bir hata bildirimi şunlardan birini içeriyorsa net sayılır: hata çıktısı
 Aşağıdaki sınıflandırma rakamları bizim yazdığımız etiketlerle ölçüldü. Kendi işlerinde autogear'ın nasıl yaptığını görmek için kararlarının günlüğünü makinende tutar: her mesajın başı (100 karakter), kademe, cevap veren model ve efor, seçici kırptıysa autogear'ın istediği, seçimin kaynağı, turun maliyeti ve sonrasında ne olduğu. Son 200 karar saklanır.
 
 - `/gear log` son 25 kararı tablo olarak, kullanılan kademeleri ve **şüpheli kararları** gösterir: işin kendisinin sorguladığı kararlar (şikâyet ettin ve autogear bir kademe yükseltti; turun sonunda testler ya da derleme kırıktı) ve senin işaretlediklerin.
-- Bir karar yanlışsa cevaptan hemen sonra söyle: `/gear wrong weak` (model çok zayıftı) ya da `/gear wrong strong` (işin gerektirdiğinden güçlüydü). İşaret son mesaja düşer.
+- Bir karar yanlışsa cevaptan hemen sonra söyle: `/gear wrong weak` (model çok zayıftı) ya da `/gear wrong strong` (işin gerektirdiğinden güçlüydü). İşaret son mesaja düşer. Projeye bildirmek için `/gear share` o kararı GitHub'daki "Wrong model or effort" kaydına yapıştırılacak bir blok olarak yazar; mesajının kelimeleri içinde yok, sen yapıştırmadıkça hiçbir şey gönderilmez.
 - Şüpheli oranı bir tabandır: kimsenin fark etmediği yanlış seçimler sayılmaz. Birkaç günlük kullanımla kuralların hangi tür mesajlarda yanıldığını gösterir, bir sonraki ayar da orada.
 - `/gear reset` günlüğü siler. Makinenden hiç çıkmaz.
 
@@ -337,7 +338,7 @@ Son ikisi gerçek model çağrısı yapar, biraz kota harcar; Haiku cevapları `
 3. `node scripts/harvest.mjs` bu seçimleri oturum kayıtlarından `eval/.work/harvest.json` dosyasına toplar; etiketlenince bir sonraki sürümün üzerinden yeniden oynatılacağı bir gerçek kullanım kümesi olurlar.
 4. Ancak ondan sonra `/gear on`.
 
-**Bir değişikliği kendi Claude Code'unda denemek.** Claude Code klasörü değil, eklentinin kurulu bir kopyasını çalıştırır. Düzenledikten sonra `.claude-plugin/plugin.json` içindeki `version` değerini yükselt, sonra:
+**Bir değişikliği kendi Claude Code'unda denemek.** Claude Code klasörü değil, eklentinin kurulu bir kopyasını çalıştırır. Düzenledikten sonra `.claude-plugin/plugin.json` içindeki `version` değerini ve `hooks/core/version.ts` içindeki `AUTOGEAR_VERSION`'ı yükselt, sonra:
 
 ```bash
 claude plugin marketplace update autogear
@@ -395,7 +396,7 @@ Kendi başına çağırdıkları:
 autogear'ın sunucusu yoktur ve kendi başına hiçbir ağ isteği yapmaz. Sakladığı her şey makinende, Claude Code'un her eklentiye verdiği depoda durur:
 
 - ayarların (mod, profil, dil, anahtarlar);
-- karar günlüğü: son 200 mesajın her biri için ilk 100 karakteri, kademe, model ve efor, gerekçeler, maliyet; `/gear reset` siler;
+- karar günlüğü: son 200 mesajın her biri için ilk 100 karakteri, dili ve uzunluğu, kademe, model ve efor, gerekçeler, maliyet; `/gear reset` siler. `/gear share` bunlardan bir kararı mesajın kelimeleri olmadan yazar, istersen bir kayda yapıştırman için; hiçbir şey göndermez;
 - tasarruf toplamları ve "temiz sohbet"e bastığın devir notu (bir sonrakiyle değişir).
 
 `/gear doctor` tam olarak iki ortam değişkenini okur: Claude Code'un sabit efor için olanı ve sabit yardımcı modeli için olanı; ikisinden biri ayarlı mı, onu söylemek için. Adları `hooks/register.tsx` dosyasında ve `claude plugin validate`'in yazdığı listede. Başka hiçbir değişken ya da ayar okunmaz, okuduğu hiçbir şey bir yere gönderilmez.

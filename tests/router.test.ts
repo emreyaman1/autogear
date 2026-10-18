@@ -679,3 +679,19 @@ test('after a /clear the band still shows the state autogear is in', async ($, o
   expect(await band.find({ type: 'Text', text: /önerirdi/ })).toBeDefined()
   await band.unmount()
 })
+
+test('/gear share gives the doubtful decision without a word of the message', async ($, on) => {
+  world(on)
+  expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'share' }))).toContain('Henüz paylaşılacak bir karar yok')
+  await turnOn($, 't1', 'müşteri faturalarındaki toplamı yuvarlayan fonksiyonu kaldır', 'claude-sonnet-5-5', { read: 1000, write: 100, output: 50 })
+  await turnOn($, 't2', 'bu fonksiyon ne yapıyor?', 'claude-haiku-5-5', { read: 1000, write: 100, output: 50 })
+  await $.command.run({ command: 'gear', args: 'wrong weak' })
+  const shared = JSON.stringify(await $.command.run({ command: 'gear', args: 'paylas' }))
+  expect(shared).toContain('message: tr · 24 chars · 4 words')
+  expect(shared).toContain('choice: T0 · Haiku · low')
+  expect(shared).toContain('mark: zayif')
+  // None of the message's words, nor the other message's.
+  for (const word of ['fonksiyon ne', 'yapıyor', 'faturalar', 'yuvarlayan']) {
+    expect(shared).not.toContain(word)
+  }
+})

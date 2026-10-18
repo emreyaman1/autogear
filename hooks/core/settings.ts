@@ -92,7 +92,7 @@ const OFF = new Set(['kapa', 'kapat', 'kapali', 'off', 'hayir', '0'])
 const PROFILE_ALIASES: Record<string, ProfileId> = { saver: 'tasarruf', balanced: 'dengeli', quality: 'kalite' }
 
 // What `/gear <verb> <value>` asks for: new settings, the status, or the help.
-export function applyCommand(settings: Settings, verb: string, value: string): Settings | 'status' | 'savings' | 'journal' | 'mark' | 'reset' | 'doctor' | 'help' {
+export function applyCommand(settings: Settings, verb: string, value: string): Settings | 'status' | 'savings' | 'journal' | 'mark' | 'share' | 'reset' | 'doctor' | 'help' {
   const isOn = ON.has(value) ? true : OFF.has(value) ? false : undefined
   switch (verb) {
     case '':
@@ -110,6 +110,9 @@ export function applyCommand(settings: Settings, verb: string, value: string): S
     case 'yanlis':
     case 'wrong':
       return 'mark'
+    case 'share':
+    case 'paylas':
+      return 'share'
     case 'sifirla':
     case 'reset':
       return 'reset'

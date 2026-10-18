@@ -5,6 +5,10 @@
 // switches itself off if its choices stop taking effect.
 export const TESTED_THROUGH = '2.1.299'
 
+// autogear's own version, for a shared report: raised together with the
+// version in .claude-plugin/plugin.json (a test cannot read that file).
+export const AUTOGEAR_VERSION = '0.12.2'
+
 function parts(version: string): number[] {
   return (version.match(/\d+/g) ?? []).slice(0, 3).map(Number)
 }

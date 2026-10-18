@@ -15,19 +15,19 @@ import { savingsCard, type LimitRow } from './card'
 import { doctorText, type Facts } from './core/doctor'
 import { cleanNote, dayOf, handoverContext, HANDOVER_TOKENS, isWorkDone, notePrompt, resumeLine } from './core/handover'
 import { classifierPrompt, parseTier, RUBRIC } from './core/llm'
-import { addEntry, flagLast, journalText, markLast, markName, readJournal, snippet, type Mark } from './core/journal'
+import { addEntry, flagLast, journalText, markLast, markName, readJournal, shareText, snippet, type Mark } from './core/journal'
 import { asEffort, displayModel, FAMILIES, FAMILY_NAMES, familyOf, MODEL_IDS, type Effort, type Family } from './core/models'
 import { pace, paceWarning } from './core/pacing'
 import { decide, type Decision } from './core/policy'
 import { costOf, readTokens, turnMoney, usd } from './core/prices'
 import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from './core/savings'
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
-import { normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
+import { languageOf, normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
 import { readRule, settle, type Task } from './core/settle'
 import { BADGE_COLORS, BADGE_HEIGHT, badgeName, badgeSvg, badgeWidth } from './core/switch'
 import { asLangSetting, getLang, L, pct, profileName, reasonText, resolveLang, setLang, sourceText, systemLocale, tierName } from './core/text'
 import { tierSpec, toTier, type Tier } from './core/tiers'
-import { isNewerThan, TESTED_THROUGH } from './core/version'
+import { AUTOGEAR_VERSION, isNewerThan, TESTED_THROUGH } from './core/version'
 import type { AutogearMode } from '../types'
 
 // Prompts a person sent: the rest (task notifications, peers, plugins) carry
@@ -87,6 +87,7 @@ const help = (): string =>
     `| \`/gear savings\` | ${L("spent, what it would have cost on the picker's model, saved", 'harcama, seçici modeliyle olacak harcama, tasarruf')} |`,
     `| \`/gear log\` | ${L("autogear's last decisions and the doubtful ones", "autogear'ın son kararları ve şüpheli olanlar")} |`,
     `| \`/gear wrong weak\` · \`strong\` | ${L("mark the last message's decision: the model was too weak · stronger than needed", 'son mesajın kararını işaretle: model çok zayıftı · gereğinden güçlüydü')} |`,
+    `| \`/gear share\` | ${L('the last doubtful decision, to paste into a report, without the words of your message', 'son şüpheli kararı, mesajınızın kelimeleri olmadan, bir kayda yapıştırmak için')} |`,
     `| \`/gear reset\` | ${L('reset the savings counter and the log', 'tasarruf sayacını ve günlüğü sıfırla')} |`,
     `| \`/gear on\` · \`/gear off\` | ${L("turn autogear on · off (off, the picker's model is used)", "autogear'ı aç · kapat (kapalıyken seçici model kullanılır)")} |`,
     `| \`/gear shadow\` | ${L("shadow: chooses and writes it down but applies nothing, the picker's model answers; to try a new version without touching your work", 'gölge: seçer ve yazar ama uygulamaz, cevabı seçicideki model verir; yeni bir sürümü işini etkilemeden denemek için')} |`,
@@ -100,7 +101,7 @@ const help = (): string =>
     '',
     L('Tags at the start of a message: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap`, `+deep`.', 'Mesajın başına yazılan etiketler: `+haiku` `+sonnet` `+opus`, `+low` … `+max`, `+cheap`, `+deep`.'),
     L('Or in words: "give this task to sonnet with max", "use opus".', 'Ya da yazıyla: "bu görevi sonnet\'e max ile ver", "opus ile yap", "use opus".'),
-    L('The old Turkish names (oto, sabitle, golge, tasarruf, kayit, yanlis, sifirla, profil, sor, not, bant) still work.', 'Eski Türkçe adlar (oto, sabitle, golge, tasarruf, kayit, yanlis, sifirla, profil, sor, not, bant) hâlâ çalışır.'),
+    L('The old Turkish names (oto, sabitle, golge, tasarruf, kayit, yanlis, paylas, sifirla, profil, sor, not, bant) still work.', 'Eski Türkçe adlar (oto, sabitle, golge, tasarruf, kayit, yanlis, paylas, sifirla, profil, sor, not, bant) hâlâ çalışır.'),
   ].join('\n')
 
 // What the router remembers within one load of the module.
@@ -539,6 +540,9 @@ async function noteDecision(
         ...(decision.isShadow === true ? { isShadow: true as const, ...(answered === undefined ? {} : { answered }) } : {}),
         ...(decision.wanted === undefined ? {} : { wanted: decision.wanted }),
         ...(decision.isPlanning === true ? { isPlanning: true as const } : {}),
+        lang: languageOf(decision.prompt),
+        chars: decision.prompt.trim().length,
+        words: decision.prompt.split(/\s+/).filter(Boolean).length,
       })
     }
     await $.store.set('journal', journal)
@@ -674,7 +678,7 @@ async function loadSettings($: EngineInterface, state: State): Promise<void> {
   await $.command.register({
     name: 'gear',
     description: L('autogear: automatic model and effort choice', 'autogear: otomatik model ve efor seçimi'),
-    argumentHint: '[on | off | shadow | profile <name> | haiku | ask | note | band | lang | savings | log | wrong | reset | doctor]',
+    argumentHint: '[on | off | shadow | profile <name> | haiku | ask | note | band | lang | savings | log | wrong | share | reset | doctor]',
   })
   await noticeVersion($)
   if ((await $.store.get('tipShown')) !== true) {
@@ -752,6 +756,17 @@ async function runCommand($: EngineInterface, state: State, args: string): Promi
         `İşaretlendi: "${entry.text}" için ${FAMILY_NAMES[entry.family]} · ${entry.effort} ${markName(mark)}.`,
       ),
     }
+  }
+  if (changed === 'share') {
+    let claudeCode: string | undefined
+    try {
+      const seen = await $.session.version()
+      claudeCode = seen.base ?? seen.version
+    } catch {
+      claudeCode = undefined
+    }
+
+    return { text: shareText(readJournal(await $.store.get('journal')), { autogear: AUTOGEAR_VERSION, claudeCode, profile: profileName(state.settings.profile) }) }
   }
   if (changed === 'reset') {
     await $.store.set('journal', [])

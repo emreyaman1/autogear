@@ -558,6 +558,34 @@ const TURKISH_OR_ENGLISH = new RegExp(
   'i',
 )
 
+// A message's language, as far as a shared report needs it: Turkish, English,
+// or the script it is written in. Never the words.
+export function languageOf(raw: string): string {
+  const text = withoutNotes(raw)
+  if (/[぀-ヿ]/.test(text)) {
+    return 'ja'
+  }
+  if (/[가-힯]/.test(text)) {
+    return 'ko'
+  }
+  if (/[㐀-鿿]/.test(text)) {
+    return 'zh'
+  }
+  if (/[Ѐ-ӿ]/.test(text)) {
+    return 'ru'
+  }
+  if (!isTurkishOrEnglish(text)) {
+    return 'other'
+  }
+
+  return TURKISH_LETTERS.test(text) || TURKISH_ONLY.test(text) ? 'tr' : 'en'
+}
+
+const TURKISH_ONLY = new RegExp(
+  '(?:^|[^a-zçğıöşü])(?:bu|bir|için|icin|ile|ve|var|yok|mı|mi|mu|mü|değil|gibi|ama|çok|neden|nasıl|olarak|sonra|daha|evet|tamam|yap|ekle|yaz|sil|göster|düzelt|değiştir|bunu|bana|lazım)(?![a-zçğıöşü])',
+  'i',
+)
+
 export function isTurkishOrEnglish(raw: string): boolean {
   const text = withoutNotes(raw)
   if (NON_LATIN.test(text)) {

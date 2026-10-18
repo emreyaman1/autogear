@@ -3,18 +3,21 @@ description: The rules read a message at the wrong tier
 labels: [classifier]
 body:
   - type: textarea
+    id: share
+    attributes:
+      label: What /gear share printed
+      description: Mark the decision first (/gear wrong weak or strong), then type /gear share and paste its block here. It holds no words of your message, only its language, its size and the cue words the rules matched.
+      render: text
+  - type: textarea
     id: message
     attributes:
-      label: The message
-      description: The text, or a rewrite of it that behaves the same. Leave out anything private.
-    validations:
-      required: true
+      label: The message (optional)
+      description: The text, or a rewrite of it that behaves the same, if you are willing to share it. Leave out anything private. The block above is enough on its own.
   - type: input
     id: language
     attributes:
       label: Language of the message
-    validations:
-      required: true
+      description: Only if you left the block out.
   - type: dropdown
     id: tier
     attributes:

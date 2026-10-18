@@ -828,3 +828,4 @@ describe('settle', () => {
     expect(settled.task).toEqual({ tier: 3 })
   })
 })
+
