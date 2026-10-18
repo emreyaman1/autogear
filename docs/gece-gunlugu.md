@@ -183,3 +183,11 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 - **Değişiklik:** bu kural artık "emin değil, alt sınır T3": Haiku T4 ya da T3 der, T3'ün altına inilmiyor. "Bunu 5. kez soruyorum", "3. kez deniyorum" gibi rakamla yazılmış tekrar artık tekrarlayan başarısızlık (önceden yalnız "üçüncü kez" yazıyla tanınıyordu). Dil tanımaya "bunu, buna, bana, sana, lazım, hâlâ, kez, olmuyor…" eklendi: "Bunu 5. kez soruyorum: PDF hâlâ bozuk" yabancı dil sanılıyordu.
 - **Ölçüm (Haiku ile, önbellekten, $0):** bu kuralın tuttuğu 16 etiketli mesajda (sekiz dil) doğru 13 → 15: iki T3 mesajı yerini buldu, T2 bir mesaj T4'ten T3'e indi; T4 olan 12 mesajın hepsi T4'te kaldı ("5. kez" mesajı artık kesin T4).
 - **Test:** yeni test. 2.1.299 205/205, 2.1.295 205/205, `validate` uyarısız. Kurallar tek başına: 2.541 mesajda kademe değişmedi, 58 mesajda yalnız güven düştü (Türkçe ve İngilizcede Haiku'ya sorulan oranı 2 puan arttı).
+
+## Dürüst ölçüm: dış ölçüt, kurallar + Haiku (main'in kuralları ↔ bu dal)
+
+- **Bu ölçüm neyi cevaplayacak:** iki T4 kuralını "emin değil" yapmak uzun görev metinlerinde Haiku'ya sorulan oranı artırdı (Terminal-Bench %44 → %60). Bu, autogear'ın gerçekte verdiği kararı iyileştiriyor mu? Cevap için saklı yarıya (kurallar yazılırken hiç bakılmayan 350 görev) bakılıyor; o yarının tek tek görevlerine bakılmadı.
+- **Yöntem:** `node eval/external.mjs --haiku` önce bu dalda (157 yeni Haiku sorusu, $0,12), sonra aynı Haiku cevaplarıyla main'in kurallarında (`C:\gearbox-base`, main @ 136ec60'ın ayrı bir kopyası; yeni soru gerekmedi).
+- **Sonuç, saklı yarı (n=350):** tam isabet %29 → **%35**; ±1 %76 → **%85**; fazla tahmin 218 → **192**; eksik 31 → 34; ciddi hata 5 → **6** (%1,4 → %1,7; hedef en çok %2); sıra uyumu 0,19 → 0,23; Haiku'ya sorulan %27 → %43.
+- **Tamamı:** SWE-bench (500) tam %34 → %39, ±1 %80 → %89, ciddi 1 → 1; Terminal-Bench (241) tam %27 → %31, ±1 %73 → %78, ciddi 7 → 8.
+- **Okuma:** gerçek kararda belirgin iyileşme, özellikle fazla tahminde (gereğinden pahalı model). Bedel: Haiku'ya daha sık soruluyor (her soru yaklaşık $0,0002–0,0008 ve 1–2 saniye) ve Terminal-Bench'te bir ciddi hata fazlası. Tek çalıştırma; Haiku aynı soruya her zaman aynı cevabı vermiyor.
