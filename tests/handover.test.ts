@@ -73,15 +73,15 @@ async function say($: Engine, text: string): Promise<void> {
   await $.prompt.submit({ text, wait: false, origin: { kind: 'composer' } })
 }
 
-// One turn of the main thread that runs `command` in Bash.
-async function turnWith($: Engine, turnId: string, command: string): Promise<void> {
+// One turn of the main thread that runs `command` in Bash, or in PowerShell.
+async function turnWith($: Engine, turnId: string, command: string, tool: 'Bash' | 'PowerShell' = 'Bash'): Promise<void> {
   await say($, 'testleri çalıştır ve commit et')
   const stream = $.turn.step({ turnId, index: 0, model: 'claude-opus-5-5', effort: 'high', messageCount: 1 })
   for await (const _chunk of stream) {
     // Drained only to reach the result.
   }
   await stream.result
-  await $.tool.call({ tool: 'Bash', command })
+  await $.tool.call({ tool, command })
   await $.turn.complete({ turnId, answer: 'tamam', durationMs: 10, isAborted: false, reason: 'answer', usage: { model: 'claude-opus-5-5', ...ZERO } })
   // The note is written after the turn ends, not awaited by it.
   for (let i = 0; i < 20; i += 1) {
@@ -105,6 +105,12 @@ describe('the hand-over offer', () => {
       await ui.unmount()
     })
   }
+
+  test('a commit run in PowerShell is a finished piece of work too', async ($, on) => {
+    const seen = world($, on)
+    await turnWith($, 't1', 'git commit -m "adım 17"', 'PowerShell')
+    expect(seen.forks).toBe(1)
+  })
 
   test('a small conversation gets no offer, and no note is written', async ($, on) => {
     const seen = world($, on, { contextTokens: 60_000 })

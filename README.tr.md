@@ -378,7 +378,7 @@ autogear tek bir hooks modülüdür (`hooks/register.tsx`). Bağlandığı olayl
 - **`prompt.submit`**: gönderdiğin her mesajı sınıflamak için okur. Baştaki seçimi (`+opus`) model görmeden siler; **temiz sohbet**e bastıysan devir notunu ilk mesajına bir kez ekler. Mesajda başka hiçbir şey değişmez.
 - **`turn.step`**: ana sohbetteki her model isteğinden hemen önce autogear'ın seçtiği modeli ve eforu koyar. Yardımcıların (alt ajanların) istekleri değişmeden geçer; yalnızca modelleri cevabın altındaki satır için not edilir.
 - **`turn.complete`**: cevabı hangi modelin verdiğini ve kullandığı tokenları okur (kendini denetleme ve tasarruf için) ve cevabın altına italik satırı ekler.
-- **`tool.call`** (yalnızca Bash): bir komut çalıştıktan sonra, ana sohbetteki bir test, derleme, commit ya da push'un geçip geçmediğini okur (kartopu freni ve temiz sohbet önerisi için). Hiçbir komutu değiştirmez ya da durdurmaz.
+- **`tool.call`** (yalnızca Bash ve PowerShell): bir komut çalıştıktan sonra, ana sohbetteki bir test, derleme, commit ya da push'un geçip geçmediğini okur (kartopu freni ve temiz sohbet önerisi için). Hiçbir komutu değiştirmez ya da durdurmaz.
 - **`session.append`** (yalnızca ekler): Claude Code'un plan modunda eklediği notları okur, plan modunun açık olduğunu bilmek için.
 - **`session.start`**, **`session.end`**: ayarları yükler; bir `/clear` olduğunu not eder.
 - **`ui.render`**: istem üstündeki durum satırını, devir notu panelini ve `/gear savings` kartını çizer.

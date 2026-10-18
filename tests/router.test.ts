@@ -155,6 +155,17 @@ test('a turn that ends with failing tests hands the next one a stronger model', 
   expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'medium' })
 })
 
+test('failing tests run in PowerShell hand the next turn a stronger model too', async ($, on) => {
+  const { sent } = world(on, { checksFail: true })
+  await say($, 'commit mesajı yaz')
+  await step($, 't1')
+  await $.tool.call({ tool: 'PowerShell', command: 'npm test' })
+  await finish($, 't1', 'claude-haiku-5-5')
+  await say($, 'bu fonksiyon ne yapıyor?')
+  await step($, 't2')
+  expect(sent[1]).toEqual({ model: 'claude-sonnet-5-5', effort: 'medium' })
+})
+
 test('a bug told without detail goes to Sonnet at high in tasarruf, and a go-ahead in its middle keeps it there', async ($, on) => {
   const { sent } = world(on)
   await say($, 'bu çalışmıyor, düzelt')

@@ -81,3 +81,12 @@ Kullanıcı bilgisayardan uzakken yapılan geliştirmenin adım adım kaydı. Ba
 
 - **Sonuç:** hayır. Mod API'sinde bir isteğin yalnızca modeli ve eforu değiştirilebiliyor; danışman için alan yok. Danışmanın çağrıları cevapta görünüyor ama değiştirilemiyor; ayarlar yalnızca okunabiliyor. Tek yol `/advisor` komutunu turlar arasında çalıştırmak; bu kalıcı bir ayar değişikliği ve dizin incelemesinin zaten işaretlediği türden ("kendi kendine komut çalıştırıyor").
 - **Karar:** kod yazılmadı. `docs/sonraki-adimlar.md` adım 8'e bulgu ve öneri yazıldı (yapılmasın; yapılırsa bir kez ve sorarak). Kanıt da zayıf: adım 4'te danışmanlı düzen 9/10, tek başına Sonnet 10/10.
+
+## Geliştirme 6: PowerShell komutları da sayılıyor
+
+- **Sorun (kanıt):** autogear iki şey için komutları izliyor: test ya da derleme başarısız kaldıysa bir sonraki mesajı bir kademe yukarı almak ("kartopu freni") ve commit/push/geçen test sonrası büyük sohbette temiz sohbet önermek. İkisi de yalnızca Bash'e bağlıydı. Windows'ta Claude Code komutları PowerShell aracıyla da çalıştırıyor (bu oturumun kendi ortamında PowerShell birincil kabuk). Kullanıcının 15 Eylül'den beri kayıtlarında 6.166 Bash ve 415 PowerShell komutu var; PowerShell'dekilerden 14'ü test/derleme komutu. PowerShell'i birincil kullanan bir Windows kullanıcısında iki özellik de hiç çalışmazdı.
+- **Değişiklik:** aynı izleme PowerShell aracına da eklendi (aynı kural, aynı fonksiyon). Komut değiştirilmiyor ve durdurulmuyor. README'lerin "Neye bağlanır" bölümü "yalnızca Bash ve PowerShell" oldu.
+- **Test:** iki yeni test: PowerShell'de başarısız `npm test` sonraki mesajı bir kademe yukarı alıyor; PowerShell'de `git commit` büyük sohbette devir notunu başlatıyor. Değişiklik olmadan ikisi de düşüyor (denendi: 177 geçti, 2 kaldı). Tam test: 2.1.299 179/179, 2.1.295 179/179; `validate` uyarısız, yeni kancayı "tool.call{tool=PowerShell}" diye listeliyor.
+- **Ölçüm:** sınıflandırma değişmedi (2.111 mesajda 0 değişiklik).
+- **Dikkat:** bu, eklentinin bağlandığı olay listesine yeni bir satır ekliyor; `main`'e katılınca dizin taraması bunu görür (README'de yazıyor).
+- **Bulunan, düzeltilmeyen:** "test" ya da "build" kelimesi geçen her komut (`cat tests/…`, içinde "test" geçen bir `node -e` betiği) kontrol sayılıyor. Kayıtlarda bunlardan 8'i hata verdi; hiçbiri turun son kontrolü olmadığı için sonucu etkilemedi (günlükte "test/derleme kırık" işareti 209 kayıtta 0). Sıkılaştırmak (yalnız gerçek test çalıştırıcıları) kartopu frenini zayıflatabilir; dokunulmadı.

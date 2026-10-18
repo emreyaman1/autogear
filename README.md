@@ -378,7 +378,7 @@ autogear is one hooks module (`hooks/register.tsx`). The events it hooks, and wh
 - **`prompt.submit`**: reads each message you send, to classify it. It takes a leading override (`+opus`) off before the model sees the message, and after you press **clean conversation** it adds the hand-over note to your first message, once. Nothing else in a message is changed.
 - **`turn.step`**: right before each model request of the main conversation, sets the model and effort autogear chose. Requests of helpers (subagents) pass unchanged; only their model is noted for the line under the answer.
 - **`turn.complete`**: reads which model answered and the tokens it used, for the self-check and the savings, and adds the italic line under the answer.
-- **`tool.call`** (Bash only): after a command has run, reads whether a test, build, commit or push in the main conversation passed or failed, for the snowball brake and the clean-conversation offer. It never changes or blocks a command.
+- **`tool.call`** (Bash and PowerShell only): after a command has run, reads whether a test, build, commit or push in the main conversation passed or failed, for the snowball brake and the clean-conversation offer. It never changes or blocks a command.
 - **`session.append`** (attachments only): reads the notes Claude Code adds in plan mode, to know plan mode is on.
 - **`session.start`**, **`session.end`**: loads the settings; notes that a `/clear` happened.
 - **`ui.render`**: draws the state row above the prompt, the hand-over note pane and the `/gear savings` card.

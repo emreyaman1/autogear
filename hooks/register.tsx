@@ -1029,14 +1029,30 @@ export const register: Register = on => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
-    const ran = await next(e)
-    if (e.agentId === undefined && CHECK_COMMAND.test(e.command)) {
-      state.lastCheckFailed = ran.isError === true
+  // A shell command of the main thread, run in Bash or, on Windows, in
+  // PowerShell: a failing check, or a commit, a push or a passing test run.
+  const noteCommand = (command: string, isError: boolean, agentId: string | undefined): void => {
+    if (agentId !== undefined) {
+      return
     }
-    if (e.agentId === undefined && isWorkDone(e.command, ran.isError === true)) {
+    if (CHECK_COMMAND.test(command)) {
+      state.lastCheckFailed = isError
+    }
+    if (isWorkDone(command, isError)) {
       state.isWorkDone = true
     }
+  }
+
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    const ran = await next(e)
+    noteCommand(e.command, ran.isError === true, e.agentId)
+
+    return ran
+  }).catch(($, e, next) => next(e))
+
+  on('tool.call', { tool: 'PowerShell' }, async ($, e, next) => {
+    const ran = await next(e)
+    noteCommand(e.command, ran.isError === true, e.agentId)
 
     return ran
   }).catch(($, e, next) => next(e))
