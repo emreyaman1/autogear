@@ -1167,8 +1167,8 @@ export const register: Register = on => {
       const row = (
         <Box>
           <Text dimColor>⚙ autogear </Text>
-          <Text backgroundColor={BADGE_COLORS[mode]} color="#ffffff" bold>
-            {` ${mode === 'pin' ? '○' : '●'} ${badgeName(mode)} `}
+          <Text color={BADGE_COLORS[mode]} bold>
+            {`${mode === 'pin' ? '○' : '●'} ${badgeName(mode)}`}
           </Text>
           <Text dimColor> {note} </Text>
           {warning !== '' && <Text color="warning">⚠ {warning} </Text>}

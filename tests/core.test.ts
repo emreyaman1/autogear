@@ -343,11 +343,11 @@ describe('robustness', () => {
 describe('badgeSvg', () => {
   const modes = ['auto', 'shadow', 'pin', 'down'] as const
 
-  test('each state is a pill of its own color with its own name, sized to it', () => {
+  test('each state is a pill tinted in its own color with its own name, sized to it', () => {
     expect(new Set(modes.map(mode => BADGE_COLORS[mode])).size).toBe(modes.length)
     for (const mode of modes) {
       const svg = badgeSvg(mode)
-      expect(svg).toContain(`<rect width="${badgeWidth(mode)}" height="${BADGE_HEIGHT}" rx="${BADGE_HEIGHT / 2}" fill="${BADGE_COLORS[mode]}"/>`)
+      expect(svg).toContain(`<rect x=".5" y=".5" width="${badgeWidth(mode) - 1}" height="${BADGE_HEIGHT - 1}" rx="${BADGE_HEIGHT / 2 - 0.5}" fill="${BADGE_COLORS[mode]}" fill-opacity=".14" stroke="${BADGE_COLORS[mode]}" stroke-opacity=".5"/>`)
       expect(svg).toContain(`>${badgeName(mode)}</text>`)
     }
     expect(badgeWidth('pin')).toBeGreaterThan(badgeWidth('auto'))

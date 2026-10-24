@@ -217,7 +217,7 @@ async function badgeOf(ui: Awaited<ReturnType<Engine['ui']['mount']>>, surface: 
     return (await ui.find({ type: 'Svg' }))?.props.alt as string | undefined
   }
   for (const [name, state] of [['AÇIK', 'açık'], ['GÖLGE', 'gölge'], ['KAPALI', 'kapalı'], ['DURDU', 'durdu']] as const) {
-    if ((await ui.find({ type: 'Text', text: new RegExp(` ${name} $`) })) !== undefined) {
+    if ((await ui.find({ type: 'Text', text: new RegExp(`[●○] ${name}$`) })) !== undefined) {
       return `autogear: ${state}`
     }
   }
