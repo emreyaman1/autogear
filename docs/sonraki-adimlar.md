@@ -42,6 +42,7 @@ Terimlerin sade anlamları: `~/.claude/sozluk.md`.
 - **Dürüst kıyas tablosu yapılacak:** opusplan ve diğerleriyle. "Her şey Sonnet" kıyası çıkarıldı; gerçek kullanıcı varsayılan olarak Opus kullanıyor (adım 4).
 - **Her cevabın altında, italik, cevabı hangi modelin verdiği yazacak.** gearbox kapalıyken de (adım 10).
 - **Stajbul'daki "birden çok metin üretip seçtirme" fikri iptal edildi** (gearbox'la ilgisi yok; kayıt için).
+- **Durum satırı sadeleşti (25 Ekim 2026, kullanıcı isteği; `gelistirme` dalında):** tek satır; nokta, durumun renginde "autogear açık", koyu tepsi içinde üç konumlu anahtar (Açık · Gölge · Kapalı; seçili olan parlak ve noktalı), sağda yalnızca modelle efor ("Sonnet · low"). Kullanıcı T numarasını ve "önemsiz" gibi etiketi görmek istemedi; alttaki durum satırı (tasarruf dahil) kaldırıldı, tasarruf `/gear savings`'te. Masaüstü uygulaması her düğmeyi kendi gri kutusuyla çiziyor ve bir Mod bunu kaldıramıyor; bu yüzden tek parça düz anahtar yapılamadı, düğmeler koyu bir tepsiye (Box arka planı) konuldu. Denenmemiş alternatifler: tek seçici (`Select`), yalnızca yazı. İnceleme bitene kadar `main`'e alınmaz.
 
 ## Öncelik sırası
 
