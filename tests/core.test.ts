@@ -8,7 +8,7 @@ import { addEntry, flagLast, journalText, learnedRules, markLast, MAX_ENTRIES, r
 import { applyCommand, DEFAULTS, readSettings, readStats } from '../hooks/core/settings'
 import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
 import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
-import { BADGE_COLORS, DOT_SIZE, badgeName, dotSvg } from '../hooks/core/switch'
+import { BADGE_COLORS, DOT_SIZE, ROW_HEIGHT, badgeName, dotSvg } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 import { isNewerThan } from '../hooks/core/version'
 
@@ -365,7 +365,7 @@ describe('dotSvg', () => {
   test('is one svg root of the size the Svg element is given', () => {
     for (const mode of modes) {
       const svg = dotSvg(mode)
-      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${DOT_SIZE}" height="${DOT_SIZE}"`)
+      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${DOT_SIZE}" height="${ROW_HEIGHT}"`)
       expect(svg).toEndWith('</svg>')
     }
   })

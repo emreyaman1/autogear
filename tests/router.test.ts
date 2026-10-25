@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { expect, mock, test, type Engine } from 'claude-code/testing'
 
-import { BADGE_COLORS, DOT_SIZE } from '../hooks/core/switch'
+import { BADGE_COLORS, DOT_SIZE, ROW_HEIGHT } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 
 // The tests read autogear's Turkish; the English is tested by switching to it.
@@ -271,7 +271,7 @@ test('the state is an Svg dot and colored Text on the desktop and colored Text o
 
   const desktop = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const badge = await desktop.find({ type: 'Svg' })
-  expect(badge?.props).toMatchObject({ alt: 'autogear: gölge', width: DOT_SIZE, height: DOT_SIZE, isInteractive: true })
+  expect(badge?.props).toMatchObject({ alt: 'autogear: gölge', width: DOT_SIZE, height: ROW_HEIGHT, isInteractive: true })
   expect(badge?.props.source).toContain(BADGE_COLORS.shadow)
   expect(await desktop.find({ type: 'Text', text: 'autogear gölge' })).toBeDefined()
   await desktop.press({ key: 'to-pin' })

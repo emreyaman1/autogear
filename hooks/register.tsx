@@ -24,7 +24,7 @@ import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from '
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { languageOf, normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
 import { readRule, settle, type Task } from './core/settle'
-import { BADGE_COLORS, DOT_SIZE, dotSvg } from './core/switch'
+import { BADGE_COLORS, DOT_SIZE, ROW_HEIGHT, dotSvg, noteSvg } from './core/switch'
 import { asLangSetting, getLang, L, pct, profileName, reasonText, resolveLang, setLang, sourceText, systemLocale, tierName } from './core/text'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { AUTOGEAR_VERSION, isNewerThan, TESTED_THROUGH } from './core/version'
@@ -1185,7 +1185,7 @@ export const register: Register = on => {
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
     const row = (
       <Box alignItems="center" columnGap={1}>
-        <Svg source={dotSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={DOT_SIZE} height={DOT_SIZE} isInteractive />
+        <Svg source={dotSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={DOT_SIZE} height={ROW_HEIGHT} isInteractive />
         <Text color={BADGE_COLORS[mode]} bold>{`autogear ${modeName(mode)}`}</Text>
         <Box backgroundColor="#1f1f1d" paddingX={1} columnGap={1} alignItems="center">
           {MODE_ACTIONS.map(action => (
@@ -1210,6 +1210,7 @@ export const register: Register = on => {
       <Box flexDirection="column">
         {row}
         <Box alignItems="center" columnGap={1}>
+          <Svg source={noteSvg()} alt={L('Hand-over note', 'Devir notu')} width={DOT_SIZE} height={ROW_HEIGHT} />
           <Text dimColor>{offer}</Text>
           {hasNote && !isArmed && <Button key="handover-clear" label={L('clean conversation', 'temiz sohbet')} onPress={() => startCleanConversation($, state)} />}
           {hasNote && <Button key="handover-show" dimColor label={L('see note', 'notu gör')} onPress={showNote} />}
