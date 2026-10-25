@@ -24,7 +24,7 @@ import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from '
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { languageOf, normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
 import { readRule, settle, type Task } from './core/settle'
-import { BADGE_COLORS, BADGE_HEIGHT, badgeName, badgeSvg, badgeWidth } from './core/switch'
+import { BADGE_COLORS, DOT_SIZE, badgeName, dotSvg } from './core/switch'
 import { asLangSetting, getLang, L, pct, profileName, reasonText, resolveLang, setLang, sourceText, systemLocale, tierName } from './core/text'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { AUTOGEAR_VERSION, isNewerThan, TESTED_THROUGH } from './core/version'
@@ -211,7 +211,7 @@ function lastNote(state: State): string {
   if (last === undefined) {
     return ''
   }
-  const choice = `${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)}`
+  const choice = `${FAMILY_NAMES[last.family]} · ${last.effort} · ${tierLabel(state, last)}`
 
   return modeOf(state) === 'shadow' ? `${choice} ${L('would choose', 'önerirdi')}` : choice
 }
@@ -227,9 +227,9 @@ function showStatus($: EngineInterface, state: State): void {
     : mode === 'shadow'
       ? last === undefined
         ? L('⚙ autogear: in shadow, writing its choices down', '⚙ autogear: gölgede, seçimleri yazıyor')
-        : L(`⚙ shadow: ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} would choose`, `⚙ gölge: ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} önerirdi`)
+        : L(`⚙ shadow: ${FAMILY_NAMES[last.family]}·${last.effort} · would choose`, `⚙ gölge: ${FAMILY_NAMES[last.family]}·${last.effort} · önerirdi`)
     : last === undefined ? L(`⚙ autogear: automatic · ${profileName(settings.profile)}`, `⚙ autogear: otomatik · ${settings.profile}`)
-    : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · T${last.tier} ${tierLabel(state, last)}${savedNote(state)}`,
+    : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · ${tierLabel(state, last)}${savedNote(state)}`,
   )
 }
 
@@ -598,7 +598,7 @@ async function describe($: EngineInterface, state: State): Promise<string> {
       : undefined,
     last === undefined
       ? `- **${L('Last decision', 'Son karar')}:** ${L('none', 'yok')}`
-      : `- **${L('Last decision', 'Son karar')}:** ${FAMILY_NAMES[last.family]} · ${last.effort} · T${last.tier} ${tierLabel(state, last)} (${sourceText(SOURCE_NAMES[last.source] ?? last.source)}: ${last.reasons.map(reasonText).join('; ')})`,
+      : `- **${L('Last decision', 'Son karar')}:** ${FAMILY_NAMES[last.family]} · ${last.effort} · ${tierLabel(state, last)} (${sourceText(SOURCE_NAMES[last.source] ?? last.source)}: ${last.reasons.map(reasonText).join('; ')})`,
     state.unavailable.size === 0
       ? undefined
       : `- **${L('Gave no answer this session', 'Bu oturumda yanıt vermeyen')}:** ${[...state.unavailable].map(family => MODEL_IDS[family]).join(', ')}`,
@@ -1197,8 +1197,9 @@ export const register: Register = on => {
     const row = (
       <Box alignItems="center" columnGap={1}>
         <Text dimColor>⚙ autogear</Text>
-        <Box flexShrink={0}>
-          <Svg source={badgeSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={badgeWidth(mode)} height={BADGE_HEIGHT} isInteractive />
+        <Box flexShrink={0} alignItems="center" columnGap={1}>
+          <Svg source={dotSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={DOT_SIZE} height={DOT_SIZE} isInteractive />
+          <Text color={BADGE_COLORS[mode]} bold>{badgeName(mode)}</Text>
         </Box>
         <Text dimColor>{note}</Text>
         {warning !== '' && <Text color="warning">⚠ {warning}</Text>}

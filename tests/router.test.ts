@@ -1,7 +1,7 @@
 import type { On } from 'claude-code'
 import { expect, mock, test, type Engine } from 'claude-code/testing'
 
-import { BADGE_COLORS, BADGE_HEIGHT, badgeWidth } from '../hooks/core/switch'
+import { BADGE_COLORS, DOT_SIZE } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 
 // The tests read autogear's Turkish; the English is tested by switching to it.
@@ -259,21 +259,21 @@ test('the band shows on, shadow and off apart, and each button does what it is n
     await step($, `on-${surface}`, 0, 'claude-opus-5-5', 'max')
     expect(sent[2]?.model).toBe('claude-haiku-5-5')
     // The last choice stands beside the badge.
-    expect(await ui.find({ type: 'Text', text: /^Haiku · low · T0 önemsiz$|Haiku · low · T0 önemsiz/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^Haiku · low · önemsiz$|Haiku · low · önemsiz/ })).toBeDefined()
     await ui.unmount()
   }
 })
 
-test('the state is an Svg badge on the desktop and colored Text on the terminal, the same on both', async ($, on) => {
+test('the state is an Svg dot and colored Text on the desktop and colored Text on the terminal, the same on both', async ($, on) => {
   world(on)
   const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   await $.command.run({ command: 'gear', args: 'golge' })
 
   const desktop = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const badge = await desktop.find({ type: 'Svg' })
-  expect(badge?.props).toMatchObject({ alt: 'autogear: gölge', width: badgeWidth('shadow'), height: BADGE_HEIGHT, isInteractive: true })
+  expect(badge?.props).toMatchObject({ alt: 'autogear: gölge', width: DOT_SIZE, height: DOT_SIZE, isInteractive: true })
   expect(badge?.props.source).toContain(BADGE_COLORS.shadow)
-  expect(badge?.props.source).toContain('>GÖLGE</text>')
+  expect(await desktop.find({ type: 'Text', text: 'GÖLGE' })).toBeDefined()
   await desktop.press({ key: 'to-pin' })
   const off = await desktop.find({ type: 'Svg' })
   expect(off?.props).toMatchObject({ alt: 'autogear: kapalı' })
@@ -563,7 +563,7 @@ test('before a choice the band says what the state means; in shadow mode it show
   expect(await ui.find({ type: 'Text', text: /seçip yazıyor, uygulamıyor/ })).toBeDefined()
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
-  expect(await ui.find({ type: 'Text', text: /Haiku · low · T0 önemsiz önerirdi/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /Haiku · low · önemsiz önerirdi/ })).toBeDefined()
   await ui.unmount()
 })
 

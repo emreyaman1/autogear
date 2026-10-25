@@ -8,7 +8,7 @@ import { addEntry, flagLast, journalText, learnedRules, markLast, MAX_ENTRIES, r
 import { applyCommand, DEFAULTS, readSettings, readStats } from '../hooks/core/settings'
 import { holdTask, nextTask, settle, withHaiku } from '../hooks/core/settle'
 import { classify, namedChoice, parseOverrides, withoutNotes } from '../hooks/core/signals'
-import { BADGE_COLORS, BADGE_HEIGHT, badgeName, badgeSvg, badgeWidth } from '../hooks/core/switch'
+import { BADGE_COLORS, DOT_SIZE, badgeName, dotSvg } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 import { isNewerThan } from '../hooks/core/version'
 
@@ -340,33 +340,32 @@ describe('robustness', () => {
   })
 })
 
-describe('badgeSvg', () => {
+describe('dotSvg', () => {
   const modes = ['auto', 'shadow', 'pin', 'down'] as const
 
-  test('each state is a pill tinted in its own color with its own name, sized to it', () => {
+  test('each state is a dot of its own color, and its name is in the same color', () => {
     expect(new Set(modes.map(mode => BADGE_COLORS[mode])).size).toBe(modes.length)
     for (const mode of modes) {
-      const svg = badgeSvg(mode)
-      expect(svg).toContain(`<rect x=".5" y=".5" width="${badgeWidth(mode) - 1}" height="${BADGE_HEIGHT - 1}" rx="${BADGE_HEIGHT / 2 - 0.5}" fill="${BADGE_COLORS[mode]}" fill-opacity=".14" stroke="${BADGE_COLORS[mode]}" stroke-opacity=".5"/>`)
-      expect(svg).toContain(`>${badgeName(mode)}</text>`)
+      const svg = dotSvg(mode)
+      expect(svg).toContain(`${BADGE_COLORS[mode]}`)
+      expect(badgeName(mode)).not.toBe('')
     }
-    expect(badgeWidth('pin')).toBeGreaterThan(badgeWidth('auto'))
   })
 
   test('the dot moves to say what autogear does, and stands still for less motion', () => {
-    expect(badgeSvg('auto')).toContain('animation:pulse')
-    expect(badgeSvg('shadow')).toContain('animation:breathe')
-    expect(badgeSvg('down')).toContain('animation:blink')
-    expect(badgeSvg('pin')).not.toMatch(/animation:(?!none)/)
+    expect(dotSvg('auto')).toContain('animation:pulse')
+    expect(dotSvg('shadow')).toContain('animation:breathe')
+    expect(dotSvg('down')).toContain('animation:blink')
+    expect(dotSvg('pin')).not.toMatch(/animation:(?!none)/)
     for (const mode of modes) {
-      expect(badgeSvg(mode)).toContain('@media (prefers-reduced-motion:reduce){*{animation:none!important}}')
+      expect(dotSvg(mode)).toContain('@media (prefers-reduced-motion:reduce){*{animation:none!important}}')
     }
   })
 
   test('is one svg root of the size the Svg element is given', () => {
     for (const mode of modes) {
-      const svg = badgeSvg(mode)
-      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${badgeWidth(mode)}" height="${BADGE_HEIGHT}"`)
+      const svg = dotSvg(mode)
+      expect(svg).toStartWith(`<svg xmlns="http://www.w3.org/2000/svg" width="${DOT_SIZE}" height="${DOT_SIZE}"`)
       expect(svg).toEndWith('</svg>')
     }
   })
