@@ -198,13 +198,6 @@ function modeOf(state: State): AutogearMode {
   return state.isStoodDown ? 'down' : state.settings.mode
 }
 
-// " · $1.42 tasarruf" once this session has saved a cent.
-function savedNote(state: State): string {
-  const saved = savedOf(state.session)
-
-  return saved >= 0.01 ? ` · ${usd(saved)} ${L('saved', 'tasarruf')}` : ''
-}
-
 // What the band says beside the badge: the last choice, in shadow mode what
 // autogear would have picked; '' before one, when the band says what the state means.
 function lastNote(state: State): string {
@@ -218,20 +211,12 @@ function lastNote(state: State): string {
 }
 
 function showStatus($: EngineInterface, state: State): void {
-  const { settings, last } = state
   const mode = modeOf(state)
   void update($, modeAtom, () => mode)
   void update($, noteAtom, () => lastNote(state))
-  $.ui.status(
-    mode === 'down' ? L("⚙ autogear: stopped (the picker's model), /gear", '⚙ autogear: devre dışı (seçici), /gear')
-    : mode === 'pin' ? L("⚙ autogear: off (the picker's model)", '⚙ autogear: kapalı (seçici model)')
-    : mode === 'shadow'
-      ? last === undefined
-        ? L('⚙ autogear: in shadow, writing its choices down', '⚙ autogear: gölgede, seçimleri yazıyor')
-        : L(`⚙ shadow: ${FAMILY_NAMES[last.family]}·${last.effort} · would choose`, `⚙ gölge: ${FAMILY_NAMES[last.family]}·${last.effort} · önerirdi`)
-    : last === undefined ? L(`⚙ autogear: automatic · ${profileName(settings.profile)}`, `⚙ autogear: otomatik · ${settings.profile}`)
-    : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort}${savedNote(state)}`,
-  )
+  // The band says it all; the footer's status line is only for when the band is off.
+  const last = lastNote(state)
+  $.ui.status(state.settings.band ? '' : `⚙ autogear ${modeName(mode)}${last === '' ? '' : ` · ${last}`}`)
 }
 
 // What a main-thread turn was sent as: the model and effort its answer is told by.
