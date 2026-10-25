@@ -216,8 +216,8 @@ async function badgeOf(ui: Awaited<ReturnType<Engine['ui']['mount']>>, surface: 
   if (surface === 'desktop') {
     return (await ui.find({ type: 'Svg' }))?.props.alt as string | undefined
   }
-  for (const [name, state] of [['AÇIK', 'açık'], ['GÖLGE', 'gölge'], ['KAPALI', 'kapalı'], ['DURDU', 'durdu']] as const) {
-    if ((await ui.find({ type: 'Text', text: new RegExp(`[●○] ${name}$`) })) !== undefined) {
+  for (const [name, state] of [['açık', 'açık'], ['gölge', 'gölge'], ['kapalı', 'kapalı'], ['durdu', 'durdu']] as const) {
+    if ((await ui.find({ type: 'Text', text: new RegExp(`[●○] autogear ${name} $`) })) !== undefined) {
       return `autogear: ${state}`
     }
   }
@@ -235,7 +235,7 @@ test('the band shows on, shadow and off apart, and each button does what it is n
     expect(await badgeOf(ui, surface)).toBe('autogear: açık')
     // On: the buttons offer shadow and off, not on.
     expect(await ui.find({ type: 'Button', key: 'to-auto' })).toBeUndefined()
-    expect(await ui.find({ type: 'Button', key: 'to-shadow', text: 'gölgeye al' })).toBeDefined()
+    expect(await ui.find({ type: 'Button', key: 'to-shadow', text: /Gölge/ })).toBeDefined()
 
     await ui.press({ key: 'to-shadow' })
     expect(await badgeOf(ui, surface)).toBe('autogear: gölge')
@@ -248,7 +248,7 @@ test('the band shows on, shadow and off apart, and each button does what it is n
     await ui.press({ key: 'to-pin' })
     expect(await badgeOf(ui, surface)).toBe('autogear: kapalı')
     expect(await ui.find({ type: 'Text', text: /seçicideki model kullanılıyor/ })).toBeDefined()
-    expect(await ui.find({ type: 'Button', key: 'to-auto', text: 'aç' })).toBeDefined()
+    expect(await ui.find({ type: 'Button', key: 'to-auto', text: /Açık/ })).toBeDefined()
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, `off-${surface}`, 0, 'claude-opus-5-5', 'max')
     expect(sent[1]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })
@@ -259,7 +259,7 @@ test('the band shows on, shadow and off apart, and each button does what it is n
     await step($, `on-${surface}`, 0, 'claude-opus-5-5', 'max')
     expect(sent[2]?.model).toBe('claude-haiku-5-5')
     // The last choice stands beside the badge.
-    expect(await ui.find({ type: 'Text', text: /^Haiku · low · önemsiz$|Haiku · low · önemsiz/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /Haiku · low/ })).toBeDefined()
     await ui.unmount()
   }
 })
@@ -273,7 +273,7 @@ test('the state is an Svg dot and colored Text on the desktop and colored Text o
   const badge = await desktop.find({ type: 'Svg' })
   expect(badge?.props).toMatchObject({ alt: 'autogear: gölge', width: DOT_SIZE, height: DOT_SIZE, isInteractive: true })
   expect(badge?.props.source).toContain(BADGE_COLORS.shadow)
-  expect(await desktop.find({ type: 'Text', text: 'GÖLGE' })).toBeDefined()
+  expect(await desktop.find({ type: 'Text', text: 'autogear gölge' })).toBeDefined()
   await desktop.press({ key: 'to-pin' })
   const off = await desktop.find({ type: 'Svg' })
   expect(off?.props).toMatchObject({ alt: 'autogear: kapalı' })
@@ -283,9 +283,9 @@ test('the state is an Svg dot and colored Text on the desktop and colored Text o
   // The desktop's press turned autogear off: the terminal draws the same state.
   const terminal = await $.ui.mount({ ...BAND, surface: 'terminal' })
   expect(await terminal.find({ type: 'Svg' })).toBeUndefined()
-  expect(await terminal.find({ type: 'Text', text: /KAPALI/ })).toBeDefined()
+  expect(await terminal.find({ type: 'Text', text: /autogear kapalı/ })).toBeDefined()
   await terminal.press({ key: 'to-auto' })
-  expect(await terminal.find({ type: 'Text', text: /AÇIK/ })).toBeDefined()
+  expect(await terminal.find({ type: 'Text', text: /autogear açık/ })).toBeDefined()
   await terminal.unmount()
 })
 
@@ -299,7 +299,7 @@ test('stood down, the band says so, offers to try again, and a state picked by h
   }
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect((await ui.find({ type: 'Svg' }))?.props).toMatchObject({ alt: 'autogear: durdu' })
-  expect(await ui.find({ type: 'Button', key: 'to-auto', text: 'yeniden dene' })).toBeDefined()
+  expect(await ui.find({ type: 'Button', key: 'to-auto', text: 'Yeniden dene' })).toBeDefined()
   await ui.press({ key: 'to-shadow' })
   expect((await ui.find({ type: 'Svg' }))?.props).toMatchObject({ alt: 'autogear: gölge' })
   await ui.press({ key: 'to-auto' })
@@ -563,7 +563,7 @@ test('before a choice the band says what the state means; in shadow mode it show
   expect(await ui.find({ type: 'Text', text: /seçip yazıyor, uygulamıyor/ })).toBeDefined()
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
-  expect(await ui.find({ type: 'Text', text: /Haiku · low · önemsiz önerirdi/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /Haiku · low önerirdi/ })).toBeDefined()
   await ui.unmount()
 })
 
@@ -674,8 +674,8 @@ test('after a /clear the band still shows the state autogear is in', async ($, o
   await $.session.end({ reason: 'clear', sessionId: 'old-1', resume: { id: 'old-1' } })
   isCleared = true
   const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  expect(await band.find({ type: 'Text', text: /GÖLGE/ })).toBeDefined()
-  expect(await band.find({ type: 'Text', text: /AÇIK/ })).toBeUndefined()
+  expect(await band.find({ type: 'Text', text: /autogear gölge/ })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: /autogear açık/ })).toBeUndefined()
   expect(await band.find({ type: 'Text', text: /önerirdi/ })).toBeDefined()
   await band.unmount()
 })

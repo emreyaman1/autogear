@@ -24,7 +24,7 @@ import { addTurn, emptyTotals, savedOf, savingsText, sumOf, type Totals } from '
 import { applyCommand, DEFAULTS, readSettings, readStats, type Settings } from './core/settings'
 import { languageOf, normalize, parseOverrides, withoutNotes, type ParsedPrompt, type RuleResult } from './core/signals'
 import { readRule, settle, type Task } from './core/settle'
-import { BADGE_COLORS, DOT_SIZE, badgeName, dotSvg } from './core/switch'
+import { BADGE_COLORS, DOT_SIZE, dotSvg } from './core/switch'
 import { asLangSetting, getLang, L, pct, profileName, reasonText, resolveLang, setLang, sourceText, systemLocale, tierName } from './core/text'
 import { tierSpec, toTier, type Tier } from './core/tiers'
 import { AUTOGEAR_VERSION, isNewerThan, TESTED_THROUGH } from './core/version'
@@ -66,7 +66,8 @@ const modeNote = (mode: AutogearMode): string =>
   : mode === 'pin' ? L("the picker's model is used", 'seçicideki model kullanılıyor')
   : L("its choices were not applied; the picker's model is used", 'seçimleri uygulanmıyordu; seçicideki model kullanılıyor')
 
-// The band's buttons, each named for what a press does.
+// The band's three-way switch: a segment for each state, the current one lit,
+// the others pressable and named for the state a press goes to.
 const MODE_ACTIONS = [
   { mode: 'auto', key: 'to-auto' },
   { mode: 'shadow', key: 'to-shadow' },
@@ -74,9 +75,9 @@ const MODE_ACTIONS = [
 ] as const
 
 const actionLabel = (target: AutogearMode, from: AutogearMode): string =>
-  target === 'auto' ? (from === 'down' ? L('try again', 'yeniden dene') : L('turn on', 'aç'))
-  : target === 'shadow' ? L('to shadow', 'gölgeye al')
-  : L('turn off', 'kapat')
+  target === 'auto' ? (from === 'down' ? L('Try again', 'Yeniden dene') : L('On', 'Açık'))
+  : target === 'shadow' ? L('Shadow', 'Gölge')
+  : L('Off', 'Kapalı')
 
 // The commands are English in both languages; the old Turkish names keep working.
 const help = (): string =>
@@ -211,7 +212,7 @@ function lastNote(state: State): string {
   if (last === undefined) {
     return ''
   }
-  const choice = `${FAMILY_NAMES[last.family]} · ${last.effort} · ${tierLabel(state, last)}`
+  const choice = `${FAMILY_NAMES[last.family]} · ${last.effort}`
 
   return modeOf(state) === 'shadow' ? `${choice} ${L('would choose', 'önerirdi')}` : choice
 }
@@ -229,7 +230,7 @@ function showStatus($: EngineInterface, state: State): void {
         ? L('⚙ autogear: in shadow, writing its choices down', '⚙ autogear: gölgede, seçimleri yazıyor')
         : L(`⚙ shadow: ${FAMILY_NAMES[last.family]}·${last.effort} · would choose`, `⚙ gölge: ${FAMILY_NAMES[last.family]}·${last.effort} · önerirdi`)
     : last === undefined ? L(`⚙ autogear: automatic · ${profileName(settings.profile)}`, `⚙ autogear: otomatik · ${settings.profile}`)
-    : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort} · ${tierLabel(state, last)}${savedNote(state)}`,
+    : `⚙ ${FAMILY_NAMES[last.family]}·${last.effort}${savedNote(state)}`,
   )
 }
 
@@ -1144,7 +1145,6 @@ export const register: Register = on => {
     const warning = isWorking ? (await read($, warningAtom)).split(':')[0] : ''
     const last = isWorking ? lastNote(state) : ''
     const note = last === '' ? modeNote(mode) : last
-    const actions = MODE_ACTIONS.filter(action => action.mode !== mode)
     // Stood down, "turn on" tries again.
     const label = (action: (typeof MODE_ACTIONS)[number]): string => actionLabel(action.mode, mode)
     // A second line while a hand-over note is offered or on its way.
@@ -1166,15 +1166,18 @@ export const register: Register = on => {
       const { Box, Button, Text } = $.ui.resolve(e)
       const row = (
         <Box>
-          <Text dimColor>⚙ autogear </Text>
           <Text color={BADGE_COLORS[mode]} bold>
-            {`${mode === 'pin' ? '○' : '●'} ${badgeName(mode)}`}
+            {`${mode === 'pin' ? '○' : '●'} autogear ${modeName(mode)} `}
           </Text>
+          {MODE_ACTIONS.map(action =>
+            action.mode === mode ? (
+              <Text key={action.key} inverse bold>{` ${label(action)} `}</Text>
+            ) : (
+              <Button key={action.key} dimColor label={` ${label(action)} `} onPress={() => switchMode($, state, action.mode)} />
+            ),
+          )}
           <Text dimColor> {note} </Text>
           {warning !== '' && <Text color="warning">⚠ {warning} </Text>}
-          {actions.map(action => (
-            <Button key={action.key} dimColor label={label(action)} onPress={() => switchMode($, state, action.mode)} />
-          ))}
         </Box>
       )
       if (offer === undefined) {
@@ -1196,16 +1199,20 @@ export const register: Register = on => {
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
     const row = (
       <Box alignItems="center" columnGap={1}>
-        <Text dimColor>⚙ autogear</Text>
-        <Box flexShrink={0} alignItems="center" columnGap={1}>
-          <Svg source={dotSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={DOT_SIZE} height={DOT_SIZE} isInteractive />
-          <Text color={BADGE_COLORS[mode]} bold>{badgeName(mode)}</Text>
+        <Svg source={dotSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={DOT_SIZE} height={DOT_SIZE} isInteractive />
+        <Text color={BADGE_COLORS[mode]} bold>{`autogear ${modeName(mode)}`}</Text>
+        <Box columnGap={0}>
+          {MODE_ACTIONS.map(action =>
+            action.mode === mode ? (
+              <Text key={action.key} backgroundColor="#3f3f3b" bold>{` ${label(action)} `}</Text>
+            ) : (
+              <Button key={action.key} dimColor label={label(action)} onPress={() => switchMode($, state, action.mode)} />
+            ),
+          )}
         </Box>
+        <Box flexGrow={1} />
         <Text dimColor>{note}</Text>
         {warning !== '' && <Text color="warning">⚠ {warning}</Text>}
-        {actions.map(action => (
-          <Button key={action.key} dimColor label={label(action)} onPress={() => switchMode($, state, action.mode)} />
-        ))}
       </Box>
     )
     if (offer === undefined) {
