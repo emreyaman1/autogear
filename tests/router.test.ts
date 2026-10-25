@@ -234,12 +234,12 @@ test('the band shows on, shadow and off apart, and each button does what it is n
     const ui = await $.ui.mount({ ...BAND, surface })
     expect(await badgeOf(ui, surface)).toBe('autogear: açık')
     // On: the buttons offer shadow and off, not on.
-    expect(await ui.find({ type: 'Button', key: 'to-auto' })).toBeUndefined()
+    expect(await ui.find({ type: 'Button', key: 'to-shadow', text: /●/ })).toBeUndefined()
     expect(await ui.find({ type: 'Button', key: 'to-shadow', text: /Gölge/ })).toBeDefined()
 
     await ui.press({ key: 'to-shadow' })
     expect(await badgeOf(ui, surface)).toBe('autogear: gölge')
-    expect(await ui.find({ type: 'Button', key: 'to-shadow' })).toBeUndefined()
+    expect(await ui.find({ type: 'Button', key: 'to-shadow', text: /● Gölge/ })).toBeDefined()
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, `shadow-${surface}`, 0, 'claude-opus-5-5', 'max')
     expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'max' })

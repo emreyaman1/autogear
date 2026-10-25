@@ -1169,13 +1169,14 @@ export const register: Register = on => {
           <Text color={BADGE_COLORS[mode]} bold>
             {`${mode === 'pin' ? '○' : '●'} autogear ${modeName(mode)} `}
           </Text>
-          {MODE_ACTIONS.map(action =>
-            action.mode === mode ? (
-              <Text key={action.key} inverse bold>{` ${label(action)} `}</Text>
-            ) : (
-              <Button key={action.key} dimColor label={` ${label(action)} `} onPress={() => switchMode($, state, action.mode)} />
-            ),
-          )}
+          {MODE_ACTIONS.map(action => (
+            <Button
+              key={action.key}
+              dimColor={action.mode !== mode}
+              label={action.mode === mode ? `● ${label(action)}` : label(action)}
+              onPress={() => switchMode($, state, action.mode)}
+            />
+          ))}
           <Text dimColor> {note} </Text>
           {warning !== '' && <Text color="warning">⚠ {warning} </Text>}
         </Box>
@@ -1201,14 +1202,15 @@ export const register: Register = on => {
       <Box alignItems="center" columnGap={1}>
         <Svg source={dotSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={DOT_SIZE} height={DOT_SIZE} isInteractive />
         <Text color={BADGE_COLORS[mode]} bold>{`autogear ${modeName(mode)}`}</Text>
-        <Box columnGap={0}>
-          {MODE_ACTIONS.map(action =>
-            action.mode === mode ? (
-              <Text key={action.key} backgroundColor="#3f3f3b" bold>{` ${label(action)} `}</Text>
-            ) : (
-              <Button key={action.key} dimColor label={label(action)} onPress={() => switchMode($, state, action.mode)} />
-            ),
-          )}
+        <Box columnGap={1}>
+          {MODE_ACTIONS.map(action => (
+            <Button
+              key={action.key}
+              dimColor={action.mode !== mode}
+              label={action.mode === mode ? `● ${label(action)}` : label(action)}
+              onPress={() => switchMode($, state, action.mode)}
+            />
+          ))}
         </Box>
         <Box flexGrow={1} />
         <Text dimColor>{note}</Text>
