@@ -1187,7 +1187,7 @@ export const register: Register = on => {
       <Box alignItems="center" columnGap={1}>
         <Svg source={dotSvg(mode)} alt={`autogear: ${modeName(mode)}`} width={DOT_SIZE} height={DOT_SIZE} isInteractive />
         <Text color={BADGE_COLORS[mode]} bold>{`autogear ${modeName(mode)}`}</Text>
-        <Box columnGap={1}>
+        <Box backgroundColor="#1f1f1d" paddingX={1} columnGap={1} alignItems="center">
           {MODE_ACTIONS.map(action => (
             <Button
               key={action.key}
