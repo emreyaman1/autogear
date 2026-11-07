@@ -2,7 +2,7 @@
 
 Each release, newest first. The evidence behind each change is in `docs/sonraki-adimlar.md` (Turkish) and in the README's Measurements.
 
-## Unreleased (branch gelistirme)
+## 0.13.0 (7 November 2026)
 
 - Tried on Claude Code 2.1.317: every test and the live smoke test pass, so that build gets no "not tried yet" notice.
 - The state row is one line: a dot, "autogear on" in the state's color, a three-way switch (On · Shadow · Off) in a dark tray with the current state lit, and the model and effort of the last choice at the right. The tier number and its label ("T0 routine") are gone from the row, and the footer's status line stays empty while the row is on (the saving is in `/gear savings`).

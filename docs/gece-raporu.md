@@ -84,3 +84,5 @@ Testler: 2.1.299 ve 2.1.295'te 211/211; `validate` uyarısız; 2.541 etiketli me
 ## Başvuru durumu
 
 Portala bakmadım (giriş gerektiriyor, tıklama yasaktı). Bildiğim son durum: 0.12.2, `main` @ e8ca8b4, incelemede. `main`'e bu gece hiçbir şey gönderilmedi.
+
+**Düzeltme (7 Kasım 2026):** "incelemede" yanlıştı, portala bakılmadan yazılmıştı. Başvuru hiç insan incelemesine geçmemiş, 7 Kasım'da dizin Mod ve kod dosyalarını yalnızca Verified kuruluşlardan kabul ettiği için reddetmiş. Dal 0.13.0 olarak `main`'e katıldı. Ayrıntı: `docs/sonraki-adimlar.md`, adım 11.

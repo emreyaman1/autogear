@@ -4,7 +4,7 @@
 
 Claude Code için otomatik vites. Her mesajda modeli (Haiku, Sonnet ya da Opus) ve eforu işin zorluğuna göre seçer, sağ alttaki model seçicinin üstüne asla çıkmaz ve bunun neyi kurtardığını sayar. Limitin daha uzun sürer: kendi ölçümlerinde güçlü model, ucuzunun çözemediği hiçbir işi çözmedi; bu yüzden Opus kritik işe, plan moduna ve senin istediğin duruma ayrılır.
 
-> Durum: 0.12.2. Claude Code için bir Mod; eklenti API'sinin function hooks'una dayanır, o API Claude Code sürümleri arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var. Sürüm notları: [CHANGELOG.md](CHANGELOG.md). Neyi sakladığı ve neyi gönderdiği: [Gizlilik](#gizlilik).
+> Durum: 0.13.0. Claude Code için bir Mod; eklenti API'sinin function hooks'una dayanır, o API Claude Code sürümleri arasında değişebilir. Aşağıdaki güvenlik ağları bu yüzden var. Sürüm notları: [CHANGELOG.md](CHANGELOG.md). Neyi sakladığı ve neyi gönderdiği: [Gizlilik](#gizlilik).
 
 ![autogear 28 saniyede: her mesaj ihtiyacı olan modeli alır, seçicinin üstüne çıkılmaz](docs/demo/autogear-demo.gif)
 
