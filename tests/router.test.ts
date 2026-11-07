@@ -5,6 +5,8 @@ import { BADGE_COLORS, DOT_SIZE, ROW_HEIGHT } from '../hooks/core/switch'
 import { setLang } from '../hooks/core/text'
 
 // The tests read autogear's Turkish; the English is tested by switching to it.
+// This sets the test's own copy of the language; the mod's copy reads the one
+// `world` stores, as it does on any machine, whatever the system's language.
 setLang('tr')
 
 type Sent = { model: string; effort: unknown }
@@ -30,7 +32,8 @@ const ZERO = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, ca
 
 // The engine beneath the plugin: a model that records what it was sent, and
 // the usage, classifier, tools, store, clock and screen the router touches.
-function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false, contextTokens = 2_000, rateLimits = [] }: WorldOptions = {}): World {
+// It starts the session, where autogear reads the language stored here.
+async function world(engine: Engine, on: On, { classifierReply = 'T1', silentModel, checksFail = false, contextTokens = 2_000, rateLimits = [] }: WorldOptions = {}): Promise<World> {
   const seen: World = { sent: [], prompts: [] }
   mock.store(on, { settings: { lang: 'tr' } })
   mock.clock(on, { now: NOW })
@@ -52,6 +55,9 @@ function world(on: On, { classifierReply = 'T1', silentModel, checksFail = false
   on('model.complete', () => ({ value: { isAnswered: true, text: classifierReply, usage: ZERO } }))
   on('ui.status', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
+  on('command.register', () => ({ value: { command: 'gear' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await engine.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
   return seen
 }
@@ -74,28 +80,28 @@ async function finish($: Engine, turnId: string, answeredBy: string): Promise<vo
 }
 
 test('a trivial question goes to Haiku at low effort', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1')
   expect(sent[0]).toEqual({ model: 'claude-haiku-5-5', effort: 'low' })
 })
 
 test('a hard request stays under a Sonnet picker', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
   await step($, 't1', 0, 'claude-sonnet-5-5', 'high')
   expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
 })
 
 test('the rules ask Haiku when they cannot tell', async ($, on) => {
-  const { sent } = world(on, { classifierReply: 'T3' })
+  const { sent } = await world($, on, { classifierReply: 'T3' })
   await say($, 'şu fonksiyonu düzelt')
   await step($, 't1')
   expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
 })
 
 test('every request of a turn goes out on the same model', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await say($, 'commit mesajı yaz')
   await step($, 't1', 0)
   await step($, 't1', 1)
@@ -103,7 +109,7 @@ test('every request of a turn goes out on the same model', async ($, on) => {
 })
 
 test('a +opus prompt goes to Opus with the token taken off', async ($, on) => {
-  const { sent, prompts } = world(on)
+  const { sent, prompts } = await world($, on)
   await say($, '+opus bu fonksiyon ne yapıyor?')
   await step($, 't1')
   expect(prompts[0]).toBe('bu fonksiyon ne yapıyor?')
@@ -111,7 +117,7 @@ test('a +opus prompt goes to Opus with the token taken off', async ($, on) => {
 })
 
 test('/gear sabitle leaves every request as the picker says', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await $.command.run({ command: 'gear', args: 'sabitle' })
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1', 0, 'claude-opus-5-5', 'max')
@@ -119,7 +125,7 @@ test('/gear sabitle leaves every request as the picker says', async ($, on) => {
 })
 
 test('a model that gives no answer is sent again on the picker model, then avoided', async ($, on) => {
-  const { sent } = world(on, { silentModel: 'claude-haiku-5-5' })
+  const { sent } = await world($, on, { silentModel: 'claude-haiku-5-5' })
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1')
   expect(sent.map(one => one.model)).toEqual(['claude-haiku-5-5', 'claude-opus-5-5'])
@@ -129,7 +135,7 @@ test('a model that gives no answer is sent again on the picker model, then avoid
 })
 
 test('autogear stands down when its choices stop taking effect', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   for (const turnId of ['t1', 't2', 't3']) {
     await say($, 'bu fonksiyon ne yapıyor?')
     await step($, turnId)
@@ -145,7 +151,7 @@ test('autogear stands down when its choices stop taking effect', async ($, on) =
 })
 
 test('a turn that ends with failing tests hands the next one a stronger model', async ($, on) => {
-  const { sent } = world(on, { checksFail: true })
+  const { sent } = await world($, on, { checksFail: true })
   await say($, 'commit mesajı yaz')
   await step($, 't1')
   await $.tool.call({ tool: 'Bash', command: 'npm test' })
@@ -156,7 +162,7 @@ test('a turn that ends with failing tests hands the next one a stronger model', 
 })
 
 test('failing tests run in PowerShell hand the next turn a stronger model too', async ($, on) => {
-  const { sent } = world(on, { checksFail: true })
+  const { sent } = await world($, on, { checksFail: true })
   await say($, 'commit mesajı yaz')
   await step($, 't1')
   await $.tool.call({ tool: 'PowerShell', command: 'npm test' })
@@ -167,7 +173,7 @@ test('failing tests run in PowerShell hand the next turn a stronger model too', 
 })
 
 test('a bug told without detail goes to Sonnet at high in tasarruf, and a go-ahead in its middle keeps it there', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await say($, 'bu çalışmıyor, düzelt')
   await step($, 't1', 0, 'claude-opus-5-5', 'max')
   expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
@@ -181,7 +187,7 @@ test('a bug told without detail goes to Sonnet at high in tasarruf, and a go-ahe
 })
 
 test('a bug whose cause hides but is told plainly goes to Sonnet at high', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await say($, 'uygulama bazen donuyor, neden olduğunu bul')
   await step($, 't1', 0, 'claude-opus-5-5', 'max')
   expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'high' })
@@ -191,7 +197,7 @@ test('a bug whose cause hides but is told plainly goes to Sonnet at high', async
 
 test('a nearly full window keeps critical work on Opus and warns under the answer and in the band', async ($, on) => {
   const resetsAt = new Date(NOW + 2 * 3_600_000).toISOString()
-  const { sent } = world(on, { rateLimits: [{ kind: 'five_hour', percentUsed: 92, resetsAt }] })
+  const { sent } = await world($, on, { rateLimits: [{ kind: 'five_hour', percentUsed: 92, resetsAt }] })
   const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
@@ -226,7 +232,7 @@ async function badgeOf(ui: Awaited<ReturnType<Engine['ui']['mount']>>, surface: 
 }
 
 test('the band shows on, shadow and off apart, and each button does what it is named for', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   for (const surface of ['terminal', 'desktop'] as const) {
     sent.length = 0
@@ -265,7 +271,7 @@ test('the band shows on, shadow and off apart, and each button does what it is n
 })
 
 test('the state is an Svg dot and colored Text on the desktop and colored Text on the terminal, the same on both', async ($, on) => {
-  world(on)
+  await world($, on)
   const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   await $.command.run({ command: 'gear', args: 'golge' })
 
@@ -290,7 +296,7 @@ test('the state is an Svg dot and colored Text on the desktop and colored Text o
 })
 
 test('stood down, the band says so, offers to try again, and a state picked by hand shows as picked', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   for (const turnId of ['t1', 't2', 't3']) {
     await say($, 'bu fonksiyon ne yapıyor?')
@@ -310,7 +316,7 @@ test('stood down, the band says so, offers to try again, and a state picked by h
 })
 
 test('a turn answered by Haiku shows its cost and the saving against the picker, and /gear tasarruf adds it up', async ($, on) => {
-  world(on)
+  await world($, on)
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1')
   const usage = { model: 'claude-haiku-5-5', input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 40_000, cache_creation_input_tokens: 2000 }
@@ -326,7 +332,7 @@ test('a turn answered by Haiku shows its cost and the saving against the picker,
 })
 
 test('a turn that switched model counts its rewritten cache against autogear', async ($, on) => {
-  world(on)
+  await world($, on)
   const turn = async (id: string, model: string, text: string) => {
     await say($, text)
     await step($, id)
@@ -352,7 +358,7 @@ async function turnOn($: Engine, id: string, text: string, model: string, tokens
 }
 
 test('/gear tasarruf is drawn as a card of the session, the total, the models and the table', async ($, on) => {
-  world(on)
+  await world($, on)
   await turnOn($, 't1', 'bu fonksiyon ne yapıyor?', 'claude-haiku-5-5', { read: 40_000, write: 2000, output: 500 })
   await turnOn($, 't2', 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır', 'claude-opus-5-5', { read: 90_000, write: 8000, output: 3000 })
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -366,7 +372,7 @@ test('/gear tasarruf is drawn as a card of the session, the total, the models an
 })
 
 test('the card falls back to a line per model on a narrow screen, and says so when there is nothing yet', async ($, on) => {
-  world(on)
+  await world($, on)
   const empty = await $.ui.mount({ ...CARD, surface: 'desktop' })
   expect(await empty.find({ type: 'Text', text: /Henüz kayıtlı tur yok/ })).toBeDefined()
   await empty.unmount()
@@ -384,8 +390,8 @@ test('the card falls back to a line per model on a narrow screen, and says so wh
 })
 
 test('other /gear output is left to the engine', async ($, on) => {
-  world(on)
   on('ui.render', ($, e) => $.ui.resolve(e).Text({ children: 'engine row' }))
+  await world($, on)
   const status = await $.ui.mount({ ...CARD, props: { ...CARD.props, args: '' }, surface: 'desktop' })
   expect(await status.find({ type: 'Text', text: /engine row/ })).toBeDefined()
   expect(await status.find({ type: 'Box', borderStyle: 'round' })).toBeUndefined()
@@ -393,7 +399,7 @@ test('other /gear output is left to the engine', async ($, on) => {
 })
 
 test('every decision is logged, a complaint flags the answer before it, and a mark lands on the latest', async ($, on) => {
-  world(on)
+  await world($, on)
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'kayit' }))).toContain('Henüz kayıtlı karar yok')
   await turnOn($, 't1', 'bu fonksiyon ne yapıyor?', 'claude-haiku-5-5', { read: 1000, write: 100, output: 50 })
   await turnOn($, 't2', 'olmadı, hâlâ aynı hata', 'claude-sonnet-5-5', { read: 1000, write: 100, output: 50 })
@@ -410,14 +416,14 @@ test('every decision is logged, a complaint flags the answer before it, and a ma
 
 test('a system note ahead of the message is not classified: a plain greeting stays trivial', async ($, on) => {
   // Were the note read, Haiku's T4 would win; a greeting needs no question.
-  const { sent } = world(on, { classifierReply: 'T4' })
+  const { sent } = await world($, on, { classifierReply: 'T4' })
   await say($, '<system-reminder>\nThe user started this session without choosing a project folder, so your working directory is a scratch workspace the app created for it. Claude Code is installed; the session model is Opus 5.5.\n</system-reminder>\nmerhaba')
   await step($, 't1')
   expect(sent[0]).toEqual({ model: 'claude-haiku-5-5', effort: 'low' })
 })
 
 test('a message that is only a system note carries on with the last choice', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
   await finish($, 't1', 'claude-opus-5-5')
@@ -427,7 +433,7 @@ test('a message that is only a system note carries on with the last choice', asy
 })
 
 test('a model asked for in words is used, above the picker included', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await say($, 'istediğim şeyi yapmamışsın, bu görevi sonnete maxa verir misin')
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
   expect(sent[0]).toEqual({ model: 'claude-sonnet-5-5', effort: 'max' })
@@ -438,7 +444,7 @@ test('a model asked for in words is used, above the picker included', async ($, 
 })
 
 test('a remark Haiku calls trivial, in the middle of hard work, stays one tier below the work', async ($, on) => {
-  const { sent } = world(on, { classifierReply: 'T0' })
+  const { sent } = await world($, on, { classifierReply: 'T0' })
   await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
   await step($, 't1')
   await finish($, 't1', 'claude-opus-5-5')
@@ -453,7 +459,7 @@ test('a remark Haiku calls trivial, in the middle of hard work, stays one tier b
 })
 
 test('a warm cache never keeps harder work on Haiku', async ($, on) => {
-  const { sent } = world(on, { contextTokens: 60_000 })
+  const { sent } = await world($, on, { contextTokens: 60_000 })
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1')
   await finish($, 't1', 'claude-haiku-5-5')
@@ -463,7 +469,7 @@ test('a warm cache never keeps harder work on Haiku', async ($, on) => {
 })
 
 test('a commit in a large conversation on Opus stays on Opus at low effort, the cache kept', async ($, on) => {
-  const { sent } = world(on, { contextTokens: 150_000 })
+  const { sent } = await world($, on, { contextTokens: 150_000 })
   await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
   await step($, 't1', 0, 'claude-opus-5-5', 'high')
   expect(sent[0]).toEqual({ model: 'claude-opus-5-5', effort: 'high' })
@@ -474,7 +480,7 @@ test('a commit in a large conversation on Opus stays on Opus at low effort, the 
 })
 
 test('a message with nothing written (a bare image) carries on with the last choice', async ($, on) => {
-  const { sent } = world(on, { classifierReply: 'T0' })
+  const { sent } = await world($, on, { classifierReply: 'T0' })
   await say($, 'bu mimariyi neden böyle kurduk, alternatifleri karşılaştır')
   await step($, 't1')
   await finish($, 't1', 'claude-opus-5-5')
@@ -484,7 +490,7 @@ test('a message with nothing written (a bare image) carries on with the last cho
 })
 
 test('a +token after a system note is taken off, the note left for the model', async ($, on) => {
-  const { sent, prompts } = world(on)
+  const { sent, prompts } = await world($, on)
   await say($, '<system-reminder>\nscratch workspace\n</system-reminder>\n+haiku bu dosyada ne var?')
   await step($, 't1')
   expect(sent[0]?.model).toBe('claude-haiku-5-5')
@@ -494,7 +500,7 @@ test('a +token after a system note is taken off, the note left for the model', a
 })
 
 test('in shadow mode autogear chooses and writes it down, and every request goes as the picker says', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   const shown = JSON.stringify(await $.command.run({ command: 'gear', args: 'golge' }))
   expect(shown).toContain('gölgede')
   for (const turnId of ['t1', 't2', 't3', 't4']) {
@@ -519,7 +525,7 @@ test('in shadow mode autogear chooses and writes it down, and every request goes
 })
 
 test('in shadow mode under a Sonnet picker the log keeps both what autogear wanted and what the picker allows', async ($, on) => {
-  world(on)
+  await world($, on)
   await $.command.run({ command: 'gear', args: 'golge' })
   await say($, "uygulamayı Express'ten NestJS'e taşı, tüm route'ları, middleware'leri ve testleri güncelle")
   await step($, 't1', 0, 'claude-sonnet-5-5', 'high')
@@ -535,7 +541,7 @@ async function note($: Engine, name: string): Promise<void> {
 }
 
 test('in plan mode every request goes to Opus at an effort by the plan size, until plan mode ends', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   await note($, 'plan_mode')
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1', 0, 'claude-opus-5-5', 'max')
@@ -556,7 +562,7 @@ test('in plan mode every request goes to Opus at an effort by the plan size, unt
 })
 
 test('before a choice the band says what the state means; in shadow mode it shows what autogear would pick', async ($, on) => {
-  world(on)
+  await world($, on)
   const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   await $.command.run({ command: 'gear', args: 'golge' })
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
@@ -568,7 +574,7 @@ test('before a choice the band says what the state means; in shadow mode it show
 })
 
 test('under every answer, even with autogear off, the model that answered and its effort; the helpers beside it', async ($, on) => {
-  world(on)
+  await world($, on)
   await $.command.run({ command: 'gear', args: 'off' })
   await say($, 'bu fonksiyon ne yapıyor?')
   await step($, 't1', 0, 'claude-opus-5-5', 'max')
@@ -592,7 +598,7 @@ test('under every answer, even with autogear off, the model that answered and it
 })
 
 test('the commands are English: on, off, shadow, savings, log, wrong, reset, profile saver', async ($, on) => {
-  const { sent } = world(on)
+  const { sent } = await world($, on)
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'profile balanced' }))).toContain('profil dengeli')
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'profile saver' }))).toContain('profil tasarruf')
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'shadow' }))).toContain('gölgede')
@@ -615,7 +621,7 @@ test('the commands are English: on, off, shadow, savings, log, wrong, reset, pro
 })
 
 test('/gear lang en speaks English everywhere, /gear lang tr goes back', async ($, on) => {
-  world(on)
+  await world($, on)
   try {
     expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'lang en' }))).toContain('on')
     await say($, 'bu fonksiyon ne yapıyor?')
@@ -637,7 +643,7 @@ test('/gear lang en speaks English everywhere, /gear lang tr goes back', async (
 })
 
 test('/gear doctor says what to fix and how', async ($, on) => {
-  world(on)
+  await world($, on)
   const before = JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))
   expect(before).toContain('autogear doctor')
   expect(before).toContain('autogear açık')
@@ -654,19 +660,19 @@ test('/gear doctor says what to fix and how', async ($, on) => {
 })
 
 test('/gear doctor names an environment variable that pins the effort or the helpers', async ($, on) => {
-  world(on)
   mock.env(on, { CLAUDE_CODE_EFFORT_LEVEL: 'max', CLAUDE_CODE_SUBAGENT_MODEL: 'sonnet' })
+  await world($, on)
   const text = JSON.stringify(await $.command.run({ command: 'gear', args: 'doctor' }))
   expect(text).toContain('CLAUDE_CODE_EFFORT_LEVEL=max')
   expect(text).toContain('CLAUDE_CODE_SUBAGENT_MODEL=sonnet')
 })
 
 test('after a /clear the band still shows the state autogear is in', async ($, on) => {
-  world(on)
   on('session.end', ($, e) => ({ sessionId: e.sessionId }))
   // The cleared conversation's state starts afresh: its values read as their initials.
   let isCleared = false
   on('state.get', ($, e, next) => (isCleared && e.plugin === 'autogear' && (e.key === 'mode' || e.key === 'note') ? { value: e.key === 'mode' ? 'auto' : '', version: 0 } : next(e)))
+  await world($, on)
   const BAND = { plugin: 'autogear', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10 } } as const
   await $.command.run({ command: 'gear', args: 'shadow' })
   await say($, 'bu fonksiyon ne yapıyor?')
@@ -681,7 +687,7 @@ test('after a /clear the band still shows the state autogear is in', async ($, o
 })
 
 test('/gear share gives the doubtful decision without a word of the message', async ($, on) => {
-  world(on)
+  await world($, on)
   expect(JSON.stringify(await $.command.run({ command: 'gear', args: 'share' }))).toContain('Henüz paylaşılacak bir karar yok')
   await turnOn($, 't1', 'müşteri faturalarındaki toplamı yuvarlayan fonksiyonu kaldır', 'claude-sonnet-5-5', { read: 1000, write: 100, output: 50 })
   await turnOn($, 't2', 'bu fonksiyon ne yapıyor?', 'claude-haiku-5-5', { read: 1000, write: 100, output: 50 })
@@ -697,7 +703,7 @@ test('/gear share gives the doubtful decision without a word of the message', as
 })
 
 test('a rule the log caught out three times is no longer sure here: Haiku is asked where it would have been', async ($, on) => {
-  world(on, { classifierReply: 'T3' })
+  await world($, on, { classifierReply: 'T3' })
   const features = ['CSV dışa aktarma özelliği ekle', 'profil fotoğrafı yükleme özelliği ekle', 'dark mode desteği ekle']
   for (const [index, text] of features.entries()) {
     await turnOn($, `t${index}`, text, 'claude-sonnet-5-5', { read: 1000, write: 100, output: 50 })

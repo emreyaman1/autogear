@@ -5,6 +5,8 @@ import { cleanNote, handoverContext, isWorkDone } from '../hooks/core/handover'
 import { setLang } from '../hooks/core/text'
 
 // The tests read autogear's Turkish; the English is tested by switching to it.
+// This sets the test's own copy of the language; the mod's copy reads the one
+// `world` stores, as it does on any machine, whatever the system's language.
 setLang('tr')
 
 const NOW = Date.parse('2026-10-17T12:00:00Z')
@@ -26,8 +28,9 @@ type World = { forks: number; clears: number; opened: string[]; contexts: (reado
 
 // The engine beneath autogear: a conversation of `contextTokens`, a fork that
 // writes NOTE, a /clear that ends the session as the engine's does, and the
-// prompts with what they carried beside them.
-function world(engine: Engine, on: On, { contextTokens = 700_000 }: { contextTokens?: number } = {}): World {
+// prompts with what they carried beside them. It starts the session, where
+// autogear reads the language stored here.
+async function world(engine: Engine, on: On, { contextTokens = 700_000 }: { contextTokens?: number } = {}): Promise<World> {
   const seen: World = { forks: 0, clears: 0, opened: [], contexts: [] }
   mock.store(on, { settings: { lang: 'tr' } })
   mock.clock(on, { now: NOW })
@@ -65,6 +68,9 @@ function world(engine: Engine, on: On, { contextTokens = 700_000 }: { contextTok
   on('ui.close', () => ({ value: undefined }))
   on('ui.status', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
+  on('command.register', () => ({ value: { command: 'gear' } }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  await engine.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
 
   return seen
 }
@@ -92,7 +98,7 @@ async function turnWith($: Engine, turnId: string, command: string, tool: 'Bash'
 describe('the hand-over offer', () => {
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`after a commit in a large conversation the band offers a clean conversation, and nothing more (${surface})`, async ($, on) => {
-      const seen = world($, on)
+      const seen = await world($, on)
       await turnWith($, 't1', 'git commit -m "adım 17"')
       expect(seen.forks).toBe(1)
       const ui = await $.ui.mount({ ...BAND, surface })
@@ -107,13 +113,13 @@ describe('the hand-over offer', () => {
   }
 
   test('a commit run in PowerShell is a finished piece of work too', async ($, on) => {
-    const seen = world($, on)
+    const seen = await world($, on)
     await turnWith($, 't1', 'git commit -m "adım 17"', 'PowerShell')
     expect(seen.forks).toBe(1)
   })
 
   test('a small conversation gets no offer, and no note is written', async ($, on) => {
-    const seen = world($, on, { contextTokens: 60_000 })
+    const seen = await world($, on, { contextTokens: 60_000 })
     await turnWith($, 't1', 'git push')
     expect(seen.forks).toBe(0)
     const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
@@ -122,7 +128,7 @@ describe('the hand-over offer', () => {
   })
 
   test('a large conversation gets no offer for work that did not finish', async ($, on) => {
-    const seen = world($, on)
+    const seen = await world($, on)
     await turnWith($, 't1', 'ls -la')
     await turnWith($, 't2', 'npm test -- fail')
     await turnWith($, 't3', 'git commit -m fail')
@@ -130,7 +136,7 @@ describe('the hand-over offer', () => {
   })
 
   test('with autogear off, no note is written', async ($, on) => {
-    const seen = world($, on)
+    const seen = await world($, on)
     await $.command.run({ command: 'gear', args: 'sabitle' })
     await turnWith($, 't1', 'git commit -m x')
     expect(seen.forks).toBe(0)
@@ -138,7 +144,7 @@ describe('the hand-over offer', () => {
 
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`"notu gör" opens the note in a pane, on the press only (${surface})`, async ($, on) => {
-      const seen = world($, on)
+      const seen = await world($, on)
       await turnWith($, 't1', 'npm test')
       const band = await $.ui.mount({ ...BAND, surface })
       await band.press({ key: 'handover-show' })
@@ -159,7 +165,7 @@ describe('the hand-over offer', () => {
   }
 
   test('"temiz sohbet" clears the conversation and the next prompt carries the note, once', async ($, on) => {
-    const seen = world($, on)
+    const seen = await world($, on)
     await turnWith($, 't1', 'git commit -m x && git push')
     const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
     await band.press({ key: 'handover-clear' })
@@ -179,7 +185,7 @@ describe('the hand-over offer', () => {
   })
 
   test('a /clear the person ran carries no note, and the offer goes', async ($, on) => {
-    const seen = world($, on)
+    const seen = await world($, on)
     await turnWith($, 't1', 'git commit -m x')
     await $.session.end({ reason: 'clear', sessionId: 'old-1', resume: { id: 'old-1' } })
     const before = seen.contexts.length
@@ -191,7 +197,7 @@ describe('the hand-over offer', () => {
   })
 
   test('writing on keeps the offer and carries nothing; × takes it down', async ($, on) => {
-    const seen = world($, on)
+    const seen = await world($, on)
     await turnWith($, 't1', 'git commit -m x')
     const before = seen.contexts.length
     await say($, 'şimdi README dosyasını güncelle')
