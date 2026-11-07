@@ -12,10 +12,6 @@ on:
 jobs:
   plugin:
     runs-on: ubuntu-latest
-    # The tests read autogear's Turkish, and autogear follows the system's language.
-    env:
-      LANG: tr_TR.UTF-8
-      LC_ALL: tr_TR.UTF-8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
