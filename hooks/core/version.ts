@@ -3,7 +3,7 @@
 // The newest build whose plugin API autogear's tests and live smoke test
 // passed on. A newer build gets a one-time notice; autogear keeps running and
 // switches itself off if its choices stop taking effect.
-export const TESTED_THROUGH = '2.1.299'
+export const TESTED_THROUGH = '2.1.317'
 
 // autogear's own version, for a shared report: raised together with the
 // version in .claude-plugin/plugin.json (a test cannot read that file).

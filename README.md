@@ -42,7 +42,7 @@ claude plugin marketplace add <path to your copy of the repository>
 claude plugin install autogear@autogear
 ```
 
-It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295 and 2.1.299; the live smoke test passed on 2.1.299). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build autogear does not load at all and cannot say why; 2.1.278 refuses every version since 0.7. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
+It then runs in every Claude Code session you open, the desktop app included. Needs Claude Code 2.1.295 or newer (tested on 2.1.295, 2.1.299 and 2.1.317; the live smoke test passed on 2.1.317). Claude Code checks a hooks module against its own plugin API before running any of it and refuses the whole module if one event or call is unknown, and a plugin cannot declare a minimum version, so on an older build autogear does not load at all and cannot say why; 2.1.278 refuses every version since 0.7. The desktop app brings its own up-to-date Claude Code; a `claude` installed separately in a terminal may be older (`claude --version`, `claude update`).
 
 ## Using it
 

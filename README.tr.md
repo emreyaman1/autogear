@@ -42,7 +42,7 @@ claude plugin marketplace add <deponun kopyasının yolu>
 claude plugin install autogear@autogear
 ```
 
-Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295 ve 2.1.299'da denendi; canlı duman testi 2.1.299'da geçti). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde autogear hiç yüklenmez ve nedenini söyleyemez; 2.1.278, 0.7'den bu yana her sürümü reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
+Kurulumdan sonra açtığın her Claude Code oturumunda (masaüstü uygulaması dahil) çalışır. Claude Code 2.1.295 ya da daha yenisi gerekir (2.1.295, 2.1.299 ve 2.1.317'de denendi; canlı duman testi 2.1.317'de geçti). Claude Code bir hooks modülünü çalıştırmadan önce kendi eklenti API'siyle karşılaştırır; tanımadığı tek bir olay ya da çağrı varsa modülün tamamını reddeder. Bir eklenti en düşük sürümü de bildiremez. Bu yüzden eski bir sürümde autogear hiç yüklenmez ve nedenini söyleyemez; 2.1.278, 0.7'den bu yana her sürümü reddeder. Masaüstü uygulaması kendi güncel Claude Code'unu getirir; terminale ayrıca kurulmuş bir `claude` daha eski olabilir (`claude --version`, `claude update`).
 
 ## Kullanım
 
